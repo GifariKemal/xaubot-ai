@@ -777,7 +777,7 @@ Selain 10 kondisi di atas, Position Manager juga menjalankan:
 ║  Max loss: ~$50-80 per trade                                     ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║                    LAPIS 2: SOFTWARE SMART EXIT                  ║
-║                    (Bot mengevaluasi setiap detik)               ║
+║                    (Bot mengevaluasi setiap ~10 detik)           ║
 ║                                                                   ║
 ║  10 kondisi exit (lihat bagian 6)                                ║
 ║  Biasanya menutup SEBELUM broker SL kena                        ║
@@ -1237,6 +1237,7 @@ SELL Signal:
 │  2. Feature Engineering → 40+ fitur                          │
 │  3. SMC Analysis → struktur pasar                            │
 │  4. Create target → UP/DOWN (lookahead=1)                    │
+│  4b. Split 70/30 dengan 50-bar gap (anti temporal leakage)   │
 │  5. Train HMM (3 regime, lookback=500)                       │
 │  6. Train XGBoost (50 rounds, early_stop=5)                  │
 │  7. Walk-forward validation (500 train/50 test/50 step)      │
@@ -1281,7 +1282,7 @@ SELL Signal:
 | Boost rounds | 50 | 50 (harian) / 80 (weekend) |
 | Walk-forward | Ya | Tidak |
 | Backup | Tidak | Ya (5 terakhir) |
-| Rollback | Tidak | Ya (AUC < 0.52) |
+| Rollback | Tidak | Ya (AUC < 0.60) |
 | Database | Tidak | Ya (PostgreSQL) |
 | Tujuan | Setup awal | Maintenance rutin |
 
@@ -1451,7 +1452,7 @@ Balance > $10,000 → MEDIUM MODE
 ★ Golden Time (20:00-23:59 WIB) = waktu paling optimal
   → Spread ketat, likuiditas maksimal, volatilitas ideal
   → Lot multiplier 1.2x (bonus)
-  → Bot akan hold posisi profit lebih lama di sesi ini
+  → v4: Smart Hold dihapus — tidak ada lagi hold losers menunggu sesi tertentu
 ```
 
 ---
