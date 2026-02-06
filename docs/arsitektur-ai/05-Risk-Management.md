@@ -199,33 +199,35 @@ Setiap posisi terbuka dievaluasi setiap loop:
    Jika peak_profit > $30 DAN current < 60% dari peak:
      -> TUTUP (lindungi profit)
 
-6. TIME-BASED EXIT (v3: BARU)
-   Jika posisi terbuka >= 4 jam DAN profit < $5:
-     - Jika profit >= $0 -> TUTUP (breakeven/profit kecil)
-     - Jika profit > -$15 -> TUTUP (loss kecil, daripada makin besar)
+6. SMART TIME-BASED EXIT (v5: Don't Cut Winners)
+   Jika posisi terbuka >= 4 jam:
+     - profit < $5 DAN tidak growing -> TUTUP
+     - profit >= $5 DAN growing + ML agrees -> HOLD (extend)
    Jika posisi terbuka >= 6 jam:
-     -> FORCE EXIT (tutup apapun kondisinya)
+     - profit < $10 ATAU tidak growing -> TUTUP
+     - profit >= $10 DAN growing -> extend ke 8 jam
+   Jika posisi terbuka >= 8 jam:
+     -> TUTUP (take profit atau max time)
 ```
 
-### Time-Based Exit Detail (v3 Update)
+### Smart Time-Based Exit Detail (v5 Update)
 
 ```
-Jam 0        Jam 4              Jam 6
-|------------|------------------|-----> waktu
-             |                  |
-             | profit < $5?     | FORCE EXIT
-             | Ya -> evaluasi:  | (apapun kondisinya)
-             |   profit >= 0    |
-             |     -> tutup OK  |
-             |   loss > -$15    |
-             |     -> tutup     |
-             |   loss <= -$15   |
-             |     -> tahan     |
+Jam 0        Jam 4              Jam 6              Jam 8
+|------------|------------------|------------------|-----> waktu
+             |                  |                  |
+             | stuck?           | profitable?      | FINAL EXIT
+             | (no growth)      | (growing?)       |
+             |   -> TUTUP       |   -> extend!     |
+             |                  | not growing?     |
+             | growing?         |   -> TUTUP       |
+             |   -> HOLD        |                  |
 
-Kenapa perlu time-based exit?
-  - Trade yang stuck tanpa progress = buang waktu & margin
-  - Lebih baik exit kecil daripada menunggu loss besar
-  - Mencegah posisi "zombie" yang tidak kemana-mana
+v5 Perubahan dari v3:
+  - 4h: Cek profit GROWTH (momentum), bukan hanya profit < $5
+  - 6h: Bukan force close lagi — extend ke 8h jika profit > $10 + growing
+  - ML agreement diperhitungkan sebelum timeout
+  - Prinsip: jangan potong pemenang yang masih berjalan
 ```
 
 ### Broker Stop Loss (v3: ATR-Based Protection)
@@ -428,14 +430,18 @@ Backtest menggunakan **logika exit yang identik** dengan live trading:
 
 ```
 Exit reversal:   0.65 (65% ML confidence)    <- synced dengan live
-Time-based exit:
-  16 bars (4 jam M15) + profit < $5 -> exit
-  24 bars (6 jam M15)              -> force exit
+Smart time-based exit (v5):
+  16 bars (4 jam M15) + no growth   -> exit (stuck)
+  16 bars + growing + ML agrees     -> hold (extend)
+  24 bars (6 jam M15) + profit<$10  -> exit
+  24 bars + profit>$10 + growing    -> extend ke 32 bars (8 jam)
+  32 bars (8 jam M15)               -> final exit
 
 Perhitungan bar:
   bars_since_entry = current_bar_index - entry_bar_index
   16 bars * 15 menit = 4 jam
   24 bars * 15 menit = 6 jam
+  32 bars * 15 menit = 8 jam (v5: max extended time)
 ```
 
 **Kenapa penting disinkronkan?** Agar hasil backtest akurat mewakili performa live trading.
@@ -449,5 +455,5 @@ Perhitungan bar:
 3. **Multi-Layer Protection** — Per-trade, per-day, total limit, circuit breaker
 4. **Recovery First** — Setelah loss, otomatis masuk mode defensif
 5. **Profit Protection** — Jika profit sudah besar, lindungi dari drawback
-6. **Time-Bounded** — Tidak ada posisi "zombie", max 6 jam (v3 update)
+6. **Smart Time-Bounded** — Tidak ada posisi "zombie", max 6-8 jam, tapi jangan potong pemenang (v5 update)
 7. **Faster Reversal** — Exit lebih cepat di 65% ML confidence (v3 update)

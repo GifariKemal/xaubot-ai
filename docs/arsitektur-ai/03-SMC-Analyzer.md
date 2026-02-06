@@ -367,14 +367,35 @@ AND (ada FVG bearish ATAU Order Block bearish):
 └────────────┴─────────────────────┴──────────────────────┴──────────────────────────┘
 ```
 
-### Sistem Confidence
+### Sistem Confidence (v5: Calibrated Weighted Scoring)
 
 ```
-Base confidence:  55%
-+ BOS/CHoCH:     +10%
-+ FVG:           +10%
-+ Order Block:   +10%
-Maximum:          85%
+Sebelum (v4):                     Sesudah (v5):
+  Base: 55%                         Base: 40%
+  + BOS/CHoCH: +10%                 + Structure aligned: +15%
+  + FVG: +10%                       + BOS/CHoCH: +12%
+  + OB: +10%                        + FVG: +8%
+  Max: 85%                          + Order Block: +10%
+                                    + Trend strength: +10%
+                                    + Fresh level: +5%
+                                    Max: 85%
+
+Kalkulasi confidence sekarang menggunakan metode calculate_confidence():
+  1. Base = 40% (minimum, selalu ada)
+  2. Structure aligned = +15% (market_structure searah sinyal)
+  3. BOS/CHoCH = +12% (ada break of structure/character)
+  4. FVG = +8% (ada Fair Value Gap)
+  5. Order Block = +10% (ada Order Block)
+  6. Trend strength = +10% (ada ≥2 BOS searah dalam 20 bar terakhir)
+  7. Fresh level = +5% (first touch of key level)
+  8. Cap di 85% (tidak pernah 100% yakin)
+
+Contoh:
+  BUY signal, structure bullish, ada BOS + FVG + OB, trend kuat:
+  = 40% + 15% + 12% + 8% + 10% + 10% = 95% → cap 85%
+
+  BUY signal, structure bearish, ada CHoCH + FVG saja:
+  = 40% + 0% + 12% + 8% + 0% + 0% = 60%
 ```
 
 ### Output Signal
@@ -385,7 +406,7 @@ SMCSignal:
   entry_price: float
   stop_loss: float        # ATR-based (min 1.5 ATR dari entry)
   take_profit: float      # 2:1 RR, capped di 4 ATR
-  confidence: 0.55 - 0.85
+  confidence: 0.40 - 0.85  # v5: base diturunkan ke 40% (calibrated)
   reason: "Bullish BOS + FVG + OB"
   risk_reward: float      # Minimum 2.0
 ```

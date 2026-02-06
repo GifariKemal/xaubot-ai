@@ -439,7 +439,7 @@ Signal Generation:
     ├── Entry: harga saat ini
     ├── SL: ATR-based, minimum 1.5 × ATR dari entry
     ├── TP: 2:1 Risk-Reward minimum, cap 4 × ATR
-    ├── Confidence: 55-85% (berdasarkan confluence)
+    ├── Confidence: 40-85% (v5: calibrated weighted scoring) (berdasarkan confluence)
     └── Reason: "BOS + Bullish FVG at 2645.50"
 ```
 
@@ -619,13 +619,15 @@ SINYAL SMC + ML MASUK
 └──────────────────────────────────────────────────────────┘
         │ PASS
         ▼
-┌─ FILTER 8: Pullback Filter ─────────────────────────────┐
+┌─ FILTER 8: Pullback Filter (v5: ATR-based) ────────────┐
 │  Apakah momentum selaras dengan arah sinyal?             │
 │  ✗ BUY tapi RSI > 80 (overbought) → BLOCK               │
 │  ✗ SELL tapi RSI < 20 (oversold) → BLOCK                 │
 │  ✗ MACD histogram berlawanan → BLOCK                     │
-│  ✗ Harga bounce > $2 dalam 3 candle → BLOCK             │
+│  ✗ Harga bounce > 15% ATR dalam 3 candle → BLOCK        │
+│  ✓ Movement < 10% ATR (consolidation) → PASS            │
 │  ✓ Momentum selaras → PASS                               │
+│  (v5: threshold dinamis berdasarkan ATR, bukan fixed $2) │
 └──────────────────────────────────────────────────────────┘
         │ PASS
         ▼
@@ -727,9 +729,12 @@ POSISI TERBUKA (dicek setiap ~10 detik)
 └──────────────────────────────────────────────────────────┘
         │ tidak trigger
         ▼
-┌─ KONDISI 9: Time-Based ─────────────────────────────────┐
-│  (a) > 4 jam + profit < $5 → TUTUP (terlalu lama)       │
-│  (b) > 6 jam → FORCE TUTUP (apapun kondisi)             │
+┌─ KONDISI 9: Smart Time-Based (v5: Don't Cut Winners) ──┐
+│  (a) > 4 jam + no growth → TUTUP (stuck)                │
+│  (b) > 4 jam + growing + ML agrees → HOLD (extend)      │
+│  (c) > 6 jam + profit < $10 → TUTUP                     │
+│  (d) > 6 jam + profit > $10 + growing → extend ke 8 jam │
+│  (e) > 8 jam → TUTUP (final max time)                   │
 └──────────────────────────────────────────────────────────┘
         │ tidak trigger
         ▼
@@ -1092,7 +1097,7 @@ BUY Signal:
     ├── Entry: harga saat ini
     ├── SL: di bawah zone, minimum 1.5 × ATR
     ├── TP: 2:1 R:R, maximum 4 × ATR
-    └── Confidence: 55-85% (lebih banyak confluence = lebih tinggi)
+    └── Confidence: 40-85% (v5: calibrated weighted scoring) (lebih banyak confluence = lebih tinggi)
 
 SELL Signal:
     ├── BOS bearish ATAU CHoCH bullish→bearish
@@ -1100,7 +1105,7 @@ SELL Signal:
     ├── Entry: harga saat ini
     ├── SL: di atas zone, minimum 1.5 × ATR
     ├── TP: 2:1 R:R, maximum 4 × ATR
-    └── Confidence: 55-85%
+    └── Confidence: 40-85% (v5: calibrated weighted scoring)
 ```
 
 ---
@@ -1165,10 +1170,27 @@ SELL Signal:
         │
         ▼
 ╔═══════════════════════════════════════════════════════════════╗
+║ TAHAP 4b: POST-EXECUTION VALIDATION (v5 BARU)                ║
+║                                                                ║
+║ Slippage Validation:                                          ║
+║   → Bandingkan harga aktual vs expected                       ║
+║   → Max acceptable: 0.15% dari harga (~$4 untuk XAUUSD)      ║
+║   → Log WARNING jika melebihi batas                           ║
+║   → Gunakan harga AKTUAL untuk position tracking              ║
+║                                                                ║
+║ Partial Fill Handling:                                         ║
+║   → Cek apakah volume terisi = volume diminta                 ║
+║   → Jika partial: log fill ratio, update lot_size aktual      ║
+║   → Risk calculation tetap akurat dengan volume sebenarnya    ║
+╚═══════════════════════════════════════════════════════════════╝
+        │
+        ▼
+╔═══════════════════════════════════════════════════════════════╗
 ║ TAHAP 5: POSITION REGISTERED                                  ║
 ║                                                                ║
 ║ Smart Risk Manager:                                           ║
-║   → Catat entry price, direction, lot, timestamp              ║
+║   → Catat entry price AKTUAL, direction, lot AKTUAL, timestamp║
+║   → v5: Menggunakan harga & volume dari broker (bukan planned)║
 ║   → Inisialisasi peak_profit = 0                              ║
 ║   → Mulai tracking momentum                                  ║
 ║                                                                ║

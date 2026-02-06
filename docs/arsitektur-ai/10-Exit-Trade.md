@@ -197,34 +197,50 @@ IF hari Jumat setelah 04:00 WIB:
 
 ---
 
-### CHECK 9: Time-Based Exit (v3 BARU)
+### CHECK 9: Smart Time-Based Exit (v5: Smarter — Don't Cut Winners)
 
 ```
-Mencegah posisi "zombie" yang stuck:
+Mencegah posisi "zombie" TAPI jangan potong posisi profit yang masih tumbuh.
 
 trade_duration = (sekarang - entry_time) dalam jam
+profit_growing = momentum > 0
+ml_agrees      = ML signal searah dengan posisi
 
-IF 4+ jam DAN profit < $5:
-  a) profit >= $0
-     -> TUTUP [TIMEOUT] Breakeven setelah 4 jam
+IF 4+ jam:
+  a) profit < $5 DAN NOT profit_growing:
+     - profit >= $0 -> TUTUP [TIMEOUT] Breakeven + no growth
+     - profit > -$15 -> TUTUP [TIMEOUT] Small loss + no growth
+  b) profit >= $5 DAN profit_growing DAN ml_agrees:
+     -> HOLD (extend time — profit masih tumbuh!)
+     -> Log: "extending time"
 
-  b) profit > -$15
-     -> TUTUP [TIMEOUT] Loss kecil, daripada stuck
+IF 6+ jam:
+  a) profit < $10 ATAU NOT profit_growing:
+     -> TUTUP [MAX TIME] (sebelumnya: force close apapun kondisi)
+  b) profit >= $10 DAN profit_growing:
+     -> EXTEND ke max 8 jam (v5 BARU — biarkan profit berjalan)
+     -> Di jam 8+ -> TUTUP [MAX TIME] Take profit
 
-IF 6+ jam (apapun profit):
-  -> TUTUP [MAX TIME] Force exit — max hold 6 jam
+v5 PERUBAHAN:
+  - 4h: Sekarang cek profit growth, bukan hanya profit < $5
+  - 6h: BUKAN force close lagi — extend ke 8h jika profitable + growing
+  - ML agreement dipertimbangkan sebelum timeout
+  - Prinsip: jangan potong pemenang yang masih berjalan
 ```
 
 **Visualisasi:**
 
 ```
-Jam:  0     1     2     3     4     5     6
-      |-----|-----|-----|-----|-----|-----|
-      entry                   |           |
-                              |           |
-                        4h check:    6h FORCE EXIT
-                        profit<$5?
-                        Ya -> exit
+Jam:  0     1     2     3     4     5     6     7     8
+      |-----|-----|-----|-----|-----|-----|-----|-----|
+      entry                   |           |           |
+                              |           |           |
+                        4h check:    6h check:   8h FINAL EXIT
+                        stuck?       profitable?
+                        no growth?   growing?
+                        -> exit      -> extend!
+                                     not growing?
+                                     -> exit
 ```
 
 ---

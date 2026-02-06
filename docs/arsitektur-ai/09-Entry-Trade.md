@@ -167,13 +167,27 @@ if not can_enter:
     return  # Sedang pullback, tunggu momentum selaras
 ```
 
+**v5: Threshold sekarang ATR-based (bukan hardcoded)**
+
+```
+ATR diambil dari data (default $12 untuk XAUUSD)
+bounce_threshold      = ATR × 0.15    # ~$1.80 (sebelumnya: $2.00 fixed)
+consolidation_threshold = ATR × 0.10  # ~$1.20 (sebelumnya: $1.50 fixed)
+
+Kenapa ATR-based?
+  - Threshold menyesuaikan volatilitas pasar saat ini
+  - Saat volatilitas tinggi (ATR=$20): bounce=$3, consolidation=$2
+  - Saat volatilitas rendah (ATR=$8): bounce=$1.2, consolidation=$0.8
+  - Lebih akurat daripada threshold tetap
+```
+
 **Untuk signal BUY, block jika:**
-- Harga turun > $2 dalam 3 candle terakhir
+- Harga turun > bounce_threshold (15% ATR) dalam 3 candle terakhir
 - MACD bearish + harga turun
 - Harga jauh di bawah EMA9 + terus turun
 
 **Untuk signal SELL, block jika:**
-- Harga naik > $2 dalam 3 candle terakhir
+- Harga naik > bounce_threshold (15% ATR) dalam 3 candle terakhir
 - MACD bullish + harga naik
 - Harga jauh di atas EMA9 + terus naik
 
@@ -182,6 +196,7 @@ if not can_enter:
 ```
 1. Short-term Momentum (3 candle terakhir)
    -> Arah pergerakan harga terkini
+   -> Block jika bounce > 15% ATR (v5: dinamis)
 
 2. MACD Histogram
    -> Rising = bullish momentum
@@ -194,6 +209,10 @@ if not can_enter:
 4. RSI Extreme
    -> RSI > 80 = overbought (block BUY)
    -> RSI < 20 = oversold (block SELL)
+
+5. Consolidation Check
+   -> Jika movement < 10% ATR = consolidation → ALLOW
+   -> v5: dinamis, bukan fixed $1.5
 ```
 
 ---
@@ -276,14 +295,53 @@ result = mt5.send_order(
 if gagal dan error 10016:
     result = mt5.send_order(sl=0, ...)  # Tanpa broker SL
 
-# Step E: Register posisi untuk monitoring
+# Step E: Slippage Validation (v5 BARU)
 if result.success:
+    actual_price = result.price
+    slippage = abs(actual_price - signal.entry_price)
+    max_slippage = signal.entry_price * 0.0015  # 0.15% dari harga
+
+    if slippage > max_slippage:
+        log WARNING "HIGH SLIPPAGE"  # Catat slippage tinggi
+    # Gunakan harga AKTUAL untuk tracking, bukan harga expected
+
+# Step F: Partial Fill Check (v5 BARU)
+    filled_volume = result.volume
+    if filled_volume < requested_volume:
+        log WARNING "PARTIAL FILL"
+        # Update lot_size ke volume yang sebenarnya terisi
+        position.lot_size = filled_volume
+
+# Step G: Register posisi (gunakan nilai AKTUAL)
     smart_risk.register_position(
         ticket=result.order_id,
-        entry_price=signal.entry_price,
-        lot_size=position.lot_size,
+        entry_price=actual_price,     # v5: harga aktual (bukan expected)
+        lot_size=filled_volume,       # v5: volume aktual (bukan requested)
         direction=signal.signal_type,
     )
+```
+
+### Slippage & Partial Fill (v5 Detail)
+
+```
+SLIPPAGE VALIDATION:
+  expected_price = signal.entry_price
+  actual_price   = result.price (dari broker)
+  slippage       = |actual - expected|
+  max_acceptable = 0.15% dari harga (~$4 untuk XAUUSD @$2650)
+
+  Jika slippage > max_acceptable:
+    -> LOG WARNING (untuk monitoring & analisis)
+    -> Tetap pakai harga aktual untuk position tracking
+
+PARTIAL FILL HANDLING:
+  requested_volume = lot dari risk calculation
+  filled_volume    = result.volume (dari broker)
+
+  Jika filled < requested:
+    -> LOG WARNING dengan fill ratio (%)
+    -> Update position.lot_size ke filled_volume
+    -> Risk calculation tetap akurat (berdasarkan volume sebenarnya)
 ```
 
 ---
@@ -291,7 +349,7 @@ if result.success:
 ## Post-Entry
 
 ```python
-# Step F: Log trade detail
+# Step H: Log trade detail
 trade_logger.log_trade_open(
     signal, ml_prediction, regime, market_quality, ...
 )

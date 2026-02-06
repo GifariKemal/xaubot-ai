@@ -92,11 +92,14 @@ LOOP UTAMA (cek setiap ~5 detik, analisis pada candle baru):
     |  ├── [5] ML Agreement → tidak strongly disagree?
     |  ├── [6] Dynamic Quality → bukan AVOID?
     |  ├── [7] Confirmation → 2x candle berturut?
-    |  ├── [8] Pullback Filter → momentum selaras?
+    |  ├── [8] Pullback Filter → momentum selaras? (v5: ATR-based)
     |  ├── [9] Cooldown → 5 menit sejak trade terakhir?
     |  ├── [10] Position Limit → < 2 posisi?
     |  ├── [11] Lot Size → > 0?
-    |  └── SEMUA PASS → Execute trade → Log → Telegram
+    |  ├── SEMUA PASS → Execute trade
+    |  ├── Slippage validation (v5: cek harga aktual vs expected)
+    |  ├── Partial fill check (v5: cek volume aktual vs requested)
+    |  └── Register position (harga & volume AKTUAL) → Log → Telegram
     |  |
     |  |===[PHASE 4: PERIODIK]=============================
     |  |
