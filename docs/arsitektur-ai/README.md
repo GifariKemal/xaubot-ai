@@ -31,12 +31,23 @@
 | 9 | [Entry Trade](09-Entry-Trade.md) | `main_live.py` | Proses masuk posisi (11 filter) |
 | 10 | [Exit Trade](10-Exit-Trade.md) | `main_live.py` | Proses keluar posisi (10 kondisi) |
 
+### Koneksi & Konfigurasi
+
+| # | Komponen | File Source | Fungsi |
+|---|----------|------------|--------|
+| 16 | [MT5 Connector](16-MT5-Connector.md) | `src/mt5_connector.py` | Jembatan ke broker MT5 (auto-reconnect) |
+| 17 | [Configuration](17-Configuration.md) | `src/config.py` | Konfigurasi terpusat (6 sub-config) |
+
 ### Pendukung
 
 | # | Komponen | File Source | Fungsi |
 |---|----------|------------|--------|
 | 11 | [News Agent](11-News-Agent.md) | `src/news_agent.py` | Monitoring berita ekonomi |
 | 12 | [Telegram Notifications](12-Telegram-Notifications.md) | `src/telegram_notifier.py` | Notifikasi real-time ke Telegram |
+| 18 | [Trade Logger](18-Trade-Logger.md) | `src/trade_logger.py` | Pencatatan trade dual-storage (DB + CSV) |
+| 19 | [Position Manager](19-Position-Manager.md) | `src/position_manager.py` | Manajemen posisi aktif (trailing, breakeven) |
+| 20 | [Risk Engine](20-Risk-Engine.md) | `src/risk_engine.py` | Mesin risiko & circuit breaker (Kelly Criterion) |
+| 21 | [Database](21-Database.md) | `src/db/` | PostgreSQL integration (6 repository) |
 
 ### Training & Validasi
 
@@ -45,6 +56,13 @@
 | 13 | [Auto Trainer](13-Auto-Trainer.md) | `src/auto_trainer.py` | Retraining model otomatis (pelatih malam) |
 | 14 | [Backtest](14-Backtest.md) | `backtests/backtest_live_sync.py` | Simulasi trading 100% sync dengan live |
 | 15 | [Dynamic Confidence](15-Dynamic-Confidence.md) | `src/dynamic_confidence.py` | Penyesuaian threshold otomatis (termometer) |
+| 22 | [Train Models](22-Train-Models.md) | `train_models.py` | Script training awal (HMM + XGBoost) |
+
+### Orchestrator
+
+| # | Komponen | File Source | Fungsi |
+|---|----------|------------|--------|
+| 23 | [Main Live Orchestrator](23-Main-Live-Orchestrator.md) | `main_live.py` | Otak pusat bot, koordinasi semua komponen |
 
 ---
 
@@ -122,3 +140,11 @@ Regime   Signal
 | Auto Trainer | "Apakah model AI masih akurat? Perlu dilatih ulang?" |
 | Backtest | "Apakah strategi ini profitable di data historis?" |
 | Dynamic Confidence | "Seberapa selektif bot harus trading saat ini?" |
+| MT5 Connector | "Bagaimana bot terhubung ke broker dan mengirim order?" |
+| Configuration | "Bagaimana semua parameter dikonfigurasi?" |
+| Trade Logger | "Dimana semua data trade disimpan?" |
+| Position Manager | "Bagaimana posisi terbuka dikelola secara aktif?" |
+| Risk Engine | "Berapa ukuran lot yang aman? Sudah lewat batas harian?" |
+| Database | "Bagaimana data persisten disimpan dan di-query?" |
+| Train Models | "Bagaimana model AI dilatih pertama kali?" |
+| Main Live | "Siapa yang mengorkestrasi semua komponen?" |
