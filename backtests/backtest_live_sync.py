@@ -130,12 +130,14 @@ class LiveSyncBacktest:
 
     def __init__(
         self,
-        ml_threshold: float = 0.55,
+        ml_threshold: float = 0.50,
         signal_confirmation: int = 2,
         pullback_filter: bool = True,
         golden_time_only: bool = False,
         max_loss_per_trade: float = 50.0,
-        trade_cooldown_bars: int = 20,  # ~5 minutes on M15 = 20 bars
+        trade_cooldown_bars: int = 10,  # OPTIMIZED: was 20, now 10 (~2.5 hours)
+        trend_reversal_mult: float = 0.6,  # OPTIMIZED: was 0.4, now 0.6 (less aggressive exit)
+        sell_filter_strict: bool = True,  # OPTIMIZED: require ML agreement for SELL
     ):
         """
         Initialize backtest with configurable parameters.
@@ -146,7 +148,9 @@ class LiveSyncBacktest:
             pullback_filter: Enable pullback detection filter
             golden_time_only: Only trade during 19:00-23:00 WIB
             max_loss_per_trade: Maximum loss before smart exit
-            trade_cooldown_bars: Minimum bars between trades
+            trade_cooldown_bars: Minimum bars between trades (OPTIMIZED: 10)
+            trend_reversal_mult: ATR multiplier for trend reversal exit (OPTIMIZED: 0.6)
+            sell_filter_strict: Require ML agreement for SELL signals (OPTIMIZED: True)
         """
         self.ml_threshold = ml_threshold
         self.signal_confirmation = signal_confirmation
@@ -154,6 +158,8 @@ class LiveSyncBacktest:
         self.golden_time_only = golden_time_only
         self.max_loss_per_trade = max_loss_per_trade
         self.trade_cooldown_bars = trade_cooldown_bars
+        self.trend_reversal_mult = trend_reversal_mult
+        self.sell_filter_strict = sell_filter_strict
 
         # Initialize components (same as main_live.py)
         config = get_config()
@@ -320,8 +326,8 @@ class LiveSyncBacktest:
             if entry_idx < len(atr_list) and atr_list[entry_idx] is not None:
                 atr = atr_list[entry_idx]
 
-        # Dynamic thresholds based on ATR (SYNCED with main_live.py)
-        reversal_momentum_threshold = atr * 0.4   # 40% of ATR = strong reversal
+        # Dynamic thresholds based on ATR (OPTIMIZED: configurable multiplier)
+        reversal_momentum_threshold = atr * self.trend_reversal_mult  # OPTIMIZED: 0.6 default
         min_loss_for_reversal_exit = atr * 0.8    # 80% of ATR = ~$10 equivalent
 
         # Get ML predictions for exit logic
@@ -569,6 +575,17 @@ class LiveSyncBacktest:
             if ml_strongly_disagrees:
                 self._signal_persistence = {}
                 continue
+
+            # === SELL FILTER (OPTIMIZED: stricter requirements for SELL) ===
+            if self.sell_filter_strict and smc_signal.signal_type == "SELL":
+                # Require ML to agree for SELL signals (SELL has lower WR historically)
+                if ml_pred.signal != "SELL":
+                    self._signal_persistence = {}
+                    continue
+                # Require higher ML confidence for SELL
+                if ml_pred.confidence < 0.55:
+                    self._signal_persistence = {}
+                    continue
 
             # === SIGNAL CONFIRMATION (SYNCED with main_live.py) ===
             signal_key = f"{smc_signal.signal_type}_{int(smc_signal.entry_price)}"
@@ -840,8 +857,12 @@ def main():
     parser = argparse.ArgumentParser(description="Live-Sync Backtest")
     parser.add_argument("--tune", action="store_true", help="Run threshold tuning")
     parser.add_argument("--save", action="store_true", help="Save results to CSV")
-    parser.add_argument("--threshold", type=float, default=0.55, help="ML confidence threshold")
+    parser.add_argument("--threshold", type=float, default=0.50, help="ML confidence threshold")
     parser.add_argument("--golden-only", action="store_true", help="Only trade golden time")
+    parser.add_argument("--cooldown", type=int, default=10, help="Trade cooldown in bars (default: 10)")
+    parser.add_argument("--trend-mult", type=float, default=0.6, help="Trend reversal ATR multiplier (default: 0.6)")
+    parser.add_argument("--no-sell-filter", action="store_true", help="Disable strict SELL filter")
+    parser.add_argument("--baseline", action="store_true", help="Run with baseline settings (old params)")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -901,11 +922,25 @@ def main():
         tune_thresholds(df, start_date, end_date)
     else:
         # Run single backtest
+        # Use baseline settings if requested
+        if args.baseline:
+            cooldown = 20
+            trend_mult = 0.4
+            sell_filter = False
+            print("\n*** BASELINE MODE (old settings) ***")
+        else:
+            cooldown = args.cooldown
+            trend_mult = args.trend_mult
+            sell_filter = not args.no_sell_filter
+
         backtest = LiveSyncBacktest(
             ml_threshold=args.threshold,
             signal_confirmation=2,
             pullback_filter=True,
             golden_time_only=args.golden_only,
+            trade_cooldown_bars=cooldown,
+            trend_reversal_mult=trend_mult,
+            sell_filter_strict=sell_filter,
         )
 
         stats = backtest.run(df, start_date=start_date, end_date=end_date)
@@ -922,6 +957,9 @@ def main():
         print(f"  Signal Confirmation: 2 consecutive")
         print(f"  Pullback Filter: Enabled")
         print(f"  Golden Time Only: {args.golden_only}")
+        print(f"  Trade Cooldown: {cooldown} bars")
+        print(f"  Trend Reversal Mult: {trend_mult}")
+        print(f"  Sell Filter Strict: {sell_filter}")
 
         print(f"\nPerformance:")
         print(f"  Total Trades: {stats.total_trades}")

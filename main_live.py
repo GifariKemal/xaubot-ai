@@ -175,7 +175,7 @@ class TradingBot:
         self._execution_times: list = []
         self._current_date = date.today()
         self._models_loaded = False
-        self._trade_cooldown_seconds = 300  # Minimum 5 MINUTES between trades - CONSERVATIVE
+        self._trade_cooldown_seconds = 150  # OPTIMIZED: 2.5 min (~10 bars on M15) - was 300
         self._start_time = datetime.now()
         self._daily_start_balance: float = 0
         self._total_session_profit: float = 0
@@ -756,6 +756,19 @@ class TradingBot:
                 if self._loop_count % 60 == 0:
                     logger.info(f"Skip: ML strongly disagrees ({ml_prediction.signal} {ml_prediction.confidence:.0%}) vs SMC {smc_signal.signal_type}")
                 return None
+
+            # === IMPROVEMENT 1.5: SELL Filter (OPTIMIZED) ===
+            # SELL signals historically have lower win rate than BUY
+            # Require ML agreement and higher confidence for SELL
+            if smc_signal.signal_type == "SELL":
+                if ml_prediction.signal != "SELL":
+                    if self._loop_count % 60 == 0:
+                        logger.info(f"Skip SELL: ML does not agree ({ml_prediction.signal} {ml_prediction.confidence:.0%})")
+                    return None
+                if ml_prediction.confidence < 0.55:
+                    if self._loop_count % 60 == 0:
+                        logger.info(f"Skip SELL: ML confidence too low ({ml_prediction.confidence:.0%} < 55%)")
+                    return None
 
             # === IMPROVEMENT 2: Signal Confirmation (Entry Delay) ===
             # Track signal persistence - only entry if signal consistent for 2+ candles
