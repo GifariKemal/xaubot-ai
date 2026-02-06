@@ -1,0 +1,40 @@
+# Smart Automatic Trading BOT + AI
+# Requirements for Hybrid AI Forex Trading System (XAUUSD)
+# Python 3.11+ required
+
+# Core Data Engine (Rust-based, NOT Pandas)
+polars>=1.37.0
+pyarrow>=15.0.0
+
+# Broker Connection
+MetaTrader5>=5.0.5572
+
+# Machine Learning
+xgboost>=2.1.0
+scikit-learn>=1.4.0
+hmmlearn>=0.3.3
+joblib>=1.4.0
+
+# Asynchronous Processing
+asyncio-throttle>=1.0.2
+
+# Logging and Monitoring
+loguru>=0.7.2
+
+# Environment Variables
+python-dotenv>=1.0.1
+
+# Numerical Computing (for numpy-based SMC algorithms)
+numpy>=1.26.0
+
+# HTTP Client (for Telegram)
+aiohttp>=3.9.0
+
+# PostgreSQL Database
+psycopg2-binary>=2.9.9
+
+# Optional: For backtesting
+# vectorbt>=0.26.2
+
+# Optional: Connection pooling
+# asyncpg>=0.29.0
