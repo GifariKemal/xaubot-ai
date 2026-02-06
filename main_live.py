@@ -186,6 +186,8 @@ class TradingBot:
         self._last_news_alert_reason: Optional[str] = None  # Track news alert to avoid duplicates
         self._current_session_multiplier: float = 1.0  # Session lot multiplier
         self._is_sydney_session: bool = False  # Sydney session flag (needs higher confidence)
+        self._last_candle_time: Optional[datetime] = None  # Track last processed candle
+        self._position_check_interval: int = 10  # Check positions every N seconds between candles
     
     def _load_models(self) -> bool:
         """Load pre-trained models."""
@@ -318,39 +320,111 @@ class TradingBot:
         return [f for f in default_features if f in df.columns]
     
     async def _main_loop(self):
-        """Main trading loop."""
+        """Main trading loop - CANDLE-BASED (not time-based)."""
+        last_position_check = time.time()
+
         while self._running:
             loop_start = time.perf_counter()
-            
+
             try:
                 # Check for new day
                 if date.today() != self._current_date:
                     self._on_new_day()
-                
-                # Execute one loop iteration
-                await self._trading_iteration()
-                
+
+                # Ensure MT5 connection is alive (auto-reconnect if needed)
+                if not self.mt5.ensure_connected():
+                    logger.warning("MT5 disconnected, attempting reconnection...")
+                    await asyncio.sleep(10)  # Wait before retrying
+                    continue
+
+                # Get current candle time to check if new candle formed
+                df_check = self.mt5.get_market_data(
+                    symbol=self.config.symbol,
+                    timeframe=self.config.execution_timeframe,
+                    count=2,
+                )
+
+                if len(df_check) == 0:
+                    logger.warning("No data received from MT5")
+                    await asyncio.sleep(5)
+                    continue
+
+                current_candle_time = df_check["time"].tail(1).item()
+
+                # Check if new candle formed
+                is_new_candle = (
+                    self._last_candle_time is None or
+                    current_candle_time > self._last_candle_time
+                )
+
+                if is_new_candle:
+                    # NEW CANDLE: Run full analysis
+                    self._last_candle_time = current_candle_time
+                    await self._trading_iteration()
+                    self._loop_count += 1
+
+                    # Log on new candle
+                    if self._loop_count % 4 == 0:  # Every 4 candles (1 hour on M15)
+                        avg_time = sum(self._execution_times[-4:]) / min(4, len(self._execution_times)) if self._execution_times else 0
+                        logger.info(f"Candle #{self._loop_count} | Avg execution: {avg_time*1000:.1f}ms")
+
+                    # AUTO-RETRAINING CHECK - every 20 candles (5 hours on M15)
+                    if self._loop_count % 20 == 0:
+                        await self._check_auto_retrain()
+                else:
+                    # SAME CANDLE: Only check positions (every 10 seconds)
+                    if time.time() - last_position_check >= self._position_check_interval:
+                        await self._position_check_only()
+                        last_position_check = time.time()
+
             except Exception as e:
                 logger.error(f"Loop error: {e}")
                 import traceback
                 logger.debug(traceback.format_exc())
-            
+
             # Track execution time
             execution_time = time.perf_counter() - loop_start
             self._execution_times.append(execution_time)
-            
-            # Log performance periodically
-            self._loop_count += 1
-            if self._loop_count % 60 == 0:
-                avg_time = sum(self._execution_times[-60:]) / min(60, len(self._execution_times))
-                logger.info(f"Loop #{self._loop_count} | Avg execution: {avg_time*1000:.1f}ms")
 
-            # AUTO-RETRAINING CHECK - every 5 minutes (300 loops)
-            if self._loop_count % 300 == 0:
-                await self._check_auto_retrain()
+            # Wait before next check (5 seconds between candle checks)
+            await asyncio.sleep(5)
 
-            # Wait for next iteration
-            await asyncio.sleep(1)
+    async def _position_check_only(self):
+        """Quick position check without full analysis (between candles)."""
+        try:
+            open_positions = self.mt5.get_open_positions(
+                symbol=self.config.symbol,
+                magic=self.config.magic_number,
+            )
+
+            if len(open_positions) > 0 and not self.simulation:
+                # Get minimal data for position management
+                df = self.mt5.get_market_data(
+                    symbol=self.config.symbol,
+                    timeframe=self.config.execution_timeframe,
+                    count=50,  # Less data needed
+                )
+
+                if len(df) == 0:
+                    return
+
+                # Calculate features for ML check
+                df = self.features.calculate_all(df, include_ml_features=True)
+                feature_cols = self._get_available_features(df)
+                ml_prediction = self.ml_model.predict(df, feature_cols)
+
+                tick = self.mt5.get_tick(self.config.symbol)
+                current_price = tick.bid if tick else df["close"].tail(1).item()
+
+                await self._smart_position_management(
+                    open_positions=open_positions,
+                    df=df,
+                    regime_state=None,
+                    ml_prediction=ml_prediction,
+                    current_price=current_price,
+                )
+        except Exception as e:
+            logger.debug(f"Position check error: {e}")
     
     async def _trading_iteration(self):
         """Single trading iteration."""
@@ -684,29 +758,44 @@ class TradingBot:
                 return None
 
             # === IMPROVEMENT 2: Signal Confirmation (Entry Delay) ===
-            # Track signal persistence - only entry if signal consistent for 2+ loops
+            # Track signal persistence - only entry if signal consistent for 2+ candles
+            # FIX: Proper memory management to prevent leak
             signal_key = f"{smc_signal.signal_type}_{smc_signal.entry_price:.0f}"
+            current_time = time.time()
+
             if not hasattr(self, '_signal_persistence'):
-                self._signal_persistence = {}
+                self._signal_persistence = {}  # {key: (count, last_seen_timestamp)}
+
+            # Cleanup: Remove entries older than 5 minutes (300 seconds)
+            # This prevents memory leak from accumulating stale signals
+            self._signal_persistence = {
+                k: v for k, v in self._signal_persistence.items()
+                if current_time - v[1] < 300  # Keep only signals seen in last 5 min
+            }
+
+            # Also limit to max 50 entries as safety
+            if len(self._signal_persistence) > 50:
+                # Keep only 20 most recent
+                sorted_signals = sorted(self._signal_persistence.items(), key=lambda x: x[1][1], reverse=True)
+                self._signal_persistence = dict(sorted_signals[:20])
 
             if signal_key not in self._signal_persistence:
-                self._signal_persistence[signal_key] = 1
+                self._signal_persistence[signal_key] = (1, current_time)
                 logger.debug(f"Signal confirmation: {signal_key} seen 1st time - waiting")
-                # Clean old signals
-                self._signal_persistence = {k: v for k, v in self._signal_persistence.items()
-                                            if v < 10}  # Keep only recent
                 return None  # Wait for confirmation
             else:
-                self._signal_persistence[signal_key] += 1
+                count, _ = self._signal_persistence[signal_key]
+                self._signal_persistence[signal_key] = (count + 1, current_time)
 
-            # Require at least 2 consecutive confirmations
-            if self._signal_persistence[signal_key] < 2:
-                logger.debug(f"Signal confirmation: {signal_key} count={self._signal_persistence[signal_key]} - waiting")
+            # Require at least 2 consecutive confirmations (2 candles)
+            count, _ = self._signal_persistence[signal_key]
+            if count < 2:
+                logger.debug(f"Signal confirmation: {signal_key} count={count} - waiting")
                 return None
 
             # Signal confirmed! Reset counter
-            logger.info(f"Signal CONFIRMED: {signal_key} after {self._signal_persistence[signal_key]} checks")
-            self._signal_persistence[signal_key] = 0
+            logger.info(f"Signal CONFIRMED: {signal_key} after {count} checks")
+            self._signal_persistence[signal_key] = (0, current_time)
 
             # SMC-Only: Use SMC signal with confidence adjustment
             ml_agrees = (
@@ -1696,7 +1785,8 @@ class TradingBot:
                 logger.info(f"  Test AUC: {results.get('xgb_test_auc', 0):.4f}")
 
                 # Check if new model is worse - rollback if needed
-                if results.get("xgb_test_auc", 0) < 0.52:
+                # FIX: Increased minimum AUC from 0.52 to 0.60 (0.52 is barely better than random)
+                if results.get("xgb_test_auc", 0) < 0.60:
                     logger.warning("New model AUC too low - rolling back!")
                     self.auto_trainer.rollback_models()
                     self.regime_detector.load()

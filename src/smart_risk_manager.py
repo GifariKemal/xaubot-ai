@@ -238,43 +238,93 @@ class SmartRiskManager:
     def _load_daily_state(self):
         """Load daily state from file."""
         state_file = "data/risk_state.txt"
-        try:
-            if os.path.exists(state_file):
-                with open(state_file, "r") as f:
-                    lines = f.readlines()
-                    saved_date = None
-                    for line in lines:
-                        if line.startswith("date:"):
-                            saved_date = line.split(":")[1].strip()
-                        # Always load total_loss (persists across days)
-                        if line.startswith("total_loss:"):
-                            self._total_loss = float(line.split(":")[1].strip())
+        backup_file = "data/risk_state.bak"
 
-                    if saved_date == str(date.today()):
-                        # Load today's state
-                        for l in lines:
-                            if l.startswith("daily_loss:"):
-                                self._state.daily_loss = float(l.split(":")[1].strip())
-                            elif l.startswith("daily_profit:"):
-                                self._state.daily_profit = float(l.split(":")[1].strip())
-                            elif l.startswith("consecutive_losses:"):
-                                self._state.consecutive_losses = int(l.split(":")[1].strip())
+        def load_from_file(filepath):
+            """Load state from a specific file."""
+            with open(filepath, "r") as f:
+                lines = f.readlines()
+                saved_date = None
+                for line in lines:
+                    if line.startswith("date:"):
+                        saved_date = line.split(":")[1].strip()
+                    # Always load total_loss (persists across days)
+                    if line.startswith("total_loss:"):
+                        self._total_loss = float(line.split(":")[1].strip())
+                        logger.info(f"Loaded total loss: ${self._total_loss:.2f}")
+
+                if saved_date == str(date.today()):
+                    # Load today's state
+                    for l in lines:
+                        if l.startswith("daily_loss:"):
+                            self._state.daily_loss = float(l.split(":")[1].strip())
+                        elif l.startswith("daily_profit:"):
+                            self._state.daily_profit = float(l.split(":")[1].strip())
+                        elif l.startswith("consecutive_losses:"):
+                            self._state.consecutive_losses = int(l.split(":")[1].strip())
+                    logger.info(f"Loaded today's state: loss=${self._state.daily_loss:.2f}, profit=${self._state.daily_profit:.2f}")
+                return True
+
+        try:
+            # Try main state file first
+            if os.path.exists(state_file):
+                load_from_file(state_file)
+            # If main file missing/corrupt, try backup
+            elif os.path.exists(backup_file):
+                logger.warning("Main state file missing, loading from backup...")
+                load_from_file(backup_file)
         except Exception as e:
             logger.warning(f"Could not load risk state: {e}")
+            # Try backup if main file failed
+            try:
+                if os.path.exists(backup_file):
+                    load_from_file(backup_file)
+            except:
+                logger.error("Could not load risk state from backup either")
 
     def _save_daily_state(self):
-        """Save daily state to file."""
+        """Save daily state to file with atomic write (crash-safe)."""
         os.makedirs("data", exist_ok=True)
         state_file = "data/risk_state.txt"
+        temp_file = "data/risk_state.tmp"
+        backup_file = "data/risk_state.bak"
+
         try:
-            with open(state_file, "w") as f:
-                f.write(f"date:{date.today()}\n")
-                f.write(f"daily_loss:{self._state.daily_loss}\n")
-                f.write(f"daily_profit:{self._state.daily_profit}\n")
-                f.write(f"consecutive_losses:{self._state.consecutive_losses}\n")
-                f.write(f"total_loss:{self._total_loss}\n")
+            # Write to temp file first (atomic write pattern)
+            content = (
+                f"date:{date.today()}\n"
+                f"daily_loss:{self._state.daily_loss}\n"
+                f"daily_profit:{self._state.daily_profit}\n"
+                f"consecutive_losses:{self._state.consecutive_losses}\n"
+                f"total_loss:{self._total_loss}\n"
+                f"saved_at:{datetime.now(WIB).isoformat()}\n"
+            )
+
+            with open(temp_file, "w") as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())  # Force write to disk
+
+            # Backup existing file
+            if os.path.exists(state_file):
+                try:
+                    import shutil
+                    shutil.copy2(state_file, backup_file)
+                except:
+                    pass
+
+            # Atomic rename (crash-safe)
+            os.replace(temp_file, state_file)
+
         except Exception as e:
             logger.warning(f"Could not save risk state: {e}")
+            # Try to restore from backup if main file corrupted
+            if os.path.exists(backup_file) and not os.path.exists(state_file):
+                try:
+                    import shutil
+                    shutil.copy2(backup_file, state_file)
+                except:
+                    pass
 
     def check_new_day(self):
         """Check if it's a new day and reset state."""
@@ -627,33 +677,25 @@ class SmartRiskManager:
                     return True, ExitReason.TAKE_PROFIT, f"[WARN] Early exit ${current_profit:.2f} (reversal signal: {ml_signal} {ml_confidence:.0%})"
 
         # === CHECK 3: SMART HOLD FOR GOLDEN TIME (TIGHTENED v2) ===
-        # Jika trade di luar golden time dan loss masih kecil, tunggu golden time
-        # TAPI hanya jika momentum tidak terlalu negatif
+        # FIX: REMOVED SMART HOLD MARTINGALE BEHAVIOR
+        # Holding losing positions waiting for "golden time" is DANGEROUS
+        # It encourages holding losers hoping they'll recover
+        # PROPER RISK MANAGEMENT: Follow SL rules, don't hope for recovery
+
         now = datetime.now(WIB)
         current_hour = now.hour
 
-        # Golden time adalah 19:00 - 23:00 WIB (London-NY Overlap)
-        is_golden_time = 19 <= current_hour <= 23
-        hours_to_golden = (19 - current_hour) if current_hour < 19 else 0
-
-        # Smart Hold Logic: LEBIH KETAT - cek momentum dulu
-        if current_profit < 0 and not is_golden_time:
+        # Early cut: If loss > 30% of max and momentum negative, cut early
+        if current_profit < 0:
             loss_percent_of_max = abs(current_profit) / self.max_loss_per_trade * 100
 
-            # BARU: Jika momentum sangat negatif (< -30), JANGAN hold terlalu lama
+            # Cut early if momentum is against us AND loss is significant
             if momentum < -30 and loss_percent_of_max >= 30:
                 logger.info(f"[EARLY CUT] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + weak momentum ({momentum:.0f}) - CUTTING EARLY")
                 return True, ExitReason.TREND_REVERSAL, f"[EARLY CUT] Loss ${abs(current_profit):.2f} + momentum {momentum:.0f} - cutting to preserve daily limit"
 
-            # Jika loss < 30% dari max dan golden time dalam 3 jam DAN momentum tidak terlalu buruk, HOLD
-            if loss_percent_of_max < 30 and hours_to_golden <= 3 and hours_to_golden > 0 and momentum > -50:
-                logger.info(f"[SMART HOLD] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}% of max), Golden time in {hours_to_golden}h - HOLDING")
-                return False, None, f"SMART HOLD: Loss ${abs(current_profit):.2f} | Golden in {hours_to_golden}h | ML: {ml_signal}({ml_confidence:.0%})"
-
-            # Jika loss < 20% dari max dan masih dalam session aktif (London), HOLD
-            if loss_percent_of_max < 20 and 15 <= current_hour < 19 and momentum > -40:
-                logger.info(f"[SMART HOLD] Small loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}% of max) in London session - HOLDING")
-                return False, None, f"SMART HOLD: Small loss ${abs(current_profit):.2f} | London session | ML: {ml_signal}({ml_confidence:.0%})"
+            # NOTE: Smart Hold REMOVED - no more holding losers hoping for golden time
+            # If SL is hit, close the trade immediately
 
         # === CHECK 4: TREND REVERSAL (LEBIH SENSITIF) ===
         # Close lebih cepat jika ada reversal signal - tidak perlu tunggu loss besar

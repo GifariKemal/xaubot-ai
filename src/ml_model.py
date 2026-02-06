@@ -138,9 +138,22 @@ class TradingModel:
         X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
         
         # Train/test split (time-series aware - no shuffle)
+        # FIX: Add GAP between train and test to prevent temporal leakage
+        # Gap of 50 bars (~12.5 hours on M15) breaks autocorrelation
+        gap_size = 50
         split_idx = int(len(X) * train_ratio)
-        X_train, X_test = X[:split_idx], X[split_idx:]
-        y_train, y_test = y[:split_idx], y[split_idx:]
+
+        X_train = X[:split_idx]
+        y_train = y[:split_idx]
+        # Skip 'gap_size' bars between train and test
+        test_start_idx = split_idx + gap_size
+        if test_start_idx >= len(X):
+            # Not enough data for gap, use smaller gap
+            test_start_idx = min(split_idx + 10, len(X) - 1)
+        X_test = X[test_start_idx:]
+        y_test = y[test_start_idx:]
+
+        logger.info(f"Train/Test gap: {test_start_idx - split_idx} bars to prevent temporal leakage")
         
         logger.info(f"Training with {len(X_train)} samples, testing with {len(X_test)} samples")
         

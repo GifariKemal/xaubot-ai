@@ -102,59 +102,46 @@ class SMCAnalyzer:
             - fvg_mid: Midpoint of FVG (50% retracement target)
         """
         # Get shifted values using Polars expressions
+        # FIX: NO LOOKAHEAD - detect FVG on the THIRD candle (after it's confirmed)
+        # We only use PAST data (shift positive values)
         df = df.with_columns([
             # Previous candle values (t-1)
             pl.col("high").shift(1).alias("_prev_high"),
             pl.col("low").shift(1).alias("_prev_low"),
-            # Candle before previous (t-2)
+            # Candle before previous (t-2) - this is the FIRST candle of FVG pattern
             pl.col("high").shift(2).alias("_prev2_high"),
             pl.col("low").shift(2).alias("_prev2_low"),
-            # Next candle values (t+1) - for detecting FVG on middle candle
-            pl.col("high").shift(-1).alias("_next_high"),
-            pl.col("low").shift(-1).alias("_next_low"),
+            # Current candle is the THIRD candle - NO shift(-1) needed!
+        ])
+
+        # Calculate FVG conditions - detected on THIRD candle (current)
+        # Bullish FVG: First candle high < Third candle low (gap up)
+        # Bearish FVG: First candle low > Third candle high (gap down)
+        # NO LOOKAHEAD: we detect AFTER the pattern is complete
+
+        df = df.with_columns([
+            # Bullish FVG: gap between candle 1's high and current candle's low
+            (pl.col("_prev2_high") < pl.col("low")).alias("is_fvg_bull"),
+
+            # Bearish FVG: gap between candle 1's low and current candle's high
+            (pl.col("_prev2_low") > pl.col("high")).alias("is_fvg_bear"),
         ])
         
-        # Calculate FVG conditions
-        # For the MIDDLE candle of a 3-candle pattern:
-        # Bullish FVG: prev2_high < next_low (gap between candle 1's high and candle 3's low)
-        # Bearish FVG: prev2_low > next_high (gap between candle 1's low and candle 3's high)
-        
+        # Calculate FVG zones using CURRENT candle (no lookahead)
         df = df.with_columns([
-            # Bullish FVG detection
-            (pl.col("_prev2_high") < pl.col("_next_low")).alias("is_fvg_bull"),
-            
-            # Bearish FVG detection
-            (pl.col("_prev2_low") > pl.col("_next_high")).alias("is_fvg_bear"),
-        ])
-        
-        # Calculate FVG zones
-        df = df.with_columns([
-            # Bullish FVG zone: from prev2_high to next_low
+            # Bullish FVG zone: from prev2_high (bottom) to current_low (top)
             pl.when(pl.col("is_fvg_bull"))
-                .then(pl.col("_next_low"))
+                .then(pl.col("low"))  # Current candle low is FVG top
+                .when(pl.col("is_fvg_bear"))
+                .then(pl.col("_prev2_low"))  # First candle low is FVG top for bearish
                 .otherwise(None)
                 .alias("fvg_top"),
-            
+
             pl.when(pl.col("is_fvg_bull"))
-                .then(pl.col("_prev2_high"))
-                .otherwise(
-                    pl.when(pl.col("is_fvg_bear"))
-                        .then(pl.col("_prev2_low"))
-                        .otherwise(None)
-                )
-                .alias("fvg_bottom"),
-        ])
-        
-        # Update fvg_top for bearish FVG
-        df = df.with_columns([
-            pl.when(pl.col("is_fvg_bear"))
-                .then(pl.col("_prev2_low"))
-                .otherwise(pl.col("fvg_top"))
-                .alias("fvg_top"),
-            
-            pl.when(pl.col("is_fvg_bear"))
-                .then(pl.col("_next_high"))
-                .otherwise(pl.col("fvg_bottom"))
+                .then(pl.col("_prev2_high"))  # First candle high is FVG bottom for bullish
+                .when(pl.col("is_fvg_bear"))
+                .then(pl.col("high"))  # Current candle high is FVG bottom
+                .otherwise(None)
                 .alias("fvg_bottom"),
         ])
         
@@ -173,10 +160,9 @@ class SMCAnalyzer:
                 .alias("fvg_signal"),
         ])
         
-        # Drop temporary columns
+        # Drop temporary columns (no _next columns since we removed lookahead)
         df = df.drop([
-            "_prev_high", "_prev_low", "_prev2_high", "_prev2_low",
-            "_next_high", "_next_low"
+            "_prev_high", "_prev_low", "_prev2_high", "_prev2_low"
         ])
         
         logger.debug(f"FVG calculation complete. Bullish: {df['is_fvg_bull'].sum()}, Bearish: {df['is_fvg_bear'].sum()}")
@@ -202,41 +188,53 @@ class SMCAnalyzer:
             - swing_low_level: Price level of swing low
         """
         window_size = 2 * self.swing_length + 1
-        
-        # Calculate rolling max/min with centered window
+
+        # Calculate rolling max/min WITHOUT LOOKAHEAD
+        # FIX: We detect swing points AFTER they're confirmed (swing_length bars later)
+        # This means swing detection is delayed but NO FUTURE DATA is used
+        #
+        # Strategy: A swing high at bar [i] is confirmed at bar [i + swing_length]
+        # when we can verify bar [i] was the highest in window
+        # We use shift(swing_length) to look back at the confirmed swing point
         df = df.with_columns([
+            # Look at past window_size bars only
             pl.col("high")
-                .rolling_max(window_size=window_size, center=True)
+                .rolling_max(window_size=window_size, center=False)
                 .alias("_roll_max"),
             pl.col("low")
-                .rolling_min(window_size=window_size, center=True)
+                .rolling_min(window_size=window_size, center=False)
                 .alias("_roll_min"),
+            # Get the high/low from swing_length bars ago (the "center" point)
+            pl.col("high").shift(self.swing_length).alias("_center_high"),
+            pl.col("low").shift(self.swing_length).alias("_center_low"),
         ])
         
-        # Detect swing points where current price equals rolling extreme
+        # Detect swing points: the CENTER point equals rolling extreme
+        # This detects swing points swing_length bars LATE (after confirmation)
+        # NO LOOKAHEAD: we only confirm after seeing bars on both sides
         df = df.with_columns([
-            # Swing High: current high is the rolling max
-            pl.when(pl.col("high") == pl.col("_roll_max"))
+            # Swing High: center high equals rolling max (confirmed swing high)
+            pl.when(pl.col("_center_high") == pl.col("_roll_max"))
                 .then(1)
                 .otherwise(0)
                 .alias("swing_high"),
-            
-            # Swing Low: current low is the rolling min
-            pl.when(pl.col("low") == pl.col("_roll_min"))
+
+            # Swing Low: center low equals rolling min (confirmed swing low)
+            pl.when(pl.col("_center_low") == pl.col("_roll_min"))
                 .then(-1)
                 .otherwise(0)
                 .alias("swing_low"),
         ])
         
-        # Store swing levels
+        # Store swing levels (use center values, not current values)
         df = df.with_columns([
             pl.when(pl.col("swing_high") == 1)
-                .then(pl.col("high"))
+                .then(pl.col("_center_high"))
                 .otherwise(None)
                 .alias("swing_high_level"),
-            
+
             pl.when(pl.col("swing_low") == -1)
-                .then(pl.col("low"))
+                .then(pl.col("_center_low"))
                 .otherwise(None)
                 .alias("swing_low_level"),
         ])
@@ -252,7 +250,7 @@ class SMCAnalyzer:
         ])
         
         # Drop temporary columns
-        df = df.drop(["_roll_max", "_roll_min"])
+        df = df.drop(["_roll_max", "_roll_min", "_center_high", "_center_low"])
         
         swing_highs = (df["swing_high"] == 1).sum()
         swing_lows = (df["swing_low"] == -1).sum()
@@ -302,24 +300,27 @@ class SMCAnalyzer:
         
         for i in range(self.ob_lookback, n):
             # Check for swing low -> Bullish Order Block
+            # FIX: NO LOOKAHEAD - validate OB at CURRENT bar, not future bar
             if swing_lows[i] == -1:
                 # Look for last bearish candle before swing low
                 for j in range(i - 1, max(0, i - self.ob_lookback), -1):
                     if closes[j] < opens[j]:  # Bearish candle
-                        # Check if this is a valid OB (price moved up significantly after)
-                        if i + 1 < n and closes[i + 1] > highs[j]:
+                        # FIX: Validate OB using CURRENT bar (closes[i]) not future bar
+                        # OB is valid if current close is above OB high (structure broken)
+                        if closes[i] > highs[j]:
                             ob[j] = 1  # Bullish OB
                             ob_top[j] = highs[j]
                             ob_bottom[j] = lows[j]
                             break
-            
+
             # Check for swing high -> Bearish Order Block
             if swing_highs[i] == 1:
                 # Look for last bullish candle before swing high
                 for j in range(i - 1, max(0, i - self.ob_lookback), -1):
                     if closes[j] > opens[j]:  # Bullish candle
-                        # Check if this is a valid OB (price moved down significantly after)
-                        if i + 1 < n and closes[i + 1] < lows[j]:
+                        # FIX: Validate OB using CURRENT bar (closes[i]) not future bar
+                        # OB is valid if current close is below OB low (structure broken)
+                        if closes[i] < lows[j]:
                             ob[j] = -1  # Bearish OB
                             ob_top[j] = highs[j]
                             ob_bottom[j] = lows[j]
@@ -629,17 +630,29 @@ class SMCAnalyzer:
             return None, None
 
         # Get ATR for dynamic SL/TP calculation
-        atr = latest["atr"].item() if "atr" in df.columns else current_close * 0.01  # Fallback 1%
-        min_sl_distance = 1.5 * atr  # Minimum 1.5 ATR untuk SL
-        max_tp_distance = 4.0 * atr  # Maximum 4 ATR untuk TP
+        # FIX: Realistic ATR fallback for XAUUSD (~$12-15 typical)
+        if "atr" in df.columns:
+            atr = latest["atr"].item()
+            if atr is None or atr <= 0 or atr > current_close * 0.05:  # Sanity check
+                atr = 12.0  # Default realistic ATR for XAUUSD
+        else:
+            atr = 12.0  # Default realistic ATR for XAUUSD
 
-        # BULLISH SIGNAL CONDITIONS (RELAXED)
+        # SL: 1.5-2 ATR distance (protects against noise)
+        min_sl_distance = 1.5 * atr
+        # TP: Must be at least 2x risk (RR 1:2 minimum)
+        # With 1.5 ATR SL, TP should be at least 3 ATR
+        min_rr_ratio = 2.0  # ENFORCED: Minimum Risk:Reward 1:2
+
+        # BULLISH SIGNAL CONDITIONS
         # Need: bullish structure OR recent bullish break, AND (FVG OR OB)
         if ((market_structure == 1 or has_bullish_break) and
             (has_bullish_fvg or has_bullish_ob)):
 
             entry_zone, zone_type = get_valid_bullish_zone()
-            entry = entry_zone if entry_zone else current_close
+            # FIX: ALWAYS use current_close as entry (no stale prices)
+            # FVG/OB zone is just for confirmation, not entry price
+            entry = current_close
 
             # SL below swing low or ATR-based (use the FURTHER one to prevent whipsaw)
             swing_sl = last_swing_low if last_swing_low and last_swing_low < entry else None
@@ -651,45 +664,53 @@ class SMCAnalyzer:
             else:
                 sl = atr_sl
 
-            # TP at 2:1 RR minimum, capped at max distance
+            # Ensure SL is at least min_sl_distance away
+            if entry - sl < min_sl_distance:
+                sl = entry - min_sl_distance
+
+            # FIX: TP at EXACTLY min_rr_ratio (1:2) - ENFORCED
             risk = entry - sl
-            tp = entry + (risk * 2)
-            # Cap TP at reasonable distance
-            if tp > entry + max_tp_distance:
-                tp = entry + max_tp_distance
+            tp = entry + (risk * min_rr_ratio)
 
-            # Confidence based on confirmations
-            conf = 0.55  # Base
-            if has_bullish_break:
-                conf += 0.1
-            if has_bullish_fvg:
-                conf += 0.1
-            if has_bullish_ob:
-                conf += 0.1
+            # VALIDATE RR before creating signal
+            actual_rr = (tp - entry) / risk if risk > 0 else 0
+            if actual_rr < min_rr_ratio:
+                logger.debug(f"Skipping BUY signal: RR {actual_rr:.2f} < {min_rr_ratio}")
+                signal = None
+            else:
+                # Confidence based on confirmations
+                conf = 0.55  # Base
+                if has_bullish_break:
+                    conf += 0.1
+                if has_bullish_fvg:
+                    conf += 0.1
+                if has_bullish_ob:
+                    conf += 0.1
 
-            reason_parts = []
-            if has_bullish_break:
-                reason_parts.append("BOS/CHoCH")
-            if zone_type == "FVG":
-                reason_parts.append("FVG")
-            if zone_type == "OB":
-                reason_parts.append("OB")
+                reason_parts = []
+                if has_bullish_break:
+                    reason_parts.append("BOS/CHoCH")
+                if zone_type == "FVG":
+                    reason_parts.append("FVG")
+                if zone_type == "OB":
+                    reason_parts.append("OB")
 
-            signal = SMCSignal(
-                signal_type="BUY",
-                entry_price=entry,
-                stop_loss=sl,
-                take_profit=tp,
-                confidence=min(conf, 0.85),
-                reason="Bullish " + " + ".join(reason_parts),
-            )
+                signal = SMCSignal(
+                    signal_type="BUY",
+                    entry_price=entry,
+                    stop_loss=sl,
+                    take_profit=tp,
+                    confidence=min(conf, 0.85),
+                    reason="Bullish " + " + ".join(reason_parts),
+                )
 
-        # BEARISH SIGNAL CONDITIONS (RELAXED)
+        # BEARISH SIGNAL CONDITIONS
         elif ((market_structure == -1 or has_bearish_break) and
               (has_bearish_fvg or has_bearish_ob)):
 
             entry_zone, zone_type = get_valid_bearish_zone()
-            entry = entry_zone if entry_zone else current_close
+            # FIX: ALWAYS use current_close as entry (no stale prices)
+            entry = current_close
 
             # SL above swing high or ATR-based (use the FURTHER one to prevent whipsaw)
             swing_sl = last_swing_high if last_swing_high and last_swing_high > entry else None
@@ -701,38 +722,45 @@ class SMCAnalyzer:
             else:
                 sl = atr_sl
 
-            # TP at 2:1 RR minimum, capped at max distance
+            # Ensure SL is at least min_sl_distance away
+            if sl - entry < min_sl_distance:
+                sl = entry + min_sl_distance
+
+            # FIX: TP at EXACTLY min_rr_ratio (1:2) - ENFORCED
             risk = sl - entry
-            tp = entry - (risk * 2)
-            # Cap TP at reasonable distance
-            if tp < entry - max_tp_distance:
-                tp = entry - max_tp_distance
+            tp = entry - (risk * min_rr_ratio)
 
-            # Confidence based on confirmations
-            conf = 0.55  # Base
-            if has_bearish_break:
-                conf += 0.1
-            if has_bearish_fvg:
-                conf += 0.1
-            if has_bearish_ob:
-                conf += 0.1
+            # VALIDATE RR before creating signal
+            actual_rr = (entry - tp) / risk if risk > 0 else 0
+            if actual_rr < min_rr_ratio:
+                logger.debug(f"Skipping SELL signal: RR {actual_rr:.2f} < {min_rr_ratio}")
+                signal = None
+            else:
+                # Confidence based on confirmations
+                conf = 0.55  # Base
+                if has_bearish_break:
+                    conf += 0.1
+                if has_bearish_fvg:
+                    conf += 0.1
+                if has_bearish_ob:
+                    conf += 0.1
 
-            reason_parts = []
-            if has_bearish_break:
-                reason_parts.append("BOS/CHoCH")
-            if zone_type == "FVG":
-                reason_parts.append("FVG")
-            if zone_type == "OB":
-                reason_parts.append("OB")
+                reason_parts = []
+                if has_bearish_break:
+                    reason_parts.append("BOS/CHoCH")
+                if zone_type == "FVG":
+                    reason_parts.append("FVG")
+                if zone_type == "OB":
+                    reason_parts.append("OB")
 
-            signal = SMCSignal(
-                signal_type="SELL",
-                entry_price=entry,
-                stop_loss=sl,
-                take_profit=tp,
-                confidence=min(conf, 0.85),
-                reason="Bearish " + " + ".join(reason_parts),
-            )
+                signal = SMCSignal(
+                    signal_type="SELL",
+                    entry_price=entry,
+                    stop_loss=sl,
+                    take_profit=tp,
+                    confidence=min(conf, 0.85),
+                    reason="Bearish " + " + ".join(reason_parts),
+                )
 
         if signal:
             logger.info(f"SMC Signal: {signal.signal_type} @ {signal.entry_price:.5f}, "
