@@ -639,70 +639,102 @@ class MT5Connector:
         volume: Optional[float] = None,
         deviation: int = 20,
         magic: int = 123456,
+        max_retries: int = 3,
     ) -> OrderResult:
         """
-        Close an open position.
-        
+        Close an open position with retry logic.
+
         Args:
             ticket: Position ticket
             volume: Volume to close (None for full close)
             deviation: Maximum price deviation
             magic: Magic number
-            
+            max_retries: Maximum retry attempts
+
         Returns:
             OrderResult with execution details
         """
         if not mt5:
             return OrderResult(success=False, comment="MT5 not available")
-        
+
         # Get position info
         position = mt5.positions_get(ticket=ticket)
         if not position:
             return OrderResult(success=False, comment="Position not found")
-        
+
         position = position[0]
         symbol = position.symbol
         pos_volume = volume or position.volume
-        
-        # Determine close direction
-        if position.type == mt5.POSITION_TYPE_BUY:
-            close_type = mt5.ORDER_TYPE_SELL
-            price = mt5.symbol_info_tick(symbol).bid
-        else:
-            close_type = mt5.ORDER_TYPE_BUY
-            price = mt5.symbol_info_tick(symbol).ask
-        
-        request = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
-            "volume": float(pos_volume),
-            "type": close_type,
-            "position": ticket,
-            "price": price,
-            "deviation": deviation,
-            "magic": magic,
-            "comment": "AI Bot Close",
-            "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
-        }
-        
-        result = mt5.order_send(request)
-        
-        if result and result.retcode == self.RETCODE_DONE:
-            logger.info(f"Position {ticket} closed")
-            return OrderResult(
-                success=True,
-                order_id=result.order,
-                retcode=result.retcode,
-                comment=result.comment,
-                price=result.price,
-                volume=result.volume,
-            )
-        
+
+        result = None
+        for attempt in range(max_retries):
+            # Re-fetch price each attempt for accuracy
+            tick = mt5.symbol_info_tick(symbol)
+            if not tick:
+                logger.warning(f"Close attempt {attempt + 1}: No tick data for {symbol}")
+                time.sleep(0.5)
+                continue
+
+            if position.type == mt5.POSITION_TYPE_BUY:
+                close_type = mt5.ORDER_TYPE_SELL
+                price = tick.bid
+            else:
+                close_type = mt5.ORDER_TYPE_BUY
+                price = tick.ask
+
+            request = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": float(pos_volume),
+                "type": close_type,
+                "position": ticket,
+                "price": price,
+                "deviation": deviation,
+                "magic": magic,
+                "comment": "AI Bot Close",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+
+            result = mt5.order_send(request)
+
+            if result is None:
+                error = mt5.last_error()
+                logger.warning(f"Close attempt {attempt + 1} failed (None): {error}")
+                time.sleep(0.5)
+                continue
+
+            if result.retcode == self.RETCODE_DONE:
+                logger.info(f"Position {ticket} closed @ {result.price}")
+                return OrderResult(
+                    success=True,
+                    order_id=result.order,
+                    retcode=result.retcode,
+                    comment=result.comment,
+                    price=result.price,
+                    volume=result.volume,
+                )
+
+            # Non-retryable errors
+            if result.retcode in [
+                self.RETCODE_INVALID_VOLUME,
+                self.RETCODE_INVALID_STOPS,
+                self.RETCODE_TRADE_DISABLED,
+            ]:
+                return OrderResult(
+                    success=False,
+                    retcode=result.retcode,
+                    comment=result.comment,
+                )
+
+            # Retryable: requote, reject, invalid price, invalid request
+            logger.warning(f"Close attempt {attempt + 1} for #{ticket}: {result.retcode} - {result.comment}")
+            time.sleep(0.5)
+
         return OrderResult(
             success=False,
             retcode=result.retcode if result else None,
-            comment=result.comment if result else "Close failed",
+            comment=result.comment if result else "Max retries exceeded",
         )
     
     def get_open_positions(

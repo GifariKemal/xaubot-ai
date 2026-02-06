@@ -1220,7 +1220,7 @@ class TradingBot:
                     regime=regime,
                     volatility=volatility,
                     session=session_status.get("session", "unknown"),
-                    spread=self.mt5.get_symbol_info(self.config.symbol).spread if hasattr(self.mt5, 'get_symbol_info') else 0,
+                    spread=self.mt5.get_symbol_info(self.config.symbol).get("spread", 0) if hasattr(self.mt5, 'get_symbol_info') else 0,
                     atr=0,  # ATR calculated in main loop, not available here
                     smc_signal=signal.signal_type,
                     smc_confidence=signal.confidence,
