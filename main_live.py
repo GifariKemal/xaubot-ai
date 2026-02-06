@@ -858,6 +858,17 @@ class TradingBot:
             if len(recent) < 5:
                 return True, "Not enough data for pullback check"
 
+            # Get ATR for dynamic thresholds (no more hardcoded $2, $1.5)
+            atr = 12.0  # Default for XAUUSD
+            if "atr" in df.columns:
+                atr_val = recent["atr"].to_list()[-1]
+                if atr_val is not None and atr_val > 0:
+                    atr = atr_val
+
+            # Dynamic thresholds based on ATR
+            bounce_threshold = atr * 0.15      # 15% of ATR = significant bounce
+            consolidation_threshold = atr * 0.10  # 10% of ATR = consolidation
+
             # === 1. SHORT-TERM MOMENTUM (Last 3 candles) ===
             closes = recent["close"].to_list()
             last_3_closes = closes[-3:]
@@ -906,9 +917,9 @@ class TradingBot:
                 # - MACD histogram FALLING (bearish momentum)
                 # - Price BELOW or AT EMA (not extended above)
 
-                # BLOCK if price is bouncing UP
-                if momentum_direction == "UP" and short_momentum > 2:  # > $2 bounce
-                    return False, f"SELL blocked: Price bouncing UP (+${short_momentum:.2f})"
+                # BLOCK if price is bouncing UP (ATR-based threshold)
+                if momentum_direction == "UP" and short_momentum > bounce_threshold:
+                    return False, f"SELL blocked: Price bouncing UP (+${short_momentum:.2f} > {bounce_threshold:.2f})"
 
                 # BLOCK if MACD showing bullish momentum increasing
                 if macd_hist_direction == "RISING" and momentum_direction == "UP":
@@ -922,9 +933,9 @@ class TradingBot:
                 if momentum_direction == "DOWN":
                     return True, f"SELL OK: Momentum aligned (${short_momentum:.2f})"
 
-                # ALLOW if price just started turning (small bounce acceptable)
-                if abs(short_momentum) < 1.5:  # < $1.5 movement = consolidation
-                    return True, f"SELL OK: Consolidation phase"
+                # ALLOW if price in consolidation (ATR-based threshold)
+                if abs(short_momentum) < consolidation_threshold:
+                    return True, f"SELL OK: Consolidation phase (<{consolidation_threshold:.2f})"
 
             elif signal_direction == "BUY":
                 # For BUY signal, we want:
@@ -932,9 +943,9 @@ class TradingBot:
                 # - MACD histogram RISING (bullish momentum)
                 # - Price ABOVE or AT EMA (not falling below)
 
-                # BLOCK if price is falling DOWN
-                if momentum_direction == "DOWN" and short_momentum < -2:  # > $2 drop
-                    return False, f"BUY blocked: Price falling DOWN (${short_momentum:.2f})"
+                # BLOCK if price is falling DOWN (ATR-based threshold)
+                if momentum_direction == "DOWN" and short_momentum < -bounce_threshold:
+                    return False, f"BUY blocked: Price falling DOWN (${short_momentum:.2f} < -{bounce_threshold:.2f})"
 
                 # BLOCK if MACD showing bearish momentum increasing
                 if macd_hist_direction == "FALLING" and momentum_direction == "DOWN":
@@ -948,9 +959,9 @@ class TradingBot:
                 if momentum_direction == "UP":
                     return True, f"BUY OK: Momentum aligned (+${short_momentum:.2f})"
 
-                # ALLOW if price just started turning (small drop acceptable)
-                if abs(short_momentum) < 1.5:  # < $1.5 movement = consolidation
-                    return True, f"BUY OK: Consolidation phase"
+                # ALLOW if price in consolidation (ATR-based threshold)
+                if abs(short_momentum) < consolidation_threshold:
+                    return True, f"BUY OK: Consolidation phase (<{consolidation_threshold:.2f})"
 
             # Default: allow trade if no strong pullback detected
             return True, f"Pullback check passed (mom={momentum_direction}, macd={macd_hist_direction})"
@@ -1114,11 +1125,41 @@ class TradingBot:
             self._last_signal = signal
             self._last_trade_time = datetime.now()
 
-            # Register with smart risk manager
+            # === SLIPPAGE VALIDATION ===
+            expected_price = signal.entry_price
+            actual_price = result.price if result.price > 0 else expected_price
+            slippage = abs(actual_price - expected_price)
+            slippage_pips = slippage * 10  # For XAUUSD, $1 = 10 pips
+
+            # Max acceptable slippage: 0.15% or $7 for XAUUSD
+            max_slippage = expected_price * 0.0015  # 0.15% of price
+
+            if slippage > max_slippage:
+                logger.warning(f"HIGH SLIPPAGE: Expected {expected_price:.2f}, Got {actual_price:.2f} (slip: ${slippage:.2f} / {slippage_pips:.1f} pips)")
+            elif slippage > 0:
+                logger.info(f"Slippage OK: ${slippage:.2f} ({slippage_pips:.1f} pips)")
+
+            # === PARTIAL FILL CHECK ===
+            requested_volume = position.lot_size
+            filled_volume = result.volume if result.volume > 0 else requested_volume
+
+            if filled_volume < requested_volume:
+                fill_ratio = filled_volume / requested_volume * 100
+                logger.warning(f"PARTIAL FILL: Requested {requested_volume}, Got {filled_volume} ({fill_ratio:.1f}%)")
+                # Update position with actual filled volume
+                position.lot_size = filled_volume
+            elif filled_volume > 0:
+                logger.debug(f"Full fill: {filled_volume} lots")
+
+            # Use actual price and volume for registration
+            entry_price_actual = actual_price if actual_price > 0 else signal.entry_price
+            lot_size_actual = filled_volume
+
+            # Register with smart risk manager (use actual values)
             self.smart_risk.register_position(
                 ticket=result.order_id,
-                entry_price=signal.entry_price,
-                lot_size=position.lot_size,
+                entry_price=entry_price_actual,  # Actual entry price
+                lot_size=lot_size_actual,        # Actual filled volume
                 direction=signal.signal_type,
             )
 
@@ -1127,15 +1168,18 @@ class TradingBot:
             session_status = self.session_filter.get_status_report()
             volatility = session_status.get("volatility", "unknown")
 
-            # Store trade info for close notification
+            # Store trade info for close notification (use actual values)
             self._open_trade_info[result.order_id] = {
-                "entry_price": signal.entry_price,
+                "entry_price": entry_price_actual,  # Actual price
+                "expected_price": signal.entry_price,
+                "slippage": slippage,
+                "lot_size": lot_size_actual,        # Actual filled volume
+                "requested_lot_size": requested_volume,
                 "open_time": datetime.now(),
                 "balance_before": self.mt5.account_balance,
                 "ml_confidence": signal.confidence,
                 "regime": regime,
                 "volatility": volatility,
-                "lot_size": position.lot_size,
                 "direction": signal.signal_type,
             }
 

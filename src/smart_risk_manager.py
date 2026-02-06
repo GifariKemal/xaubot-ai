@@ -746,20 +746,36 @@ class SmartRiskManager:
             elif current_profit > -10:
                 return True, ExitReason.WEEKEND_CLOSE, f"[WEEKEND] Weekend close - small loss ${current_profit:.2f}"
 
-        # === CHECK 8: TIME-BASED EXIT (NEW) ===
-        # Close trades yang stuck terlalu lama tanpa progress
+        # === CHECK 8: SMART TIME-BASED EXIT ===
+        # Don't cut winners short - check profit growth and trend
         trade_duration_hours = (now - guard.entry_time).total_seconds() / 3600
 
-        # 4+ jam tanpa profit berarti = exit
-        if trade_duration_hours >= 4 and current_profit < 5:
-            if current_profit >= 0:
-                return True, ExitReason.TAKE_PROFIT, f"[TIMEOUT] Closing breakeven/small profit after {trade_duration_hours:.1f}h"
-            elif current_profit > -15:
-                return True, ExitReason.TREND_REVERSAL, f"[TIMEOUT] Closing small loss ${current_profit:.2f} after {trade_duration_hours:.1f}h"
+        # Check if profit is growing (positive momentum = don't exit early)
+        profit_growing = momentum > 0
+        ml_agrees = (
+            (guard.direction == "BUY" and ml_signal == "BUY") or
+            (guard.direction == "SELL" and ml_signal == "SELL")
+        )
 
-        # Maximum 6 jam untuk any trade
+        # 4+ hours: Only exit if stuck (no profit growth)
+        if trade_duration_hours >= 4:
+            if current_profit < 5 and not profit_growing:
+                # Stuck with no growth - exit
+                if current_profit >= 0:
+                    return True, ExitReason.TAKE_PROFIT, f"[TIMEOUT] Breakeven + no growth after {trade_duration_hours:.1f}h"
+                elif current_profit > -15:
+                    return True, ExitReason.TREND_REVERSAL, f"[TIMEOUT] Small loss ${current_profit:.2f} + no growth after {trade_duration_hours:.1f}h"
+            elif current_profit >= 5 and profit_growing and ml_agrees:
+                # Profitable and growing - extend time (log only)
+                logger.debug(f"[TIME OK] Profit growing +${current_profit:.2f}, extending time (was {trade_duration_hours:.1f}h)")
+
+        # 6+ hours: Exit unless significantly profitable AND still growing
         if trade_duration_hours >= 6:
-            return True, ExitReason.TREND_REVERSAL, f"[MAX TIME] Position open {trade_duration_hours:.1f}h - forcing close"
+            if current_profit < 10 or not profit_growing:
+                return True, ExitReason.TREND_REVERSAL, f"[MAX TIME] {trade_duration_hours:.1f}h - profit ${current_profit:.2f}"
+            # If profit > $10 and growing, allow up to 8 hours
+            elif trade_duration_hours >= 8:
+                return True, ExitReason.TAKE_PROFIT, f"[MAX TIME] Taking profit ${current_profit:.2f} after {trade_duration_hours:.1f}h"
 
         # === DEFAULT: HOLD ===
         status = f"+${current_profit:.2f}" if current_profit > 0 else f"-${abs(current_profit):.2f}"
