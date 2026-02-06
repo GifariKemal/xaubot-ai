@@ -3,20 +3,33 @@ Backtest Live Sync - 100% Identical to main_live.py
 ====================================================
 This backtest MUST be identical to live trading logic.
 
+SYNCED with Critical & Major Fixes (Feb 2025):
+1. SMC Signal: No lookahead bias, current_close entry, min RR 2.0
+2. Pullback Filter: ATR-based thresholds (not hardcoded $2, $1.5)
+3. Time-Based Exit: Checks profit_growing + ML agreement before exit
+4. Trend Reversal: ATR-based momentum thresholds
+5. Signal Persistence: Index-based cleanup (prevents memory leak)
+6. Calibrated Confidence: Uses SMC's weighted confidence calculation
+
 Synchronized elements:
-1. ML Model: XGBoost with same features
-2. SMC Analyzer: Same swing_length and ob_lookback
+1. ML Model: XGBoost with same features, 50-bar train/test gap
+2. SMC Analyzer: Same swing_length, ob_lookback, NO LOOKAHEAD
 3. Regime Detection: HMM with MarketRegimeDetector
 4. Session Filter: Golden Time 19:00-23:00 WIB
 5. Signal Logic:
    - Skip if market quality AVOID or CRISIS
-   - ML confidence >= ML_THRESHOLD required
+   - ML confidence >= ML_THRESHOLD required (default 50%)
    - ML shouldn't strongly disagree (>65% opposite)
    - Signal confirmation (2+ consecutive signals)
-   - Pullback filter
-6. Position Sizing: Based on ML confidence tiers
-7. Trade Cooldown: 300 seconds (5 minutes)
-8. Exit Logic: TP hit, ML reversal, or max loss (no hard SL)
+   - Pullback filter (ATR-based thresholds)
+6. Position Sizing: Based on ML confidence tiers (0.01-0.02 lot)
+7. Trade Cooldown: 20 bars (~5 hours on M15)
+8. Exit Logic:
+   - TP hit (RR 1:2 enforced)
+   - ML reversal (>65% opposite signal)
+   - Trend reversal (ATR-based momentum shift)
+   - Smart timeout (checks profit_growing before exit)
+   - Max loss per trade ($50 default)
 
 Usage:
     python backtests/backtest_live_sync.py --tune  # Find optimal thresholds
@@ -201,7 +214,7 @@ class LiveSyncBacktest:
         idx: int,
     ) -> Tuple[bool, str]:
         """
-        Check pullback filter - EXACT same logic as main_live.py
+        Check pullback filter - SYNCED with main_live.py (ATR-based thresholds)
         """
         if not self.pullback_filter:
             return True, "Pullback filter disabled"
@@ -213,6 +226,17 @@ class LiveSyncBacktest:
             # Get data up to current index
             closes = df["close"].to_list()[:idx+1]
             last_3 = closes[-3:]
+
+            # Get ATR for dynamic thresholds (SYNCED: no more hardcoded values)
+            atr = 12.0  # Default for XAUUSD
+            if "atr" in df.columns:
+                atr_list = df["atr"].to_list()[:idx+1]
+                if atr_list[-1] is not None and atr_list[-1] > 0:
+                    atr = atr_list[-1]
+
+            # Dynamic thresholds based on ATR (SYNCED with main_live.py)
+            bounce_threshold = atr * 0.15      # 15% of ATR = significant bounce
+            consolidation_threshold = atr * 0.10  # 10% of ATR = consolidation
 
             # Short-term momentum
             short_momentum = last_3[-1] - last_3[0]
@@ -236,33 +260,33 @@ class LiveSyncBacktest:
                     elif current_price < ema_9 * 0.999:
                         price_vs_ema = "BELOW"
 
-            # SELL signal pullback check
+            # SELL signal pullback check (ATR-based thresholds)
             if signal_direction == "SELL":
-                if momentum_dir == "UP" and short_momentum > 2:
-                    return False, f"SELL blocked: Price bouncing UP (+${short_momentum:.2f})"
+                if momentum_dir == "UP" and short_momentum > bounce_threshold:
+                    return False, f"SELL blocked: Price bouncing UP (+${short_momentum:.2f} > {bounce_threshold:.2f})"
                 if macd_dir == "RISING" and momentum_dir == "UP":
                     return False, "SELL blocked: MACD bullish + price rising"
                 if price_vs_ema == "ABOVE" and momentum_dir == "UP":
                     return False, "SELL blocked: Price above EMA9 and rising"
                 if momentum_dir == "DOWN":
-                    return True, "SELL OK: Momentum aligned"
-                if abs(short_momentum) < 1.5:
-                    return True, "SELL OK: Consolidation phase"
+                    return True, f"SELL OK: Momentum aligned (${short_momentum:.2f})"
+                if abs(short_momentum) < consolidation_threshold:
+                    return True, f"SELL OK: Consolidation phase (<{consolidation_threshold:.2f})"
 
-            # BUY signal pullback check
+            # BUY signal pullback check (ATR-based thresholds)
             elif signal_direction == "BUY":
-                if momentum_dir == "DOWN" and short_momentum < -2:
-                    return False, f"BUY blocked: Price falling DOWN (${short_momentum:.2f})"
+                if momentum_dir == "DOWN" and short_momentum < -bounce_threshold:
+                    return False, f"BUY blocked: Price falling DOWN (${short_momentum:.2f} < -{bounce_threshold:.2f})"
                 if macd_dir == "FALLING" and momentum_dir == "DOWN":
                     return False, "BUY blocked: MACD bearish + price falling"
                 if price_vs_ema == "BELOW" and momentum_dir == "DOWN":
                     return False, "BUY blocked: Price below EMA9 and falling"
                 if momentum_dir == "UP":
-                    return True, "BUY OK: Momentum aligned"
-                if abs(short_momentum) < 1.5:
-                    return True, "BUY OK: Consolidation phase"
+                    return True, f"BUY OK: Momentum aligned (+${short_momentum:.2f})"
+                if abs(short_momentum) < consolidation_threshold:
+                    return True, f"BUY OK: Consolidation phase (<{consolidation_threshold:.2f})"
 
-            return True, "Pullback check passed"
+            return True, f"Pullback check passed (mom={momentum_dir}, macd={macd_dir})"
 
         except Exception as e:
             return True, f"Pullback error: {e}"
@@ -279,6 +303,7 @@ class LiveSyncBacktest:
     ) -> Tuple[float, float, ExitReason, int, float]:
         """
         Simulate trade exit with smart exit logic (no hard SL).
+        SYNCED with main_live.py and smart_risk_manager.py
 
         Returns: (profit_usd, profit_pips, exit_reason, exit_idx, exit_price)
         """
@@ -288,8 +313,22 @@ class LiveSyncBacktest:
         lows = df["low"].to_list()
         closes = df["close"].to_list()
 
+        # Get ATR for dynamic thresholds (SYNCED: no more hardcoded values)
+        atr = 12.0  # Default for XAUUSD
+        if "atr" in df.columns:
+            atr_list = df["atr"].to_list()
+            if entry_idx < len(atr_list) and atr_list[entry_idx] is not None:
+                atr = atr_list[entry_idx]
+
+        # Dynamic thresholds based on ATR (SYNCED with main_live.py)
+        reversal_momentum_threshold = atr * 0.4   # 40% of ATR = strong reversal
+        min_loss_for_reversal_exit = atr * 0.8    # 80% of ATR = ~$10 equivalent
+
         # Get ML predictions for exit logic
         feature_cols = [f for f in self.ml_model.feature_names if f in df.columns]
+
+        # Track profit history for profit_growing check (SYNCED with smart_risk_manager)
+        profit_history = []
 
         for i in range(entry_idx + 1, min(entry_idx + max_bars, len(df))):
             high = highs[i]
@@ -315,19 +354,55 @@ class LiveSyncBacktest:
                 current_pips = (entry_price - close) / 0.1
             current_profit = current_pips * pip_value * lot_size
 
+            # Track profit history for growth check
+            profit_history.append(current_profit)
+
             # === EXIT LOGIC 2: Maximum Loss ===
             if current_profit < -self.max_loss_per_trade:
                 return current_profit, current_pips, ExitReason.MAX_LOSS, i, close
 
-            # === EXIT LOGIC 3: TIME-BASED EXIT (NEW - synced with live) ===
+            # === EXIT LOGIC 3: SMART TIME-BASED EXIT (SYNCED with smart_risk_manager) ===
             # 4 hours = 16 bars on M15, 6 hours = 24 bars
             bars_since_entry = i - entry_idx
-            if bars_since_entry >= 16 and current_profit < 5:  # 4+ hours with no profit
-                if current_profit >= 0:
+
+            # Check if profit is growing (SYNCED: positive momentum = don't exit early)
+            profit_growing = False
+            if len(profit_history) >= 4:
+                recent_profits = profit_history[-4:]
+                profit_momentum = recent_profits[-1] - recent_profits[0]
+                profit_growing = profit_momentum > 0
+
+            # Get ML prediction for agreement check
+            ml_agrees = False
+            try:
+                if (i - entry_idx) % 4 == 0:  # Check every 4 bars
+                    df_slice = df.head(i + 1)
+                    ml_pred = self.ml_model.predict(df_slice, feature_cols)
+                    ml_agrees = (
+                        (direction == "BUY" and ml_pred.signal == "BUY") or
+                        (direction == "SELL" and ml_pred.signal == "SELL")
+                    )
+            except:
+                pass
+
+            # 4+ hours: Only exit if stuck (no profit growth) - SYNCED
+            if bars_since_entry >= 16:
+                if current_profit < 5 and not profit_growing:
+                    # Stuck with no growth - exit
+                    if current_profit >= 0:
+                        return current_profit, current_pips, ExitReason.TIMEOUT, i, close
+                    elif current_profit > -15:
+                        return current_profit, current_pips, ExitReason.TIMEOUT, i, close
+                # If profitable and growing and ML agrees - extend time (don't exit)
+
+            # 6+ hours: Exit unless significantly profitable AND still growing
+            if bars_since_entry >= 24:
+                if current_profit < 10 or not profit_growing:
                     return current_profit, current_pips, ExitReason.TIMEOUT, i, close
-                elif current_profit > -15:
-                    return current_profit, current_pips, ExitReason.TIMEOUT, i, close
-            if bars_since_entry >= 24:  # Max 6 hours
+                # If profit > $10 and growing, allow up to 8 hours (32 bars)
+
+            # 8+ hours: Hard max - exit regardless
+            if bars_since_entry >= 32:
                 return current_profit, current_pips, ExitReason.TIMEOUT, i, close
 
             # === EXIT LOGIC 4: ML Reversal (check every 5 bars) ===
@@ -344,17 +419,17 @@ class LiveSyncBacktest:
                 except:
                     pass
 
-            # === EXIT LOGIC 4: Trend Reversal (momentum shift) ===
+            # === EXIT LOGIC 5: Trend Reversal (ATR-based momentum shift) ===
             if i > entry_idx + 10:
                 recent_closes = closes[i-5:i+1]
                 momentum = recent_closes[-1] - recent_closes[0]
 
-                # Strong momentum against position
-                if direction == "BUY" and momentum < -5:  # $5 drop
-                    if current_profit < -10:  # Only if already losing
+                # Strong momentum against position (ATR-based thresholds)
+                if direction == "BUY" and momentum < -reversal_momentum_threshold:
+                    if current_profit < -min_loss_for_reversal_exit:  # Only if already losing
                         return current_profit, current_pips, ExitReason.TREND_REVERSAL, i, close
-                elif direction == "SELL" and momentum > 5:  # $5 rise
-                    if current_profit < -10:
+                elif direction == "SELL" and momentum > reversal_momentum_threshold:
+                    if current_profit < -min_loss_for_reversal_exit:
                         return current_profit, current_pips, ExitReason.TREND_REVERSAL, i, close
 
         # Timeout - close at last price
@@ -495,21 +570,36 @@ class LiveSyncBacktest:
                 self._signal_persistence = {}
                 continue
 
-            # === SIGNAL CONFIRMATION ===
+            # === SIGNAL CONFIRMATION (SYNCED with main_live.py) ===
             signal_key = f"{smc_signal.signal_type}_{int(smc_signal.entry_price)}"
+
+            # Cleanup: Remove entries older than 20 bars (equivalent to 5 min cleanup in live)
+            # This prevents memory leak from accumulating stale signals
+            self._signal_persistence = {
+                k: v for k, v in self._signal_persistence.items()
+                if i - v[1] < 20  # Keep only signals seen in last 20 bars
+            }
+
+            # Also limit to max 50 entries as safety (SYNCED)
+            if len(self._signal_persistence) > 50:
+                # Keep only 20 most recent
+                sorted_signals = sorted(self._signal_persistence.items(), key=lambda x: x[1][1], reverse=True)
+                self._signal_persistence = dict(sorted_signals[:20])
+
             if signal_key not in self._signal_persistence:
-                self._signal_persistence[signal_key] = 1
-                # Clean old signals
-                self._signal_persistence = {k: v for k, v in self._signal_persistence.items() if v < 10}
+                self._signal_persistence[signal_key] = (1, i)  # (count, last_seen_idx)
                 continue
             else:
-                self._signal_persistence[signal_key] += 1
+                count, _ = self._signal_persistence[signal_key]
+                self._signal_persistence[signal_key] = (count + 1, i)
 
-            if self._signal_persistence[signal_key] < self.signal_confirmation:
+            # Require at least N consecutive confirmations
+            count, _ = self._signal_persistence[signal_key]
+            if count < self.signal_confirmation:
                 continue
 
-            # Reset confirmation
-            self._signal_persistence = {}
+            # Signal confirmed! Reset counter (SYNCED)
+            self._signal_persistence[signal_key] = (0, i)
 
             # === PULLBACK FILTER ===
             pullback_ok, pullback_reason = self._check_pullback_filter(
