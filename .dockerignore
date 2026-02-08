@@ -1,0 +1,22 @@
+# Only the API code is needed — keep context minimal
+.git/
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+.next/
+*.log
+*.pkl
+*.joblib
+docs/
+archive/
+backtests/
+tests/
+scripts/
+models/
+logs/
+data/
+.env
+.env.local
+*.md

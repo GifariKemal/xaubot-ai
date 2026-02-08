@@ -4,12 +4,14 @@ Backtest Live Sync - 100% Identical to main_live.py
 This backtest MUST be identical to live trading logic.
 
 SYNCED with Critical & Major Fixes (Feb 2025):
-1. SMC Signal: No lookahead bias, current_close entry, min RR 2.0
+1. SMC Signal: No lookahead bias, current_close entry, Fixed RR 1:1.5
 2. Pullback Filter: ATR-based thresholds (not hardcoded $2, $1.5)
 3. Time-Based Exit: Checks profit_growing + ML agreement before exit
-4. Trend Reversal: ATR-based momentum thresholds
+4. Trend Reversal: ATR-based momentum thresholds (0.6x multiplier)
 5. Signal Persistence: Index-based cleanup (prevents memory leak)
 6. Calibrated Confidence: Uses SMC's weighted confidence calculation
+7. Dynamic RR: 1.5 (ranging) to 2.0 (strong trend) based on market conditions
+8. SELL Filter: Requires ML agreement + 55% confidence
 
 Synchronized elements:
 1. ML Model: XGBoost with same features, 50-bar train/test gap
@@ -25,9 +27,9 @@ Synchronized elements:
 6. Position Sizing: Based on ML confidence tiers (0.01-0.02 lot)
 7. Trade Cooldown: 20 bars (~5 hours on M15)
 8. Exit Logic:
-   - TP hit (RR 1:2 enforced)
+   - TP hit (Dynamic RR 1.5-2.0)
    - ML reversal (>65% opposite signal)
-   - Trend reversal (ATR-based momentum shift)
+   - Trend reversal (ATR * 0.6 momentum shift)
    - Smart timeout (checks profit_growing before exit)
    - Max loss per trade ($50 default)
 

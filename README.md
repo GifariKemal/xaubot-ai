@@ -119,13 +119,44 @@ xaubot-ai/
 
 ## Installation
 
-### Prerequisites
+### 🐳 Docker Deployment (Recommended)
 
+**Quick Start:**
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/GifariKemal/xaubot-ai.git
+cd xaubot-ai
+
+# 2. Configure environment
+cp .env.docker.example .env
+# Edit .env with your MT5 credentials
+
+# 3. Start all services (Windows)
+docker-start.bat
+
+# 3. Start all services (Linux/Mac)
+./docker-start.sh
+```
+
+**Services will be available at:**
+- 📊 Dashboard: http://localhost:3000
+- 🔌 API: http://localhost:8000
+- 📚 API Docs: http://localhost:8000/docs
+- 🗄️ Database: localhost:5432
+
+**Full Docker documentation:** See [DOCKER.md](DOCKER.md)
+
+---
+
+### 🐍 Manual Installation
+
+**Prerequisites:**
 - Python 3.11+
 - MetaTrader 5 terminal (Windows)
 - PostgreSQL (optional, for trade logging)
 
-### Setup
+**Setup:**
 
 ```bash
 # Clone the repository

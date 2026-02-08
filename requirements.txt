@@ -33,6 +33,11 @@ aiohttp>=3.9.0
 # PostgreSQL Database
 psycopg2-binary>=2.9.9
 
+# FastAPI for Web Dashboard API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.6.0
+
 # Optional: For backtesting
 # vectorbt>=0.26.2
 

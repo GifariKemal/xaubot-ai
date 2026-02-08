@@ -525,15 +525,14 @@ class TradingBot:
     # --- H1 Multi-Timeframe Bias (Fix 5) ---
     def _get_h1_bias(self) -> str:
         """
-        Determine H1 higher-timeframe bias using SMC structure.
+        Determine H1 higher-timeframe bias using Price vs EMA20 (#31B).
         Returns: "BULLISH", "BEARISH", or "NEUTRAL"
 
-        Logic:
+        Logic (#31B: backtest +$343, WR 81.8%, Sharpe 3.97, DD 2.5%):
         - Fetch H1 data (100 bars)
-        - Run SMC analysis (BOS, CHoCH, OB, FVG)
-        - Last BOS/CHoCH direction = H1 bias
-        - If H1 has bullish OB near price → BULLISH zone
-        - If H1 has bearish OB near price → BEARISH zone
+        - Calculate EMA20 on H1 closes
+        - If price > EMA20 * 1.001 → BULLISH (allow BUY only)
+        - If price < EMA20 * 0.999 → BEARISH (allow SELL only)
         """
         try:
             # Cache H1 bias — only update every 4 candles (1 hour) since H1 changes slowly
@@ -550,73 +549,31 @@ class TradingBot:
             if len(df_h1) < 20:
                 return "NEUTRAL"
 
-            # Run SMC on H1 data
-            from src.smc_polars import SMCAnalyzer
-            h1_smc = SMCAnalyzer(swing_length=5, fvg_min_gap_pips=5.0, ob_lookback=10)
-            df_h1 = h1_smc.calculate_all(df_h1)
+            # #31B: Price vs EMA20 method (backtested winner)
+            import numpy as np
+            closes = df_h1["close"].to_list()
+            current_price = closes[-1]
 
-            current_price = df_h1["close"].tail(1).item()
+            # Calculate EMA20
+            period = 20
+            multiplier = 2 / (period + 1)
+            ema = np.mean(closes[:period])
+            for val in closes[period:]:
+                ema = (val - ema) * multiplier + ema
+
+            # Determine bias with small buffer (0.1% threshold)
             bias = "NEUTRAL"
-
-            # 1. Check last BOS direction on H1
-            bos_col = df_h1["bos"].to_list()
-            last_bos = 0
-            for v in reversed(bos_col[-20:]):
-                if v != 0:
-                    last_bos = v
-                    break
-
-            # 2. Check last CHoCH direction on H1
-            choch_col = df_h1["choch"].to_list()
-            last_choch = 0
-            for v in reversed(choch_col[-20:]):
-                if v != 0:
-                    last_choch = v
-                    break
-
-            # 3. Check if price is near H1 Order Block
-            ob_col = df_h1["ob"].to_list()
-            highs = df_h1["high"].to_list()
-            lows = df_h1["low"].to_list()
-            near_bullish_ob = False
-            near_bearish_ob = False
-
-            for i in range(-10, 0):  # Last 10 H1 candles
-                idx = len(ob_col) + i
-                if idx < 0:
-                    continue
-                ob_val = ob_col[idx]
-                if ob_val == 1:  # Bullish OB
-                    # Price within OB zone (low to high of that candle)
-                    if lows[idx] <= current_price <= highs[idx] * 1.002:
-                        near_bullish_ob = True
-                elif ob_val == -1:  # Bearish OB
-                    if lows[idx] * 0.998 <= current_price <= highs[idx]:
-                        near_bearish_ob = True
-
-            # Determine bias: BOS > CHoCH > OB proximity
-            if last_bos == 1:
+            if current_price > ema * 1.001:
                 bias = "BULLISH"
-            elif last_bos == -1:
+            elif current_price < ema * 0.999:
                 bias = "BEARISH"
-            elif last_choch == 1:
-                bias = "BULLISH"
-            elif last_choch == -1:
-                bias = "BEARISH"
-
-            # OB proximity can override if no clear structure
-            if bias == "NEUTRAL":
-                if near_bullish_ob:
-                    bias = "BULLISH"
-                elif near_bearish_ob:
-                    bias = "BEARISH"
 
             # Cache result
             self._h1_bias_cache = bias
             self._h1_bias_loop = self._loop_count
 
             if self._loop_count % 4 == 0:
-                logger.info(f"H1 Bias: {bias} (BOS={last_bos}, CHoCH={last_choch}, near_bull_OB={near_bullish_ob}, near_bear_OB={near_bearish_ob})")
+                logger.info(f"H1 Bias: {bias} (price={current_price:.2f}, EMA20={ema:.2f})")
 
             return bias
 
@@ -962,10 +919,18 @@ class TradingBot:
         if final_signal is None:
             return
 
-        # 10.1 H1 Multi-Timeframe Filter - DISABLED (SMC-only mode)
-        # H1 bias still logged for dashboard but does NOT block trades
+        # 10.1 H1 Multi-Timeframe Filter (#31B: Price vs EMA20 — backtest +$343)
+        # BUY only when H1 is BULLISH, SELL only when H1 is BEARISH
         if h1_bias != "NEUTRAL":
-            logger.info(f"H1 Bias: {h1_bias} (monitoring only, not blocking)")
+            if (final_signal.signal_type == "BUY" and h1_bias != "BULLISH") or \
+               (final_signal.signal_type == "SELL" and h1_bias != "BEARISH"):
+                logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1={h1_bias})")
+                return
+            logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
+        else:
+            # H1 NEUTRAL = block both directions (strict mode from backtest)
+            logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1=NEUTRAL)")
+            return
 
         # 10.5 Check trade cooldown
         if self._last_trade_time:

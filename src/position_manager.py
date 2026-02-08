@@ -554,9 +554,10 @@ class SmartPositionManager:
             trail_start = self.trail_start_pips
             trail_step = self.trail_step_pips
 
-        # 5. Breakeven protection
+        # 5. Breakeven protection (#28B: smart BE locks profit at 0.5*ATR instead of fixed $2)
         if pip_profit >= be_pips and current_sl != 0:
-            breakeven_sl = entry_price + (1 if is_buy else -1) * 2  # 2 points buffer
+            be_lock_distance = current_atr * 0.5 if (current_atr is not None and current_atr > 0) else 2.0
+            breakeven_sl = entry_price + (1 if is_buy else -1) * be_lock_distance
 
             if is_buy and current_sl < breakeven_sl:
                 return PositionAction(

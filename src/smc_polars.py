@@ -135,6 +135,80 @@ class SMCAnalyzer:
         # Cap confidence at 0.85 (never 100% certain)
         return min(conf, 0.85)
 
+    def _calculate_dynamic_rr(
+        self,
+        market_structure: int,
+        has_bullish_break: bool,
+        has_bearish_break: bool,
+        has_fvg: bool,
+        has_ob: bool,
+        df: Optional[pl.DataFrame] = None,
+    ) -> float:
+        """
+        Calculate dynamic Risk:Reward ratio based on market conditions.
+
+        Returns RR between 1.5 and 2.0:
+        - 2.0: Strong trend, high confidence -> let profits run
+        - 1.5: Ranging/uncertain -> take profit earlier (higher hit rate)
+
+        Factors considered:
+        1. Market structure strength (trending vs ranging)
+        2. Number of confirmations (BOS, FVG, OB)
+        3. Trend strength (multiple BOS in same direction)
+        4. Volatility (high vol = lower RR for faster exit)
+        """
+        # Start with base RR
+        rr = 1.5  # Conservative base
+
+        # === Factor 1: Market Structure ===
+        # Strong trend = higher RR
+        if market_structure != 0:  # Trending (bullish or bearish)
+            rr += 0.15
+
+        # === Factor 2: Structure Break Confirmation ===
+        if has_bullish_break or has_bearish_break:
+            rr += 0.10  # BOS/CHoCH adds confidence
+
+        # === Factor 3: Entry Zone Confirmation ===
+        if has_fvg:
+            rr += 0.05  # FVG present
+        if has_ob:
+            rr += 0.05  # Order Block present
+
+        # === Factor 4: Trend Strength (multiple BOS) ===
+        if df is not None and "bos" in df.columns:
+            recent_bos = df.tail(20)["bos"].to_list()
+            bos_count = sum(1 for b in recent_bos if b != 0)
+            if bos_count >= 3:  # Strong trend with multiple breaks
+                rr += 0.10
+            elif bos_count >= 2:
+                rr += 0.05
+
+        # === Factor 5: Volatility Adjustment ===
+        # High volatility = reduce RR (take profit faster)
+        if df is not None and "atr" in df.columns:
+            atr = df.tail(1)["atr"].item()
+            if atr is not None:
+                # Typical XAUUSD ATR is ~$10-15
+                if atr > 18:  # High volatility
+                    rr -= 0.15  # Take profit faster
+                elif atr > 15:  # Above average volatility
+                    rr -= 0.05
+
+        # === Factor 6: Check for ranging market (low BOS count) ===
+        if df is not None and "bos" in df.columns:
+            recent_bos = df.tail(30)["bos"].to_list()
+            bos_count = sum(1 for b in recent_bos if b != 0)
+            if bos_count == 0:  # No structure breaks = ranging
+                rr = 1.5  # Use minimum RR in ranging market
+
+        # Clamp RR between 1.5 and 2.0
+        rr = max(1.5, min(2.0, rr))
+
+        logger.debug(f"Dynamic RR: {rr:.2f} (struct={market_structure}, break={has_bullish_break or has_bearish_break}, fvg={has_fvg}, ob={has_ob})")
+
+        return rr
+
     def calculate_all(self, df: pl.DataFrame) -> pl.DataFrame:
         """
         Calculate all SMC indicators.
@@ -710,9 +784,11 @@ class SMCAnalyzer:
 
         # SL: 1.5-2 ATR distance (protects against noise)
         min_sl_distance = 1.5 * atr
-        # TP: Must be at least 2x risk (RR 1:2 minimum)
-        # With 1.5 ATR SL, TP should be at least 3 ATR
-        min_rr_ratio = 2.0  # ENFORCED: Minimum Risk:Reward 1:2
+
+        # === FIXED RR RATIO 1:1.5 ===
+        # Based on backtest analysis: RR 1:2 only hits TP 14% of the time
+        # RR 1:1.5 is more realistic for higher hit rate
+        min_rr_ratio = 1.5
 
         # BULLISH SIGNAL CONDITIONS
         # Need: bullish structure OR recent bullish break, AND (FVG OR OB)
@@ -738,7 +814,7 @@ class SMCAnalyzer:
             if entry - sl < min_sl_distance:
                 sl = entry - min_sl_distance
 
-            # FIX: TP at EXACTLY min_rr_ratio (1:2) - ENFORCED
+            # FIXED TP at RR 1:1.5
             risk = entry - sl
             tp = entry + (risk * min_rr_ratio)
 
@@ -797,7 +873,7 @@ class SMCAnalyzer:
             if sl - entry < min_sl_distance:
                 sl = entry + min_sl_distance
 
-            # FIX: TP at EXACTLY min_rr_ratio (1:2) - ENFORCED
+            # FIXED TP at RR 1:1.5
             risk = sl - entry
             tp = entry - (risk * min_rr_ratio)
 

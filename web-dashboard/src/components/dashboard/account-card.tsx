@@ -2,39 +2,52 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wallet } from "lucide-react";
+import { Sparkline } from "./sparkline";
+import { cn, formatUSD, getValueColor } from "@/lib/utils";
 
 interface AccountCardProps {
   balance: number;
   equity: number;
   profit: number;
+  equityHistory?: number[];
 }
 
-export function AccountCard({ balance, equity, profit }: AccountCardProps) {
+export function AccountCard({ balance, equity, profit, equityHistory = [] }: AccountCardProps) {
   const isProfit = profit >= 0;
 
   return (
-    <Card className="bg-card/50 backdrop-blur">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <Wallet className="h-4 w-4" />
-          ACCOUNT
+    <Card className="glass">
+      <CardHeader>
+        <CardTitle className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+          <Wallet className="h-3.5 w-3.5" />
+          Account
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-1">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Balance</span>
-          <span className="font-semibold">${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <span className="text-[11px] text-muted-foreground">Balance</span>
+          <span className="text-sm font-semibold font-number">{formatUSD(balance)}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Equity</span>
-          <span className="font-semibold">${equity.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <span className="text-[11px] text-muted-foreground">Equity</span>
+          <span className="text-sm font-semibold font-number">{formatUSD(equity)}</span>
         </div>
-        <div className="flex justify-between items-center pt-2 border-t">
-          <span className="text-sm text-muted-foreground">P/L</span>
-          <span className={`font-bold ${isProfit ? 'text-green-500' : 'text-red-500'}`}>
-            {isProfit ? '+' : ''}${profit.toFixed(2)}
+        <div className="flex justify-between items-center pt-1 border-t border-border">
+          <span className="text-[11px] text-muted-foreground">P/L</span>
+          <span className={cn("text-base font-bold font-number", getValueColor(profit))}>
+            {isProfit ? "+" : ""}{formatUSD(profit)}
           </span>
         </div>
+
+        {equityHistory.length > 2 && (
+          <div className="-mx-1">
+            <Sparkline
+              data={equityHistory.slice(-30)}
+              color={isProfit ? "#22c55e" : "#ef4444"}
+              height={20}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -12,27 +12,41 @@ import {
   PositionsCard,
   LogCard,
   PriceChart,
-  EquityChart,
+  SettingsCard,
 } from "@/components/dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function LoadingSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 p-4">
-      {[...Array(8)].map((_, i) => (
-        <Skeleton key={i} className="h-[150px] rounded-xl" />
-      ))}
+    <div className="flex-1 min-h-0 flex flex-col gap-1.5 p-1.5">
+      <div className="flex gap-1.5">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={`r1-${i}`} className="flex-1 h-[80px] rounded-lg" />
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={`r2-${i}`} className="flex-1 h-[90px] rounded-lg" />
+        ))}
+      </div>
+      <div className="flex-1 min-h-0 flex gap-1.5">
+        <Skeleton className="flex-[3] rounded-lg" />
+        <Skeleton className="flex-1 rounded-lg" />
+      </div>
     </div>
   );
 }
 
 function ErrorDisplay({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center h-[80vh]">
-      <div className="text-center">
-        <p className="text-destructive text-lg font-semibold">Connection Error</p>
-        <p className="text-muted-foreground">{message}</p>
-        <p className="text-sm text-muted-foreground mt-2">
+    <div className="flex-1 flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <div className="w-12 h-12 rounded-full bg-danger-bg mx-auto flex items-center justify-center">
+          <span className="text-danger text-xl">!</span>
+        </div>
+        <p className="text-danger text-base font-semibold">Connection Error</p>
+        <p className="text-muted-foreground text-sm">{message}</p>
+        <p className="text-muted-foreground/60 text-xs">
           Make sure the API server is running on port 8000
         </p>
       </div>
@@ -43,19 +57,18 @@ function ErrorDisplay({ message }: { message: string }) {
 export default function Dashboard() {
   const { data, loading, error, dataAge } = useTradingData();
 
-  // Format current time for header
   const now = new Date();
-  const wibTime = now.toLocaleTimeString('en-US', {
-    timeZone: 'Asia/Jakarta',
+  const wibTime = now.toLocaleTimeString("en-US", {
+    timeZone: "Asia/Jakarta",
     hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="fixed inset-0 overflow-hidden flex flex-col bg-background">
         <Header connected={false} lastUpdate={wibTime} dataAge={999} />
         <LoadingSkeleton />
       </div>
@@ -64,7 +77,7 @@ export default function Dashboard() {
 
   if (error && !data) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="fixed inset-0 overflow-hidden flex flex-col bg-background">
         <Header connected={false} lastUpdate={wibTime} dataAge={999} />
         <ErrorDisplay message={error} />
       </div>
@@ -74,86 +87,116 @@ export default function Dashboard() {
   if (!data) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 overflow-hidden flex flex-col bg-background max-w-full">
       <Header
         connected={data.connected}
         lastUpdate={wibTime}
         dataAge={dataAge}
       />
 
-      <main className="container py-4">
-        <div className="grid grid-cols-2 gap-4">
-          {/* Row 1: Price Chart (full width) */}
-          <PriceChart data={data.priceHistory} />
+      <main className="flex-1 min-h-0 flex flex-col gap-1.5 p-1.5 overflow-hidden">
+        {/* ── Row 1: Status ── */}
+        <div
+          className="grid gap-1.5 overflow-hidden"
+          style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+        >
+          <div className="min-w-0 overflow-hidden">
+            <PriceCard
+              price={data.price}
+              spread={data.spread}
+              priceChange={data.priceChange}
+              priceHistory={data.priceHistory}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            <AccountCard
+              balance={data.balance}
+              equity={data.equity}
+              profit={data.profit}
+              equityHistory={data.equityHistory}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            <SessionCard
+              session={data.session}
+              isGoldenTime={data.isGoldenTime}
+              canTrade={data.canTrade}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            <RiskCard
+              dailyLoss={data.dailyLoss}
+              dailyProfit={data.dailyProfit}
+              consecutiveLosses={data.consecutiveLosses}
+              riskPercent={data.riskPercent}
+            />
+          </div>
+        </div>
 
-          {/* Row 2: Price & Account */}
-          <PriceCard
-            price={data.price}
-            spread={data.spread}
-            priceChange={data.priceChange}
-          />
-          <AccountCard
-            balance={data.balance}
-            equity={data.equity}
-            profit={data.profit}
-          />
+        {/* ── Row 2: Signals ── */}
+        <div
+          className="grid gap-1.5 overflow-hidden"
+          style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+        >
+          <div className="min-w-0 overflow-hidden">
+            <SignalCard
+              title="SMC Signal"
+              icon="smc"
+              signal={data.smc.signal}
+              confidence={data.smc.confidence}
+              detail={`${data.smc.reason || ""}${data.h1Bias ? ` | H1: ${data.h1Bias}` : ""}`}
+              updatedAt={data.smc.updatedAt}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            <SignalCard
+              title="ML Prediction"
+              icon="ml"
+              signal={data.ml.signal}
+              confidence={data.ml.confidence}
+              buyProb={data.ml.buyProb}
+              sellProb={data.ml.sellProb}
+              updatedAt={data.ml.updatedAt}
+              threshold={data.dynamicThreshold}
+              marketQuality={data.marketQuality}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            <RegimeCard
+              name={data.regime.name}
+              volatility={data.regime.volatility}
+              confidence={data.regime.confidence}
+              updatedAt={data.regime.updatedAt}
+              h1Bias={data.h1Bias}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            {data.settings ? (
+              <SettingsCard settings={data.settings} />
+            ) : (
+              <div className="glass rounded-lg h-full" />
+            )}
+          </div>
+        </div>
 
-          {/* Row 3: Session & Risk */}
-          <SessionCard
-            session={data.session}
-            isGoldenTime={data.isGoldenTime}
-            canTrade={data.canTrade}
-          />
-          <RiskCard
-            dailyLoss={data.dailyLoss}
-            dailyProfit={data.dailyProfit}
-            consecutiveLosses={data.consecutiveLosses}
-            riskPercent={data.riskPercent}
-          />
-
-          {/* Row 4: SMC & ML */}
-          <SignalCard
-            title="SMC SIGNAL"
-            icon="smc"
-            signal={data.smc.signal}
-            confidence={data.smc.confidence}
-            detail={data.smc.reason}
-          />
-          <SignalCard
-            title="ML PREDICTION"
-            icon="ml"
-            signal={data.ml.signal}
-            confidence={data.ml.confidence}
-            buyProb={data.ml.buyProb}
-            sellProb={data.ml.sellProb}
-          />
-
-          {/* Row 5: Regime & Positions */}
-          <RegimeCard
-            name={data.regime.name}
-            volatility={data.regime.volatility}
-            confidence={data.regime.confidence}
-          />
-          <PositionsCard positions={data.positions} />
-
-          {/* Row 6: Equity Chart (full width) */}
-          <EquityChart
-            equityData={data.equityHistory}
-            balanceData={data.balanceHistory}
-          />
-
-          {/* Row 7: Log (full width) */}
-          <LogCard logs={data.logs} />
+        {/* ── Row 3: Chart + Sidebar (fills remaining) ── */}
+        <div
+          className="flex-1 min-h-0 grid gap-1.5 overflow-hidden"
+          style={{ gridTemplateColumns: '3fr 1fr' }}
+        >
+          <div className="min-w-0 min-h-0 overflow-hidden">
+            <PriceChart data={data.priceHistory} />
+          </div>
+          <div className="min-w-0 min-h-0 overflow-hidden flex flex-col gap-1.5">
+            <div className="flex-1 min-h-0">
+              <PositionsCard positions={data.positions} />
+            </div>
+            <div className="flex-1 min-h-0">
+              <LogCard logs={data.logs} />
+            </div>
+          </div>
         </div>
       </main>
-
-      {/* Footer Status */}
-      <footer className="fixed bottom-0 w-full border-t bg-background/95 backdrop-blur py-2">
-        <div className="container flex justify-between text-xs text-muted-foreground">
-          <span>Last update: {data.timestamp}</span>
-          <span>AI Trading Bot Monitor v1.0</span>
-        </div>
-      </footer>
     </div>
   );
 }

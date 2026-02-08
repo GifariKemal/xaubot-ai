@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -21,8 +19,57 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - trading_bot_network
 
-  # pgAdmin (Optional - for database management)
+  # Trading Bot API (reads bot_status.json from shared volume)
+  trading-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading_bot_api
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Jakarta
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      # Mount data/ so API can read bot_status.json written by the bot on host
+      - ./data:/app/data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trading_bot_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Web Dashboard (Next.js Frontend)
+  dashboard:
+    build:
+      context: ./web-dashboard
+      dockerfile: Dockerfile
+    container_name: trading_bot_dashboard
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    depends_on:
+      trading-api:
+        condition: service_healthy
+    networks:
+      - trading_bot_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # pgAdmin (OPTIONAL - for database management)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: trading_bot_pgadmin
@@ -38,6 +85,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - trading_bot_network
     profiles:
       - admin  # Only start with: docker-compose --profile admin up
 
@@ -48,5 +97,6 @@ volumes:
     name: trading_bot_pgadmin_data
 
 networks:
-  default:
+  trading_bot_network:
     name: trading_bot_network
+    driver: bridge

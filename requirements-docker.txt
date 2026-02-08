@@ -1,0 +1,38 @@
+# Docker-compatible requirements (Linux)
+# Note: MetaTrader5 is Windows-only, excluded from Docker build
+
+# Core Data Engine (Rust-based, NOT Pandas)
+polars>=1.37.0
+pyarrow>=15.0.0
+
+# Machine Learning
+xgboost>=2.1.0
+scikit-learn>=1.4.0
+hmmlearn>=0.3.3
+joblib>=1.4.0
+
+# Asynchronous Processing
+asyncio-throttle>=1.0.2
+
+# Logging and Monitoring
+loguru>=0.7.2
+
+# Environment Variables
+python-dotenv>=1.0.1
+
+# Numerical Computing
+numpy>=1.26.0
+
+# HTTP Client
+aiohttp>=3.9.0
+
+# PostgreSQL Database
+psycopg2-binary>=2.9.9
+
+# FastAPI for Web Dashboard API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.6.0
+
+# CORS middleware
+python-multipart>=0.0.6

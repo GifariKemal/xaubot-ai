@@ -33,17 +33,20 @@ export interface TradingStatus {
     signal: string;
     confidence: number;
     reason: string;
+    updatedAt?: string;
   };
   ml: {
     signal: string;
     confidence: number;
     buyProb: number;
     sellProb: number;
+    updatedAt?: string;
   };
   regime: {
     name: string;
     volatility: number;
     confidence: number;
+    updatedAt?: string;
   };
 
   // Positions
@@ -51,6 +54,31 @@ export interface TradingStatus {
 
   // Log
   logs: LogEntry[];
+
+  // Bot Settings
+  settings?: BotSettings;
+
+  // Entry Conditions
+  h1Bias?: string;
+  dynamicThreshold?: number;
+  marketQuality?: string;
+  marketScore?: number;
+}
+
+export interface BotSettings {
+  capitalMode: string;
+  capital: number;
+  riskPerTrade: number;
+  maxDailyLoss: number;
+  maxPositions: number;
+  maxLotSize: number;
+  leverage: number;
+  executionTF: string;
+  trendTF: string;
+  minRR: number;
+  mlConfidence: number;
+  cooldownSeconds: number;
+  symbol: string;
 }
 
 export interface Position {
