@@ -1,0 +1,517 @@
+======================================================================
+XAUBOT AI — SMC-Only Backtest Log
+======================================================================
+Generated: 2026-02-07 05:48:06
+Period: 2025-08-01 to 2026-02-07
+Strategy: SMC-Only (ML disabled, synced with main_live.py v4)
+
+─── PERFORMANCE SUMMARY ─────────────────────────────
+  Total Trades:    464
+  Wins:            221
+  Losses:          243
+  Win Rate:        47.6%
+  Total Profit:    $6,256.22
+  Total Loss:      $5,167.13
+  Net P/L:         $1,089.09
+  Profit Factor:   1.21
+  Max Drawdown:    9.9% ($591.39)
+  Avg Win:         $28.31
+  Avg Loss:        $21.26
+  Avg Trade:       $2.35
+  Expectancy:      $2.35
+  Sharpe Ratio:    0.96
+
+─── EXIT REASON BREAKDOWN ──────────────────────────
+  timeout             :  177 ( 38.1%)
+  trend_reversal      :  150 ( 32.3%)
+  take_profit         :  106 ( 22.8%)
+  max_loss            :   31 (  6.7%)
+
+─── DIRECTION BREAKDOWN ────────────────────────────
+  BUY: 255 trades, 52.2% WR, $1,158.90
+  SELL: 209 trades, 42.1% WR, $-69.81
+
+─── SESSION BREAKDOWN ─────────────────────────────
+  Sydney-Tokyo                  : 186 trades,  48.4% WR, $  599.70
+  London-NY Overlap (Golden)    : 104 trades,  50.0% WR, $  257.85
+  London Early                  :  50 trades,  44.0% WR, $  155.42
+  Tokyo-London Overlap          :  23 trades,  47.8% WR, $   62.20
+  NY Session                    : 101 trades,  45.5% WR, $   13.93
+
+─── SMC COMPONENT ANALYSIS ────────────────────────
+  BOS   :  92 trades,  50.0% WR, $  368.37
+  CHoCH : 120 trades,  36.7% WR, $ -437.86
+  FVG   : 449 trades,  47.2% WR, $  855.68
+  OB    : 324 trades,  49.1% WR, $1,271.91
+
+─── DETAILED TRADE LOG ────────────────────────────
+   #       Entry Time  Dir      Entry       Exit   P/L($) Result             Exit  Conf              Session Reason
+----------------------------------------------------------------------------------------------------------------------------------
+   1 2025-08-01 01:00 SELL    3291.19    3290.90     0.29    WIN          timeout   63%         Sydney-Tokyo Bearish FVG
+   2 2025-08-01 07:45  BUY    3292.01    3287.17    -4.84   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+   3 2025-08-01 13:00 SELL    3294.50    3341.06   -46.56   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bearish FVG
+   4 2025-08-01 18:15  BUY    3349.39    3360.49    11.10    WIN          timeout   63%           NY Session Bullish FVG
+   5 2025-08-04 05:00  BUY    3351.00    3353.59     2.59    WIN          timeout   65%         Sydney-Tokyo Bullish OB
+   6 2025-08-04 11:45  BUY    3358.31    3368.47    16.25    WIN      take_profit   75%         London Early Bullish BOS/CHoCH + FVG
+   7 2025-08-04 17:15  BUY    3377.34    3372.37    -8.95   LOSS   trend_reversal   73%           NY Session Bullish FVG
+   8 2025-08-05 01:15  BUY    3374.55    3380.70     6.15    WIN      take_profit   63%         Sydney-Tokyo Bullish FVG
+   9 2025-08-05 06:15 SELL    3373.15    3374.09    -0.94   LOSS          timeout   77%         Sydney-Tokyo Bearish BOS/CHoCH + OB
+  10 2025-08-05 12:45 SELL    3359.54    3363.73    -8.38   LOSS   trend_reversal   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+  11 2025-08-05 18:00  BUY    3386.13    3379.53   -11.88   LOSS          timeout   75%           NY Session Bullish BOS/CHoCH + FVG
+  12 2025-08-06 02:00  BUY    3380.67    3375.99    -4.68   LOSS   trend_reversal   65%         Sydney-Tokyo Bullish OB
+  13 2025-08-06 07:15 SELL    3374.67    3358.86    15.81    WIN      take_profit   73%         Sydney-Tokyo Bearish FVG
+  14 2025-08-06 17:45  BUY    3379.20    3369.97   -16.61   LOSS   trend_reversal   85%           NY Session Bullish BOS/CHoCH + FVG
+  15 2025-08-06 23:30 SELL    3367.37    3372.20    -4.83   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  16 2025-08-07 06:00  BUY    3377.73    3396.68    18.95    WIN      take_profit   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  17 2025-08-07 14:15  BUY    3381.74    3385.92     4.18    WIN          timeout   63% London-NY Overlap (Golden) Bullish FVG
+  18 2025-08-07 23:00  BUY    3399.91    3391.59    -8.32   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  19 2025-08-08 06:00 SELL    3385.98    3396.08   -10.10   LOSS          timeout   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  20 2025-08-08 13:00  BUY    3396.93    3387.74   -18.38   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+  21 2025-08-08 19:30 SELL    3398.35    3385.33    13.02    WIN      take_profit   63%           NY Session Bearish FVG
+  22 2025-08-11 03:15 SELL    3387.86    3362.86    25.01    WIN      take_profit   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  23 2025-08-11 12:30 SELL    3358.72    3357.96     0.76    WIN          timeout   63% London-NY Overlap (Golden) Bearish FVG
+  24 2025-08-11 19:00 SELL    3347.44    3346.95     0.88    WIN          timeout   73%           NY Session Bearish FVG
+  25 2025-08-12 04:15 SELL    3350.97    3354.08    -3.11   LOSS   trend_reversal   65%         Sydney-Tokyo Bearish OB
+  26 2025-08-12 10:15 SELL    3348.97    3339.02    15.91    WIN      take_profit   85%         London Early Bearish BOS/CHoCH + FVG
+  27 2025-08-12 17:00 SELL    3335.73    3346.63   -19.62   LOSS          timeout   85%           NY Session Bearish BOS/CHoCH + OB
+  28 2025-08-13 02:30  BUY    3351.29    3351.03    -0.26   LOSS          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  29 2025-08-13 09:15  BUY    3354.92    3365.26    16.54    WIN      take_profit   85%         London Early Bullish BOS/CHoCH + FVG
+  30 2025-08-13 15:00  BUY    3357.18    3365.92     8.74    WIN      take_profit   63% London-NY Overlap (Golden) Bullish FVG
+  31 2025-08-13 19:30  BUY    3357.28    3356.05    -2.21   LOSS          timeout   73%           NY Session Bullish FVG
+  32 2025-08-14 03:15  BUY    3372.80    3359.77   -13.03   LOSS   trend_reversal   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  33 2025-08-14 08:30  BUY    3358.94    3365.82    10.32    WIN      take_profit   73% Tokyo-London Overlap Bullish FVG
+  34 2025-08-14 12:30 SELL    3354.93    3337.92    34.02    WIN      take_profit   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+  35 2025-08-14 19:30 SELL    3333.97    3340.37   -11.52   LOSS   trend_reversal   85%           NY Session Bearish BOS/CHoCH + FVG
+  36 2025-08-15 01:45 SELL    3333.14    3338.36    -5.22   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+  37 2025-08-15 07:00  BUY    3345.12    3340.26    -4.86   LOSS   trend_reversal   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  38 2025-08-15 12:15 SELL    3344.11    3335.98    16.26    WIN      take_profit   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+  39 2025-08-15 18:15 SELL    3343.21    3334.12    16.36    WIN      take_profit   85%           NY Session Bearish BOS/CHoCH + FVG
+  40 2025-08-18 04:15  BUY    3340.24    3348.87     8.63    WIN          timeout   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  41 2025-08-18 13:45 SELL    3346.45    3338.80    15.30    WIN      take_profit   65% London-NY Overlap (Golden) Bearish OB
+  42 2025-08-18 19:00 SELL    3333.40    3333.32     0.08    WIN          timeout   63%           NY Session Bearish FVG
+  43 2025-08-19 02:30 SELL    3332.66    3328.63     4.03    WIN      take_profit   73%         Sydney-Tokyo Bearish FVG
+  44 2025-08-19 06:00  BUY    3340.99    3334.65    -6.34   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  45 2025-08-19 12:00  BUY    3337.29    3343.74    12.91    WIN      take_profit   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+  46 2025-08-19 16:00 SELL    3329.59    3316.54    26.10    WIN          timeout   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+  47 2025-08-20 06:30  BUY    3317.81    3321.47     3.66    WIN          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  48 2025-08-20 14:15  BUY    3330.71    3345.51    29.61    WIN      take_profit   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+  49 2025-08-20 19:15  BUY    3343.55    3348.48     4.93    WIN          timeout   63%           NY Session Bullish FVG
+  50 2025-08-21 03:00  BUY    3344.43    3339.81    -4.62   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  51 2025-08-21 09:15 SELL    3334.45    3340.58    -6.13   LOSS   trend_reversal   63%         London Early Bearish FVG
+  52 2025-08-21 15:15 SELL    3337.35    3341.11    -7.52   LOSS          timeout   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+  53 2025-08-21 23:00 SELL    3338.32    3338.87    -0.55   LOSS          timeout   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  54 2025-08-22 06:30 SELL    3333.95    3329.05     4.90    WIN          timeout   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  55 2025-08-22 14:15 SELL    3329.30    3358.82   -29.52   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bearish FVG
+  56 2025-08-22 19:30  BUY    3370.67    3371.67     1.00    WIN          timeout   63%           NY Session Bullish FVG
+  57 2025-08-25 03:45 SELL    3364.71    3367.41    -2.70   LOSS   trend_reversal   73%         Sydney-Tokyo Bearish FVG
+  58 2025-08-25 09:15  BUY    3368.47    3362.53    -9.50   LOSS   trend_reversal   85%         London Early Bullish BOS/CHoCH + FVG
+  59 2025-08-25 14:30 SELL    3369.65    3364.56     5.09    WIN      take_profit   63% London-NY Overlap (Golden) Bearish FVG
+  60 2025-08-25 18:15  BUY    3373.98    3372.33    -2.97   LOSS   trend_reversal   85%           NY Session Bullish BOS/CHoCH + FVG
+  61 2025-08-26 02:00 SELL    3358.40    3377.46   -19.06   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  62 2025-08-26 07:45  BUY    3377.22    3376.57    -0.65   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+  63 2025-08-26 14:15  BUY    3378.23    3381.76     7.06    WIN          timeout   73% London-NY Overlap (Golden) Bullish FVG
+  64 2025-08-26 23:00  BUY    3389.97    3386.09    -3.88   LOSS          timeout   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  65 2025-08-27 06:45 SELL    3380.53    3381.39    -0.86   LOSS          timeout   63%         Sydney-Tokyo Bearish FVG
+  66 2025-08-27 13:15  BUY    3376.38    3382.57    12.37    WIN      take_profit   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+  67 2025-08-27 17:45  BUY    3386.40    3397.03    19.13    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+  68 2025-08-28 04:00 SELL    3390.50    3390.63    -0.13   LOSS          timeout   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  69 2025-08-28 11:45  BUY    3400.58    3397.16    -5.47   LOSS          timeout   75%         London Early Bullish BOS/CHoCH + FVG
+  70 2025-08-28 18:15  BUY    3406.26    3416.17    17.84    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+  71 2025-08-29 04:45  BUY    3409.91    3407.67    -2.24   LOSS   trend_reversal   65%         Sydney-Tokyo Bullish OB
+  72 2025-08-29 10:30 SELL    3409.74    3408.08     1.66    WIN          timeout   63%         London Early Bearish FVG
+  73 2025-08-29 17:00  BUY    3435.17    3449.06    25.00    WIN          timeout   75%           NY Session Bullish BOS/CHoCH + FVG
+  74 2025-09-01 03:00  BUY    3443.41    3451.66     8.25    WIN      take_profit   63%         Sydney-Tokyo Bullish FVG
+  75 2025-09-01 07:15  BUY    3473.74    3476.90     3.16    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+  76 2025-09-01 14:15  BUY    3471.26    3473.61     4.70    WIN          timeout   65% London-NY Overlap (Golden) Bullish OB
+  77 2025-09-02 01:15  BUY    3478.41    3487.63     9.22    WIN      take_profit   73%         Sydney-Tokyo Bullish FVG
+  78 2025-09-02 06:30  BUY    3492.79    3485.41    -7.38   LOSS   trend_reversal   63%         Sydney-Tokyo Bullish FVG
+  79 2025-09-02 12:00 SELL    3477.14    3489.67   -12.53   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bearish FVG
+  80 2025-09-02 17:15  BUY    3502.16    3536.38    61.60    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+  81 2025-09-03 02:45  BUY    3529.74    3530.68     0.94    WIN          timeout   65%         Sydney-Tokyo Bullish OB
+  82 2025-09-03 09:15  BUY    3533.22    3542.88    15.46    WIN      take_profit   73%         London Early Bullish FVG
+  83 2025-09-03 16:30  BUY    3551.63    3563.48    23.70    WIN          timeout   73% London-NY Overlap (Golden) Bullish FVG
+  84 2025-09-04 02:00  BUY    3554.85    3546.05    -8.80   LOSS   trend_reversal   63%         Sydney-Tokyo Bullish FVG
+  85 2025-09-04 07:15 SELL    3530.80    3537.08    -6.28   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+  86 2025-09-04 12:30  BUY    3540.13    3541.56     2.86    WIN          timeout   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+  87 2025-09-04 20:00  BUY    3551.92    3544.79    -7.13   LOSS   trend_reversal   63%           NY Session Bullish FVG
+  88 2025-09-05 03:15  BUY    3551.04    3555.98     4.94    WIN          timeout   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+  89 2025-09-05 12:15  BUY    3548.30    3556.47    16.33    WIN      take_profit   65% London-NY Overlap (Golden) Bullish OB
+  90 2025-09-05 18:00  BUY    3584.15    3587.44     3.29    WIN          timeout   63%           NY Session Bullish FVG
+  91 2025-09-08 06:45 SELL    3583.46    3597.47   -14.01   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+  92 2025-09-08 12:00  BUY    3612.73    3636.04    23.31    WIN          timeout   63% London-NY Overlap (Golden) Bullish FVG
+  93 2025-09-08 23:00  BUY    3635.77    3644.48     8.71    WIN      take_profit   63%         Sydney-Tokyo Bullish FVG
+  94 2025-09-09 06:45  BUY    3645.88    3644.12    -1.76   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+  95 2025-09-09 13:15 SELL    3653.02    3660.37   -14.70   LOSS   trend_reversal   65% London-NY Overlap (Golden) Bearish OB
+  96 2025-09-09 18:45 SELL    3645.47    3635.41    18.11    WIN          timeout   85%           NY Session Bearish BOS/CHoCH + FVG
+  97 2025-09-10 04:30 SELL    3627.61    3641.05   -13.44   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+  98 2025-09-10 12:45  BUY    3655.14    3650.62    -9.04   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+  99 2025-09-10 20:45  BUY    3647.27    3639.76    -7.51   LOSS          timeout   63%           NY Session Bullish FVG
+ 100 2025-09-11 04:15  BUY    3648.28    3633.64   -14.64   LOSS   trend_reversal   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 101 2025-09-11 09:45 SELL    3633.16    3637.05    -6.22   LOSS          timeout   73%         London Early Bearish FVG
+ 102 2025-09-11 18:30  BUY    3634.43    3635.00     0.57    WIN          timeout   63%           NY Session Bullish FVG
+ 103 2025-09-12 02:45 SELL    3631.76    3647.50   -15.74   LOSS   trend_reversal   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 104 2025-09-12 12:30  BUY    3644.50    3642.46    -4.08   LOSS   trend_reversal   65% London-NY Overlap (Golden) Bullish OB
+ 105 2025-09-12 17:45  BUY    3647.98    3648.32     0.61    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+ 106 2025-09-15 01:45 SELL    3642.07    3629.16    12.91    WIN      take_profit   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 107 2025-09-15 06:30  BUY    3644.82    3639.49    -5.33   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 108 2025-09-15 12:00  BUY    3644.50    3638.32   -12.36   LOSS   trend_reversal   73% London-NY Overlap (Golden) Bullish FVG
+ 109 2025-09-15 18:00  BUY    3664.77    3677.66    23.20    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+ 110 2025-09-16 03:30  BUY    3684.21    3681.45    -2.76   LOSS          timeout   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 111 2025-09-16 11:45  BUY    3694.24    3689.30    -7.90   LOSS   trend_reversal   85%         London Early Bullish BOS/CHoCH + FVG
+ 112 2025-09-16 18:00 SELL    3684.22    3690.53   -11.36   LOSS   trend_reversal   85%           NY Session Bearish BOS/CHoCH + FVG
+ 113 2025-09-17 01:15  BUY    3690.91    3685.81    -5.10   LOSS   trend_reversal   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 114 2025-09-17 06:45 SELL    3681.65    3661.25    20.40    WIN      take_profit   63%         Sydney-Tokyo Bearish FVG
+ 115 2025-09-17 15:30  BUY    3674.55    3696.42    43.74    WIN      take_profit   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 116 2025-09-18 01:00 SELL    3663.18    3662.47     0.71    WIN          timeout   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 117 2025-09-18 08:00 SELL    3654.40    3637.21    25.79    WIN      take_profit   73% Tokyo-London Overlap Bearish FVG
+ 118 2025-09-18 11:30 SELL    3662.22    3668.78    -6.56   LOSS          timeout   63%         London Early Bearish FVG
+ 119 2025-09-18 18:00 SELL    3639.28    3642.49    -5.78   LOSS          timeout   75%           NY Session Bearish BOS/CHoCH + FVG
+ 120 2025-09-19 02:00 SELL    3640.48    3646.66    -6.18   LOSS   trend_reversal   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 121 2025-09-19 07:45  BUY    3658.74    3656.73    -2.01   LOSS          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 122 2025-09-19 15:45  BUY    3649.00    3657.72    17.43    WIN      take_profit   65% London-NY Overlap (Golden) Bullish OB
+ 123 2025-09-19 19:00  BUY    3668.56    3686.73    32.71    WIN          timeout   75%           NY Session Bullish BOS/CHoCH + FVG
+ 124 2025-09-22 04:30  BUY    3688.13    3697.11     8.98    WIN      take_profit   77%         Sydney-Tokyo Bullish BOS/CHoCH + OB
+ 125 2025-09-22 09:15  BUY    3706.06    3715.13    14.51    WIN          timeout   75%         London Early Bullish BOS/CHoCH + FVG
+ 126 2025-09-22 17:45  BUY    3725.74    3746.36    37.13    WIN      take_profit   75%           NY Session Bullish BOS/CHoCH + FVG
+ 127 2025-09-22 23:15  BUY    3747.55    3743.36    -4.19   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+ 128 2025-09-23 08:00  BUY    3746.18    3760.72    21.80    WIN      take_profit   65% Tokyo-London Overlap Bullish OB
+ 129 2025-09-23 14:00  BUY    3780.20    3770.86    -9.34   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bullish FVG
+ 130 2025-09-23 20:15  BUY    3782.14    3759.33   -41.06   LOSS   trend_reversal   75%           NY Session Bullish BOS/CHoCH + FVG
+ 131 2025-09-24 05:45 SELL    3756.82    3774.43   -17.61   LOSS   trend_reversal   73%         Sydney-Tokyo Bearish FVG
+ 132 2025-09-24 13:45  BUY    3761.90    3759.66    -4.48   LOSS   trend_reversal   65% London-NY Overlap (Golden) Bullish OB
+ 133 2025-09-24 19:30 SELL    3738.41    3736.41     3.60    WIN          timeout   75%           NY Session Bearish BOS/CHoCH + FVG
+ 134 2025-09-25 03:00  BUY    3749.75    3736.47   -13.28   LOSS   trend_reversal   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 135 2025-09-25 09:15  BUY    3744.96    3743.41    -2.48   LOSS          timeout   73%         London Early Bullish FVG
+ 136 2025-09-25 16:30 SELL    3725.97    3741.65   -31.36   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 137 2025-09-25 23:15 SELL    3748.71    3742.51     6.20    WIN          timeout   73%         Sydney-Tokyo Bearish FVG
+ 138 2025-09-26 09:15 SELL    3751.66    3741.38    16.44    WIN      take_profit   65%         London Early Bearish OB
+ 139 2025-09-26 12:30 SELL    3748.81    3764.35   -15.54   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bearish FVG
+ 140 2025-09-26 18:30  BUY    3775.84    3768.53    -7.31   LOSS          timeout   63%           NY Session Bullish FVG
+ 141 2025-09-29 02:00 SELL    3767.36    3793.08   -25.72   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+ 142 2025-09-29 08:30  BUY    3803.57    3807.35     3.78    WIN          timeout   63% Tokyo-London Overlap Bullish FVG
+ 143 2025-09-29 15:15  BUY    3817.29    3825.91    17.24    WIN          timeout   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 144 2025-09-30 01:00  BUY    3829.59    3840.32    10.73    WIN      take_profit   73%         Sydney-Tokyo Bullish FVG
+ 145 2025-09-30 05:45  BUY    3847.80    3852.65     4.85    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 146 2025-09-30 13:00 SELL    3803.09    3824.83   -43.48   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 147 2025-09-30 19:00 SELL    3843.04    3850.00   -12.53   LOSS   trend_reversal   73%           NY Session Bearish FVG
+ 148 2025-10-01 01:30  BUY    3858.99    3863.31     4.32    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 149 2025-10-01 08:15  BUY    3865.60    3880.91    22.97    WIN      take_profit   73% Tokyo-London Overlap Bullish FVG
+ 150 2025-10-01 13:30  BUY    3887.25    3869.80   -17.45   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bullish FVG
+ 151 2025-10-01 18:45 SELL    3868.33    3867.68     1.17    WIN          timeout   85%           NY Session Bearish BOS/CHoCH + FVG
+ 152 2025-10-02 02:15 SELL    3865.56    3854.50    11.06    WIN      take_profit   73%         Sydney-Tokyo Bearish FVG
+ 153 2025-10-02 06:30 SELL    3864.42    3871.70    -7.28   LOSS   trend_reversal   65%         Sydney-Tokyo Bearish OB
+ 154 2025-10-02 11:45  BUY    3874.35    3893.39    30.46    WIN      take_profit   73%         London Early Bullish FVG
+ 155 2025-10-02 18:45 SELL    3828.14    3850.75   -40.70   LOSS   trend_reversal   75%           NY Session Bearish BOS/CHoCH + FVG
+ 156 2025-10-03 01:15 SELL    3854.22    3842.15    12.07    WIN      take_profit   73%         Sydney-Tokyo Bearish FVG
+ 157 2025-10-03 08:45 SELL    3854.94    3864.13    -9.19   LOSS          timeout   63% Tokyo-London Overlap Bearish FVG
+ 158 2025-10-03 15:15  BUY    3863.51    3873.57    20.12    WIN      take_profit   73% London-NY Overlap (Golden) Bullish FVG
+ 159 2025-10-03 18:15  BUY    3887.59    3886.61    -1.76   LOSS          timeout   73%           NY Session Bullish FVG
+ 160 2025-10-06 01:45  BUY    3898.97    3923.40    24.43    WIN      take_profit   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 161 2025-10-06 07:30  BUY    3939.72    3938.09    -1.63   LOSS          timeout   63%         Sydney-Tokyo Bullish FVG
+ 162 2025-10-06 14:00  BUY    3936.66    3958.27    21.61    WIN      take_profit   63% London-NY Overlap (Golden) Bullish FVG
+ 163 2025-10-06 20:00  BUY    3956.80    3965.81     9.01    WIN          timeout   63%           NY Session Bullish FVG
+ 164 2025-10-07 06:00  BUY    3967.42    3958.38    -9.04   LOSS   trend_reversal   73%         Sydney-Tokyo Bullish FVG
+ 165 2025-10-07 12:00 SELL    3958.62    3966.78   -16.32   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 166 2025-10-07 17:15  BUY    3978.01    3980.05     3.67    WIN          timeout   73%           NY Session Bullish FVG
+ 167 2025-10-08 01:00  BUY    3988.32    4028.33    40.01    WIN      take_profit   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 168 2025-10-08 10:30  BUY    4035.91    4034.84    -1.71   LOSS          timeout   85%         London Early Bullish BOS/CHoCH + FVG
+ 169 2025-10-08 19:15  BUY    4055.42    4041.35   -25.33   LOSS   trend_reversal   85%           NY Session Bullish BOS/CHoCH + FVG
+ 170 2025-10-09 01:45 SELL    4021.08    4033.08   -12.00   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 171 2025-10-09 07:00 SELL    4032.97    4034.32    -1.35   LOSS          timeout   63%         Sydney-Tokyo Bearish FVG
+ 172 2025-10-09 13:30  BUY    4038.55    4031.02    -7.53   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bullish FVG
+ 173 2025-10-09 19:00 SELL    4016.59    3954.78   111.27    WIN      take_profit   73%           NY Session Bearish FVG
+ 174 2025-10-09 23:30 SELL    3974.44    3991.33   -16.89   LOSS   trend_reversal   65%         Sydney-Tokyo Bearish OB
+ 175 2025-10-10 05:45  BUY    3978.31    3968.27   -10.04   LOSS          timeout   63%         Sydney-Tokyo Bullish FVG
+ 176 2025-10-10 12:15  BUY    3996.17    3991.17   -10.00   LOSS   trend_reversal   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 177 2025-10-10 17:45  BUY    3989.70    4045.95   101.25    WIN      take_profit   65%           NY Session Bullish OB
+ 178 2025-10-13 05:15  BUY    4045.98    4073.57    27.59    WIN          timeout   73%         Sydney-Tokyo Bullish FVG
+ 179 2025-10-13 14:30  BUY    4077.04    4103.43    52.78    WIN          timeout   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 180 2025-10-13 23:15  BUY    4110.49    4140.49    30.00    WIN      take_profit   65%         Sydney-Tokyo Bullish OB
+ 181 2025-10-14 06:30  BUY    4161.80    4111.12   -50.68   LOSS         max_loss   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 182 2025-10-14 11:45 SELL    4143.75    4140.93     4.51    WIN          timeout   77%         London Early Bearish BOS/CHoCH + OB
+ 183 2025-10-14 20:30  BUY    4149.12    4141.85   -13.09   LOSS   trend_reversal   75%           NY Session Bullish BOS/CHoCH + FVG
+ 184 2025-10-15 03:00  BUY    4168.31    4191.71    23.40    WIN          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 185 2025-10-15 11:30  BUY    4215.40    4192.78   -22.62   LOSS   trend_reversal   63%         London Early Bullish FVG
+ 186 2025-10-15 17:45  BUY    4199.96    4206.71     6.75    WIN          timeout   63%           NY Session Bullish FVG
+ 187 2025-10-16 03:15  BUY    4222.91    4226.82     3.91    WIN          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 188 2025-10-16 10:45  BUY    4230.48    4263.14    52.26    WIN          timeout   73%         London Early Bullish FVG
+ 189 2025-10-16 20:15  BUY    4289.52    4357.67   122.67    WIN          timeout   73%           NY Session Bullish FVG
+ 190 2025-10-17 05:45  BUY    4342.33    4338.75    -3.58   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+ 191 2025-10-17 12:45 SELL    4339.99    4282.21   115.56    WIN      take_profit   73% London-NY Overlap (Golden) Bearish FVG
+ 192 2025-10-17 19:00 SELL    4233.82    4232.04     3.20    WIN          timeout   76%           NY Session Bearish BOS/CHoCH + FVG
+ 193 2025-10-20 02:30  BUY    4245.36    4254.92     9.56    WIN          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 194 2025-10-20 11:00 SELL    4260.61    4279.10   -29.58   LOSS   trend_reversal   75%         London Early Bearish BOS/CHoCH + FVG
+ 195 2025-10-20 17:15  BUY    4326.06    4354.06    28.00    WIN          timeout   63%           NY Session Bullish FVG
+ 196 2025-10-21 02:45  BUY    4360.17    4339.93   -20.24   LOSS   trend_reversal   63%         Sydney-Tokyo Bullish FVG
+ 197 2025-10-21 08:15 SELL    4332.95    4274.07    58.88    WIN      take_profit   63% Tokyo-London Overlap Bearish FVG
+ 198 2025-10-21 13:30 SELL    4260.15    4134.18   125.97    WIN      take_profit   63% London-NY Overlap (Golden) Bearish FVG
+ 199 2025-10-21 19:45 SELL    4113.18    4125.44   -12.26   LOSS          timeout   57%           NY Session Bearish FVG
+ 200 2025-10-22 03:45 SELL    4074.69    4138.77   -64.08   LOSS         max_loss   68%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 201 2025-10-22 09:00  BUY    4137.42    4087.32   -80.16   LOSS         max_loss   73%         London Early Bullish FVG
+ 202 2025-10-22 13:30 SELL    4053.58    4071.07   -34.98   LOSS   trend_reversal   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 203 2025-10-22 19:15 SELL    4043.46    4092.72   -49.26   LOSS   trend_reversal   63%           NY Session Bearish FVG
+ 204 2025-10-23 01:30  BUY    4097.84    4091.18    -6.66   LOSS          timeout   63%         Sydney-Tokyo Bullish FVG
+ 205 2025-10-23 09:30  BUY    4122.38    4110.04   -19.74   LOSS   trend_reversal   75%         London Early Bullish BOS/CHoCH + FVG
+ 206 2025-10-23 15:45  BUY    4127.21    4135.79    17.16    WIN          timeout   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 207 2025-10-24 01:15 SELL    4121.85    4142.89   -21.04   LOSS   trend_reversal   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 208 2025-10-24 08:15  BUY    4112.45    4054.09   -58.36   LOSS         max_loss   63% Tokyo-London Overlap Bullish FVG
+ 209 2025-10-24 13:30 SELL    4058.20    4112.16  -107.92   LOSS         max_loss   73% London-NY Overlap (Golden) Bearish FVG
+ 210 2025-10-24 18:45  BUY    4130.34    4106.91   -23.43   LOSS   trend_reversal   63%           NY Session Bullish FVG
+ 211 2025-10-27 00:00 SELL    4104.45    4077.43    27.02    WIN      take_profit   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 212 2025-10-27 03:15 SELL    4093.26    4062.23    31.03    WIN      take_profit   73%         Sydney-Tokyo Bearish FVG
+ 213 2025-10-27 08:30  BUY    4079.87    4043.17   -55.05   LOSS         max_loss   85% Tokyo-London Overlap Bullish BOS/CHoCH + FVG
+ 214 2025-10-27 13:15 SELL    4030.03    4004.94    25.09    WIN          timeout   63% London-NY Overlap (Golden) Bearish FVG
+ 215 2025-10-28 00:00 SELL    3985.16    4017.76   -32.60   LOSS   trend_reversal   73%         Sydney-Tokyo Bearish FVG
+ 216 2025-10-28 06:15 SELL    3971.23    3898.80    72.43    WIN      take_profit   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 217 2025-10-28 14:45 SELL    3912.58    3963.21   -50.63   LOSS         max_loss   63% London-NY Overlap (Golden) Bearish FVG
+ 218 2025-10-28 20:00  BUY    3959.34    3949.74    -9.60   LOSS   trend_reversal   63%           NY Session Bullish FVG
+ 219 2025-10-29 02:30  BUY    3981.60    3951.68   -29.92   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 220 2025-10-29 09:15  BUY    3996.44    4018.45    35.22    WIN          timeout   75%         London Early Bullish BOS/CHoCH + FVG
+ 221 2025-10-29 18:00 SELL    3997.14    3948.01    88.43    WIN      take_profit   75%           NY Session Bearish BOS/CHoCH + FVG
+ 222 2025-10-30 00:00 SELL    3937.86    3937.80     0.06    WIN          timeout   73%         Sydney-Tokyo Bearish FVG
+ 223 2025-10-30 08:30  BUY    3965.58    3966.12     0.81    WIN          timeout   75% Tokyo-London Overlap Bullish BOS/CHoCH + FVG
+ 224 2025-10-30 16:00  BUY    4010.86    4018.81    15.90    WIN          timeout   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 225 2025-10-31 01:45  BUY    4036.50    4002.91   -33.59   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 226 2025-10-31 07:15 SELL    4001.87    4022.99   -21.12   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+ 227 2025-10-31 12:30 SELL    4010.22    4026.50   -16.28   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bearish FVG
+ 228 2025-10-31 18:00 SELL    3978.77    4008.42   -53.37   LOSS         max_loss   75%           NY Session Bearish BOS/CHoCH + FVG
+ 229 2025-11-03 01:15 SELL    3994.53    3971.76    22.77    WIN      take_profit   73%         Sydney-Tokyo Bearish FVG
+ 230 2025-11-03 04:30 SELL    4001.46    4014.57   -13.11   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+ 231 2025-11-03 10:00  BUY    4021.56    4016.11    -8.72   LOSS          timeout   75%         London Early Bullish BOS/CHoCH + FVG
+ 232 2025-11-03 18:30 SELL    4003.55    4011.47   -14.26   LOSS   trend_reversal   85%           NY Session Bearish BOS/CHoCH + FVG
+ 233 2025-11-04 01:45 SELL    3997.01    3994.29     2.72    WIN          timeout   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 234 2025-11-04 08:15 SELL    3975.31    3990.09   -22.17   LOSS          timeout   85% Tokyo-London Overlap Bearish BOS/CHoCH + FVG
+ 235 2025-11-04 16:45 SELL    3957.07    3938.59    36.96    WIN          timeout   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 236 2025-11-05 02:15 SELL    3938.60    3952.76   -14.16   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 237 2025-11-05 07:30  BUY    3969.72    3969.62    -0.10   LOSS          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 238 2025-11-05 14:00 SELL    3964.13    3981.23   -34.20   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 239 2025-11-05 20:45  BUY    3982.30    3979.13    -5.71   LOSS   trend_reversal   75%           NY Session Bullish BOS/CHoCH + FVG
+ 240 2025-11-06 03:15  BUY    3968.95    3982.11    13.16    WIN      take_profit   73%         Sydney-Tokyo Bullish FVG
+ 241 2025-11-06 07:00  BUY    3987.98    4011.50    23.52    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 242 2025-11-06 16:45 SELL    3993.39    3994.95    -3.12   LOSS          timeout   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 243 2025-11-06 23:30 SELL    3978.67    3997.24   -18.57   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+ 244 2025-11-07 06:45  BUY    3998.19    4007.69     9.50    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 245 2025-11-07 15:30  BUY    3993.89    4007.53    27.27    WIN      take_profit   73% London-NY Overlap (Golden) Bullish FVG
+ 246 2025-11-07 20:45  BUY    4005.40    4037.58    32.18    WIN      take_profit   63%           NY Session Bullish FVG
+ 247 2025-11-10 05:45  BUY    4050.34    4077.67    27.33    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 248 2025-11-10 14:45  BUY    4097.52    4094.63    -5.78   LOSS          timeout   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 249 2025-11-10 23:00  BUY    4111.48    4143.07    31.59    WIN          timeout   65%         Sydney-Tokyo Bullish OB
+ 250 2025-11-11 08:30 SELL    4129.15    4143.69   -21.81   LOSS   trend_reversal   77% Tokyo-London Overlap Bearish BOS/CHoCH + OB
+ 251 2025-11-11 13:45 SELL    4142.68    4130.98    23.41    WIN      take_profit   73% London-NY Overlap (Golden) Bearish FVG
+ 252 2025-11-11 18:45 SELL    4113.07    4121.63   -15.41   LOSS   trend_reversal   73%           NY Session Bearish FVG
+ 253 2025-11-12 01:15  BUY    4138.08    4125.15   -12.93   LOSS   trend_reversal   63%         Sydney-Tokyo Bullish FVG
+ 254 2025-11-12 07:45  BUY    4104.51    4118.74    14.23    WIN      take_profit   65%         Sydney-Tokyo Bullish OB
+ 255 2025-11-12 11:00  BUY    4128.40    4125.66    -4.38   LOSS          timeout   73%         London Early Bullish FVG
+ 256 2025-11-12 17:30  BUY    4178.58    4195.82    31.03    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+ 257 2025-11-13 03:45 SELL    4192.27    4207.59   -15.32   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 258 2025-11-13 09:00  BUY    4210.43    4230.26    31.73    WIN          timeout   73%         London Early Bullish FVG
+ 259 2025-11-13 17:30 SELL    4197.30    4172.96    43.81    WIN          timeout   85%           NY Session Bearish BOS/CHoCH + FVG
+ 260 2025-11-14 03:15 SELL    4174.35    4173.87     0.48    WIN          timeout   65%         Sydney-Tokyo Bearish OB
+ 261 2025-11-14 12:00 SELL    4165.35    4133.12    64.47    WIN      take_profit   65% London-NY Overlap (Golden) Bearish OB
+ 262 2025-11-14 16:15 SELL    4053.29    4108.11   -54.82   LOSS         max_loss   63% London-NY Overlap (Golden) Bearish FVG
+ 263 2025-11-17 01:15 SELL    4103.53    4076.54    26.99    WIN      take_profit   77%         Sydney-Tokyo Bearish BOS/CHoCH + OB
+ 264 2025-11-17 08:00 SELL    4058.50    4087.13   -42.95   LOSS   trend_reversal   75% Tokyo-London Overlap Bearish BOS/CHoCH + FVG
+ 265 2025-11-17 14:45 SELL    4077.07    4057.78    38.58    WIN      take_profit   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 266 2025-11-17 20:30 SELL    4068.62    4033.28    63.61    WIN      take_profit   65%           NY Session Bearish OB
+ 267 2025-11-18 01:00 SELL    4050.00    4016.76    33.24    WIN          timeout   73%         Sydney-Tokyo Bearish FVG
+ 268 2025-11-18 09:45 SELL    4013.52    4043.14   -47.39   LOSS   trend_reversal   77%         London Early Bearish BOS/CHoCH + OB
+ 269 2025-11-18 15:00  BUY    4043.11    4073.41    60.60    WIN          timeout   65% London-NY Overlap (Golden) Bullish OB
+ 270 2025-11-19 01:30  BUY    4073.15    4073.06    -0.09   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+ 271 2025-11-19 08:15  BUY    4092.24    4114.50    33.39    WIN          timeout   75% Tokyo-London Overlap Bullish BOS/CHoCH + FVG
+ 272 2025-11-19 17:15  BUY    4116.27    4074.51   -75.17   LOSS         max_loss   75%           NY Session Bullish BOS/CHoCH + FVG
+ 273 2025-11-19 20:45 SELL    4086.76    4096.20   -16.99   LOSS   trend_reversal   73%           NY Session Bearish FVG
+ 274 2025-11-20 04:00 SELL    4063.25    4075.58   -12.33   LOSS   trend_reversal   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 275 2025-11-20 09:15 SELL    4062.78    4066.47    -3.69   LOSS          timeout   63%         London Early Bearish FVG
+ 276 2025-11-20 16:00  BUY    4078.46    4048.96   -59.00   LOSS         max_loss   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 277 2025-11-20 23:00 SELL    4077.01    4073.47     3.54    WIN          timeout   65%         Sydney-Tokyo Bearish OB
+ 278 2025-11-21 07:30  BUY    4048.58    4050.49     1.91    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 279 2025-11-21 14:30 SELL    4061.61    4079.30   -17.69   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bearish FVG
+ 280 2025-11-21 23:00 SELL    4058.93    4055.99     2.94    WIN          timeout   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 281 2025-11-24 08:00 SELL    4049.72    4071.92   -33.30   LOSS   trend_reversal   73% Tokyo-London Overlap Bearish FVG
+ 282 2025-11-24 15:15  BUY    4080.37    4106.34    51.93    WIN      take_profit   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 283 2025-11-24 23:15  BUY    4132.22    4140.40     8.18    WIN          timeout   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 284 2025-11-25 09:15 SELL    4136.98    4114.70    35.64    WIN      take_profit   85%         London Early Bearish BOS/CHoCH + FVG
+ 285 2025-11-25 15:00 SELL    4138.09    4118.60    19.49    WIN      take_profit   63% London-NY Overlap (Golden) Bearish FVG
+ 286 2025-11-25 19:15  BUY    4149.49    4132.23   -17.26   LOSS   trend_reversal   63%           NY Session Bullish FVG
+ 287 2025-11-26 02:00  BUY    4138.23    4154.46    16.23    WIN      take_profit   73%         Sydney-Tokyo Bullish FVG
+ 288 2025-11-26 06:45  BUY    4161.82    4161.07    -0.75   LOSS          timeout   63%         Sydney-Tokyo Bullish FVG
+ 289 2025-11-26 13:15 SELL    4164.72    4151.75    12.97    WIN      take_profit   63% London-NY Overlap (Golden) Bearish FVG
+ 290 2025-11-26 17:45 SELL    4165.22    4165.11     0.11    WIN          timeout   63%           NY Session Bearish FVG
+ 291 2025-11-27 03:15 SELL    4153.41    4152.64     0.77    WIN          timeout   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 292 2025-11-27 09:45 SELL    4159.92    4155.98     3.94    WIN          timeout   63%         London Early Bearish FVG
+ 293 2025-11-27 18:00 SELL    4155.35    4162.44   -12.76   LOSS   trend_reversal   73%           NY Session Bearish FVG
+ 294 2025-11-28 03:45  BUY    4190.84    4182.17    -8.67   LOSS          timeout   63%         Sydney-Tokyo Bullish FVG
+ 295 2025-11-28 10:45 SELL    4165.79    4174.12   -13.33   LOSS   trend_reversal   85%         London Early Bearish BOS/CHoCH + FVG
+ 296 2025-11-28 16:00  BUY    4191.82    4248.40   113.16    WIN      take_profit   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 297 2025-12-01 06:45  BUY    4245.38    4244.41    -0.97   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+ 298 2025-12-01 13:15  BUY    4254.33    4246.48   -15.70   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 299 2025-12-01 18:45  BUY    4225.98    4227.26     2.30    WIN          timeout   65%           NY Session Bullish OB
+ 300 2025-12-02 04:15 SELL    4216.88    4224.89    -8.01   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+ 301 2025-12-02 11:15 SELL    4194.52    4204.99   -16.75   LOSS   trend_reversal   85%         London Early Bearish BOS/CHoCH + FVG
+ 302 2025-12-02 16:30  BUY    4217.88    4187.82   -60.12   LOSS         max_loss   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 303 2025-12-02 19:45 SELL    4193.73    4209.76   -28.85   LOSS   trend_reversal   75%           NY Session Bearish BOS/CHoCH + FVG
+ 304 2025-12-03 02:00 SELL    4209.67    4226.47   -16.80   LOSS   trend_reversal   65%         Sydney-Tokyo Bearish OB
+ 305 2025-12-03 07:15  BUY    4220.23    4199.59   -20.64   LOSS   trend_reversal   63%         Sydney-Tokyo Bullish FVG
+ 306 2025-12-03 14:45  BUY    4213.25    4200.66   -25.18   LOSS   trend_reversal   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 307 2025-12-03 23:00 SELL    4209.79    4196.99    12.80    WIN          timeout   65%         Sydney-Tokyo Bearish OB
+ 308 2025-12-04 08:30 SELL    4188.79    4199.72   -16.40   LOSS   trend_reversal   75% Tokyo-London Overlap Bearish BOS/CHoCH + FVG
+ 309 2025-12-04 14:15  BUY    4194.18    4210.34    16.16    WIN      take_profit   63% London-NY Overlap (Golden) Bullish FVG
+ 310 2025-12-04 19:00  BUY    4211.15    4209.43    -3.10   LOSS          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+ 311 2025-12-05 03:00 SELL    4196.88    4209.24   -12.36   LOSS   trend_reversal   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 312 2025-12-05 08:15  BUY    4227.52    4218.43   -13.64   LOSS   trend_reversal   75% Tokyo-London Overlap Bullish BOS/CHoCH + FVG
+ 313 2025-12-05 13:30  BUY    4222.93    4233.57    10.64    WIN      take_profit   63% London-NY Overlap (Golden) Bullish FVG
+ 314 2025-12-05 17:45  BUY    4243.47    4211.74   -31.73   LOSS   trend_reversal   63%           NY Session Bullish FVG
+ 315 2025-12-05 23:00 SELL    4200.36    4210.65   -10.29   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+ 316 2025-12-08 05:30 SELL    4207.56    4216.30    -8.74   LOSS   trend_reversal   73%         Sydney-Tokyo Bearish FVG
+ 317 2025-12-08 11:00  BUY    4208.93    4210.57     2.62    WIN          timeout   65%         London Early Bullish OB
+ 318 2025-12-08 18:00 SELL    4183.40    4188.52    -9.22   LOSS          timeout   75%           NY Session Bearish BOS/CHoCH + FVG
+ 319 2025-12-09 01:30 SELL    4194.44    4194.04     0.40    WIN          timeout   73%         Sydney-Tokyo Bearish FVG
+ 320 2025-12-09 08:00 SELL    4174.46    4191.59   -25.70   LOSS   trend_reversal   85% Tokyo-London Overlap Bearish BOS/CHoCH + FVG
+ 321 2025-12-09 16:45  BUY    4204.83    4212.01     7.18    WIN          timeout   63% London-NY Overlap (Golden) Bullish FVG
+ 322 2025-12-10 02:30  BUY    4207.42    4216.81     9.39    WIN      take_profit   65%         Sydney-Tokyo Bullish OB
+ 323 2025-12-10 06:00 SELL    4208.08    4192.21    15.87    WIN      take_profit   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 324 2025-12-10 16:00 SELL    4204.85    4190.75    28.20    WIN      take_profit   65% London-NY Overlap (Golden) Bearish OB
+ 325 2025-12-10 19:45 SELL    4199.61    4187.73    21.38    WIN      take_profit   65%           NY Session Bearish OB
+ 326 2025-12-11 01:00 SELL    4225.08    4212.08    13.00    WIN          timeout   63%         Sydney-Tokyo Bearish FVG
+ 327 2025-12-11 12:00 SELL    4220.40    4227.19   -13.58   LOSS          timeout   65% London-NY Overlap (Golden) Bearish OB
+ 328 2025-12-11 18:30  BUY    4261.57    4274.92    13.35    WIN          timeout   63%           NY Session Bullish FVG
+ 329 2025-12-12 04:00  BUY    4275.21    4266.26    -8.95   LOSS   trend_reversal   63%         Sydney-Tokyo Bullish FVG
+ 330 2025-12-12 09:15  BUY    4285.66    4315.25    47.35    WIN      take_profit   85%         London Early Bullish BOS/CHoCH + FVG
+ 331 2025-12-12 13:30  BUY    4334.52    4300.60   -33.92   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bullish FVG
+ 332 2025-12-15 04:45  BUY    4326.17    4345.05    18.88    WIN          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 333 2025-12-15 14:00  BUY    4343.82    4323.57   -40.50   LOSS   trend_reversal   73% London-NY Overlap (Golden) Bullish FVG
+ 334 2025-12-15 19:15 SELL    4302.09    4305.96    -3.87   LOSS          timeout   63%           NY Session Bearish FVG
+ 335 2025-12-16 04:15 SELL    4310.53    4296.19    14.34    WIN      take_profit   65%         Sydney-Tokyo Bearish OB
+ 336 2025-12-16 07:15 SELL    4280.40    4277.34     3.06    WIN          timeout   73%         Sydney-Tokyo Bearish FVG
+ 337 2025-12-16 15:45  BUY    4312.85    4294.88   -35.94   LOSS   trend_reversal   85% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 338 2025-12-17 01:00  BUY    4303.86    4317.96    14.10    WIN      take_profit   65%         Sydney-Tokyo Bullish OB
+ 339 2025-12-17 05:30  BUY    4321.38    4315.86    -5.52   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+ 340 2025-12-17 12:00  BUY    4319.37    4336.01    33.27    WIN      take_profit   65% London-NY Overlap (Golden) Bullish OB
+ 341 2025-12-17 18:15  BUY    4326.61    4337.90    11.29    WIN          timeout   63%           NY Session Bullish FVG
+ 342 2025-12-18 03:45 SELL    4331.29    4337.08    -5.79   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 343 2025-12-18 09:45 SELL    4331.32    4321.81    15.21    WIN      take_profit   65%         London Early Bearish OB
+ 344 2025-12-18 14:00 SELL    4323.94    4337.49   -27.10   LOSS   trend_reversal   65% London-NY Overlap (Golden) Bearish OB
+ 345 2025-12-18 20:00  BUY    4339.33    4325.90   -24.17   LOSS   trend_reversal   85%           NY Session Bullish BOS/CHoCH + FVG
+ 346 2025-12-19 05:15 SELL    4319.03    4326.93    -7.90   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 347 2025-12-19 10:45 SELL    4325.74    4326.59    -0.85   LOSS          timeout   63%         London Early Bearish FVG
+ 348 2025-12-19 17:15  BUY    4337.45    4340.16     4.88    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+ 349 2025-12-22 02:00  BUY    4359.45    4393.98    34.53    WIN      take_profit   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 350 2025-12-22 08:30  BUY    4408.15    4408.92     0.77    WIN          timeout   63% Tokyo-London Overlap Bullish FVG
+ 351 2025-12-22 15:00  BUY    4425.29    4429.98     9.38    WIN          timeout   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 352 2025-12-22 23:30  BUY    4444.91    4469.15    24.24    WIN      take_profit   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 353 2025-12-23 05:00  BUY    4486.00    4474.89   -11.11   LOSS   trend_reversal   63%         Sydney-Tokyo Bullish FVG
+ 354 2025-12-23 10:15  BUY    4487.01    4485.20    -2.90   LOSS          timeout   73%         London Early Bullish FVG
+ 355 2025-12-23 16:45 SELL    4445.67    4474.12   -56.90   LOSS         max_loss   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 356 2025-12-23 23:00  BUY    4491.13    4476.58   -14.55   LOSS          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 357 2025-12-24 07:30 SELL    4495.21    4491.19     4.02    WIN          timeout   73%         Sydney-Tokyo Bearish FVG
+ 358 2025-12-24 14:00 SELL    4495.17    4480.04    30.26    WIN      take_profit   65% London-NY Overlap (Golden) Bearish OB
+ 359 2025-12-24 18:00 SELL    4465.97    4488.53   -22.56   LOSS   trend_reversal   63%           NY Session Bearish FVG
+ 360 2025-12-26 04:00  BUY    4506.29    4509.08     2.79    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 361 2025-12-26 11:45  BUY    4512.69    4525.67    20.77    WIN      take_profit   73%         London Early Bullish FVG
+ 362 2025-12-26 18:30  BUY    4539.38    4523.58   -28.44   LOSS   trend_reversal   73%           NY Session Bullish FVG
+ 363 2025-12-29 02:15 SELL    4486.44    4515.11   -28.67   LOSS   trend_reversal   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 364 2025-12-29 08:00 SELL    4505.70    4484.16    32.31    WIN      take_profit   75% Tokyo-London Overlap Bearish BOS/CHoCH + FVG
+ 365 2025-12-29 11:30 SELL    4475.51    4448.65    26.86    WIN      take_profit   63%         London Early Bearish FVG
+ 366 2025-12-29 16:15 SELL    4389.51    4340.44    98.14    WIN          timeout   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 367 2025-12-30 02:00  BUY    4346.60    4378.03    31.43    WIN      take_profit   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 368 2025-12-30 11:00  BUY    4372.92    4371.56    -1.36   LOSS          timeout   63%         London Early Bullish FVG
+ 369 2025-12-30 19:00  BUY    4373.26    4348.18   -45.14   LOSS   trend_reversal   73%           NY Session Bullish FVG
+ 370 2025-12-31 01:15 SELL    4333.75    4362.09   -28.34   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 371 2025-12-31 06:30 SELL    4343.09    4298.01    45.08    WIN      take_profit   63%         Sydney-Tokyo Bearish FVG
+ 372 2025-12-31 10:15 SELL    4326.07    4328.12    -3.28   LOSS          timeout   73%         London Early Bearish FVG
+ 373 2025-12-31 17:45  BUY    4337.34    4317.32   -36.04   LOSS   trend_reversal   75%           NY Session Bullish BOS/CHoCH + FVG
+ 374 2025-12-31 23:45 SELL    4317.13    4362.82   -45.69   LOSS   trend_reversal   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 375 2026-01-02 07:15  BUY    4378.22    4394.90    16.68    WIN          timeout   73%         Sydney-Tokyo Bullish FVG
+ 376 2026-01-02 16:00 SELL    4370.21    4326.81    86.79    WIN      take_profit   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 377 2026-01-02 20:30 SELL    4312.40    4328.61   -29.18   LOSS   trend_reversal   75%           NY Session Bearish BOS/CHoCH + FVG
+ 378 2026-01-05 03:00  BUY    4402.74    4401.68    -1.06   LOSS          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 379 2026-01-05 10:00  BUY    4424.12    4417.11   -11.22   LOSS   trend_reversal   75%         London Early Bullish BOS/CHoCH + FVG
+ 380 2026-01-05 15:45 SELL    4416.55    4449.12   -65.14   LOSS         max_loss   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 381 2026-01-05 23:00  BUY    4446.85    4436.25   -10.60   LOSS   trend_reversal   65%         Sydney-Tokyo Bullish OB
+ 382 2026-01-06 06:00  BUY    4465.56    4461.55    -4.01   LOSS          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 383 2026-01-06 12:30 SELL    4451.01    4467.77   -33.52   LOSS   trend_reversal   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 384 2026-01-06 18:15  BUY    4483.33    4492.88    17.19    WIN          timeout   85%           NY Session Bullish BOS/CHoCH + FVG
+ 385 2026-01-07 04:30 SELL    4475.59    4466.66     8.93    WIN          timeout   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 386 2026-01-07 13:15 SELL    4458.90    4435.33    47.13    WIN      take_profit   65% London-NY Overlap (Golden) Bearish OB
+ 387 2026-01-07 17:30 SELL    4442.14    4458.03   -28.60   LOSS   trend_reversal   85%           NY Session Bearish BOS/CHoCH + OB
+ 388 2026-01-08 02:00  BUY    4465.44    4441.03   -24.41   LOSS   trend_reversal   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 389 2026-01-08 07:15 SELL    4425.95    4430.20    -4.25   LOSS          timeout   75%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 390 2026-01-08 13:45 SELL    4422.71    4448.10   -50.78   LOSS         max_loss   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 391 2026-01-08 19:30  BUY    4461.26    4465.38     4.12    WIN          timeout   63%           NY Session Bullish FVG
+ 392 2026-01-09 04:45  BUY    4469.32    4471.00     1.68    WIN          timeout   73%         Sydney-Tokyo Bullish FVG
+ 393 2026-01-09 11:30  BUY    4471.64    4465.93    -5.71   LOSS   trend_reversal   63%         London Early Bullish FVG
+ 394 2026-01-09 17:15  BUY    4505.25    4492.75   -22.50   LOSS   trend_reversal   85%           NY Session Bullish BOS/CHoCH + FVG
+ 395 2026-01-09 23:00  BUY    4508.01    4547.13    39.12    WIN      take_profit   63%         Sydney-Tokyo Bullish FVG
+ 396 2026-01-12 04:30  BUY    4579.01    4574.37    -4.64   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+ 397 2026-01-12 11:00  BUY    4596.88    4582.12   -23.62   LOSS   trend_reversal   75%         London Early Bullish BOS/CHoCH + FVG
+ 398 2026-01-12 16:30  BUY    4604.05    4605.88     3.66    WIN          timeout   75% London-NY Overlap (Golden) Bullish BOS/CHoCH + FVG
+ 399 2026-01-12 23:00 SELL    4592.60    4589.10     3.50    WIN          timeout   85%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 400 2026-01-13 07:15 SELL    4601.11    4585.58    15.53    WIN      take_profit   65%         Sydney-Tokyo Bearish OB
+ 401 2026-01-13 10:15 SELL    4589.83    4593.09    -3.26   LOSS          timeout   63%         London Early Bearish FVG
+ 402 2026-01-13 17:15  BUY    4608.57    4594.25   -25.78   LOSS   trend_reversal   85%           NY Session Bullish BOS/CHoCH + FVG
+ 403 2026-01-13 23:15 SELL    4587.85    4615.19   -27.34   LOSS   trend_reversal   63%         Sydney-Tokyo Bearish FVG
+ 404 2026-01-14 07:45  BUY    4619.87    4637.24    17.37    WIN      take_profit   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 405 2026-01-14 11:45  BUY    4630.29    4618.95   -11.34   LOSS          timeout   63%         London Early Bullish FVG
+ 406 2026-01-14 19:00 SELL    4615.52    4638.97   -23.45   LOSS   trend_reversal   63%           NY Session Bearish FVG
+ 407 2026-01-15 01:15 SELL    4608.66    4592.78    15.88    WIN          timeout   63%         Sydney-Tokyo Bearish FVG
+ 408 2026-01-15 09:45 SELL    4601.62    4617.79   -25.87   LOSS   trend_reversal   73%         London Early Bearish FVG
+ 409 2026-01-15 15:00  BUY    4611.61    4605.44    -6.17   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bullish FVG
+ 410 2026-01-15 23:00 SELL    4611.98    4596.84    15.14    WIN      take_profit   73%         Sydney-Tokyo Bearish FVG
+ 411 2026-01-16 08:45 SELL    4597.89    4607.36    -9.47   LOSS   trend_reversal   63% Tokyo-London Overlap Bearish FVG
+ 412 2026-01-16 15:15 SELL    4586.97    4615.83   -57.72   LOSS         max_loss   85% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 413 2026-01-16 19:30 SELL    4580.57    4595.26   -26.44   LOSS   trend_reversal   85%           NY Session Bearish BOS/CHoCH + FVG
+ 414 2026-01-19 03:30  BUY    4662.12    4664.63     2.51    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 415 2026-01-19 12:00  BUY    4670.14    4666.15    -7.98   LOSS   trend_reversal   73% London-NY Overlap (Golden) Bullish FVG
+ 416 2026-01-19 18:15  BUY    4671.75    4665.96   -10.42   LOSS   trend_reversal   75%           NY Session Bullish BOS/CHoCH + FVG
+ 417 2026-01-20 04:30 SELL    4674.03    4695.69   -21.66   LOSS   trend_reversal   65%         Sydney-Tokyo Bearish OB
+ 418 2026-01-20 09:45  BUY    4715.81    4719.37     3.56    WIN          timeout   63%         London Early Bullish FVG
+ 419 2026-01-20 17:45  BUY    4737.53    4757.83    36.54    WIN          timeout   75%           NY Session Bullish BOS/CHoCH + FVG
+ 420 2026-01-21 03:30  BUY    4819.08    4854.69    35.61    WIN          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 421 2026-01-21 13:15  BUY    4866.83    4844.64   -22.19   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bullish FVG
+ 422 2026-01-21 18:30 SELL    4834.71    4765.41   124.74    WIN      take_profit   73%           NY Session Bearish FVG
+ 423 2026-01-22 01:15 SELL    4795.19    4792.61     2.58    WIN          timeout   83%         Sydney-Tokyo Bearish FVG
+ 424 2026-01-22 07:45  BUY    4821.07    4823.12     2.05    WIN          timeout   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 425 2026-01-22 14:15  BUY    4831.48    4857.55    26.07    WIN      take_profit   63% London-NY Overlap (Golden) Bullish FVG
+ 426 2026-01-22 20:00  BUY    4908.34    4949.24    40.90    WIN          timeout   63%           NY Session Bullish FVG
+ 427 2026-01-23 05:30  BUY    4949.55    4946.24    -3.31   LOSS          timeout   73%         Sydney-Tokyo Bullish FVG
+ 428 2026-01-23 12:00 SELL    4921.40    4939.48   -36.16   LOSS   trend_reversal   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 429 2026-01-23 18:15  BUY    4985.34    4982.24    -3.10   LOSS          timeout   63%           NY Session Bullish FVG
+ 430 2026-01-26 02:15  BUY    5042.62    5088.93    46.31    WIN          timeout   75%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 431 2026-01-26 12:15  BUY    5087.40    5072.09   -15.31   LOSS   trend_reversal   63% London-NY Overlap (Golden) Bullish FVG
+ 432 2026-01-26 18:00  BUY    5101.29    5064.38   -66.44   LOSS         max_loss   85%           NY Session Bullish BOS/CHoCH + FVG
+ 433 2026-01-26 23:15 SELL    5020.26    5071.25   -50.99   LOSS         max_loss   73%         Sydney-Tokyo Bearish FVG
+ 434 2026-01-27 05:30  BUY    5074.43    5077.46     3.03    WIN          timeout   63%         Sydney-Tokyo Bullish FVG
+ 435 2026-01-27 12:45  BUY    5086.24    5077.32   -17.84   LOSS   trend_reversal   73% London-NY Overlap (Golden) Bullish FVG
+ 436 2026-01-27 18:15  BUY    5098.56    5176.38   140.08    WIN      take_profit   85%           NY Session Bullish BOS/CHoCH + FVG
+ 437 2026-01-28 02:30  BUY    5168.14    5306.02   137.88    WIN      take_profit   65%         Sydney-Tokyo Bullish OB
+ 438 2026-01-28 13:00 SELL    5260.55    5285.86   -50.62   LOSS         max_loss   77% London-NY Overlap (Golden) Bearish BOS/CHoCH + OB
+ 439 2026-01-28 19:15  BUY    5302.44    5273.60   -51.91   LOSS         max_loss   85%           NY Session Bullish BOS/CHoCH + FVG
+ 440 2026-01-28 23:00  BUY    5386.83    5564.22   177.39    WIN      take_profit   85%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 441 2026-01-29 04:00  BUY    5521.20    5537.99    16.79    WIN          timeout   66%         Sydney-Tokyo Bullish FVG
+ 442 2026-01-29 12:45 SELL    5483.46    5515.87   -64.82   LOSS         max_loss   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 443 2026-01-29 15:45 SELL    5510.29    5543.79   -67.00   LOSS         max_loss   73% London-NY Overlap (Golden) Bearish FVG
+ 444 2026-01-29 18:45 SELL    5264.31    5296.16   -57.33   LOSS         max_loss   68%           NY Session Bearish BOS/CHoCH + FVG
+ 445 2026-01-29 23:00  BUY    5398.33    5308.99   -89.34   LOSS         max_loss   76%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 446 2026-01-30 05:30 SELL    5154.60    5214.12   -59.52   LOSS         max_loss   68%         Sydney-Tokyo Bearish BOS/CHoCH + FVG
+ 447 2026-01-30 08:30 SELL    5157.27    5031.90   188.05    WIN      take_profit   66% Tokyo-London Overlap Bearish FVG
+ 448 2026-01-30 13:30 SELL    5120.82    4940.77   180.05    WIN      take_profit   57% London-NY Overlap (Golden) Bearish FVG
+ 449 2026-01-30 23:00 SELL    4839.12    4675.83   163.29    WIN      take_profit   66%         Sydney-Tokyo Bearish FVG
+ 450 2026-02-02 05:30 SELL    4665.08    4687.60   -22.52   LOSS          timeout   66%         Sydney-Tokyo Bearish FVG
+ 451 2026-02-02 14:30  BUY    4797.30    4738.90  -116.80   LOSS         max_loss   66% London-NY Overlap (Golden) Bullish FVG
+ 452 2026-02-02 17:45 SELL    4619.85    4696.48  -137.93   LOSS         max_loss   68%           NY Session Bearish BOS/CHoCH + FVG
+ 453 2026-02-02 20:45 SELL    4657.63    4694.21   -65.84   LOSS         max_loss   66%           NY Session Bearish FVG
+ 454 2026-02-03 01:00  BUY    4718.34    4868.70   150.36    WIN      take_profit   76%         Sydney-Tokyo Bullish BOS/CHoCH + FVG
+ 455 2026-02-03 10:45  BUY    4912.19    4913.52     1.33    WIN          timeout   63%         London Early Bullish FVG
+ 456 2026-02-03 17:30  BUY    4923.77    4983.77   108.00    WIN      take_profit   65%           NY Session Bullish OB
+ 457 2026-02-03 23:00  BUY    4957.74    5073.46   115.72    WIN      take_profit   73%         Sydney-Tokyo Bullish FVG
+ 458 2026-02-04 08:45  BUY    5076.61    5057.51   -28.65   LOSS   trend_reversal   73% Tokyo-London Overlap Bullish FVG
+ 459 2026-02-04 14:00 SELL    5044.94    4974.86   140.16    WIN      take_profit   75% London-NY Overlap (Golden) Bearish BOS/CHoCH + FVG
+ 460 2026-02-04 19:00 SELL    4921.23    4958.49   -37.26   LOSS   trend_reversal   63%           NY Session Bearish FVG
+ 461 2026-02-05 03:15  BUY    4951.62    4896.19   -55.43   LOSS         max_loss   63%         Sydney-Tokyo Bullish FVG
+ 462 2026-02-05 07:15 SELL    4868.19    4929.13   -60.94   LOSS         max_loss   57%         Sydney-Tokyo Bearish FVG
+ 463 2026-02-05 11:30 SELL    4889.68    4809.09   128.95    WIN      take_profit   76%         London Early Bearish BOS/CHoCH + FVG
+ 464 2026-02-05 18:30  BUY    4878.69    4836.99   -75.06   LOSS         max_loss   85%           NY Session Bullish BOS/CHoCH + FVG
+
+======================================================================
+END OF REPORT
+======================================================================

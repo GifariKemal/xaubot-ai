@@ -1,0 +1,31 @@
+#35 Fix S/L Bug Results
+Generated: 2026-02-08 18:45:06.641730
+Bug: hours_to_golden NameError in Check 5 max loss
+Fix: Remove golden hold pass-through, close immediately at threshold
+
+=== RESULTS ===
+  Baseline: #34A (golden hold): 614 trades, 82.6% WR, $3,162.64, DD: 2.4%, Sharpe: 4.41, PF: 2.43, MaxLoss exits: 24, vs Base: $+0.00
+  A: Fix S/L 50% (no hold): 614 trades, 82.6% WR, $3,162.64, DD: 2.4%, Sharpe: 4.41, PF: 2.43, MaxLoss exits: 24, vs Base: $+0.00
+  B: Fix S/L 40% (tighter): 617 trades, 81.8% WR, $2,859.53, DD: 2.1%, Sharpe: 4.14, PF: 2.24, MaxLoss exits: 32, vs Base: $-303.11
+  C: Fix S/L 60% (looser): 614 trades, 82.9% WR, $3,176.05, DD: 2.4%, Sharpe: 4.29, PF: 2.39, MaxLoss exits: 17, vs Base: $+13.42
+
+Best: C: Fix S/L 60% (looser)
+
+=== MAX-LOSS EXIT ANALYSIS ===
+  Baseline: #34A (golden hold): 24 exits, avg $-37.38, worst $-76.63
+  A: Fix S/L 50% (no hold): 24 exits, avg $-37.38, worst $-76.63
+  B: Fix S/L 40% (tighter): 32 exits, avg $-32.87, worst $-76.63
+  C: Fix S/L 60% (looser): 17 exits, avg $-44.61, worst $-76.63
+
+=== EXIT REASONS (BEST) ===
+  trailing_sl         : 297 (48.4%)
+  breakeven_exit      : 161 (26.2%)
+  early_cut           : 45 (7.3%)
+  take_profit         : 28 (4.6%)
+  trend_reversal      : 26 (4.2%)
+  smart_tp            : 19 (3.1%)
+  max_loss            : 17 (2.8%)
+  weekend_close       : 9 (1.5%)
+  timeout             : 7 (1.1%)
+  peak_protect        : 4 (0.7%)
+  market_signal       : 1 (0.2%)

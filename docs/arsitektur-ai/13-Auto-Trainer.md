@@ -1,4 +1,4 @@
-# Auto Trainer — Sistem Retraining Otomatis
+# *Auto Trainer* --- Sistem *Retraining* Otomatis
 
 > **File:** `src/auto_trainer.py`
 > **Class:** `AutoTrainer`
@@ -6,21 +6,21 @@
 
 ---
 
-## Apa Itu Auto Trainer?
+## Apa Itu *Auto Trainer*?
 
-Auto Trainer adalah sistem yang **melatih ulang model AI secara otomatis** agar tetap up-to-date dengan kondisi pasar terbaru. Retraining dilakukan saat market tutup (05:00 WIB) untuk menghindari gangguan saat trading aktif.
+*Auto Trainer* adalah sistem yang **melatih ulang model AI secara otomatis** agar tetap up-to-date dengan kondisi pasar terbaru. *Retraining* dilakukan saat market tutup (05:00 WIB) untuk menghindari gangguan saat trading aktif.
 
-**Analogi:** Auto Trainer seperti **pelatih yang membuat atlet berlatih setiap malam** — setelah pertandingan selesai, atlet (model AI) dilatih dengan data terbaru agar siap menghadapi tantangan esok hari.
+**Analogi:** *Auto Trainer* seperti **pelatih yang membuat atlet berlatih setiap malam** --- setelah pertandingan selesai, atlet (model AI) dilatih dengan data terbaru agar siap menghadapi tantangan esok hari.
 
 ---
 
-## Jadwal Retraining
+## Jadwal *Retraining*
 
 | Tipe | Waktu | Data | Boost Rounds | Kondisi |
 |------|-------|------|-------------|---------|
-| **Daily** | 05:00 WIB (market close) | 8.000 bar | 50 | Senin–Jumat |
-| **Weekend** | 05:00 WIB Sabtu/Minggu | 15.000 bar | 80 | Deep training |
-| **Emergency** | Kapan saja | 8.000 bar | 50 | AUC < 0.65 |
+| **Daily** | 05:00 WIB (market close) | 8.000 bar | 50 | Senin--Jumat |
+| **Weekend** | 05:00 WIB Sabtu/Minggu | 15.000 bar | 80 | *Deep training* |
+| **Emergency** | Kapan saja | 8.000 bar | 50 | *AUC* < 0.65 |
 | **Initial** | Pertama kali | 8.000 bar | 50 | Belum pernah training |
 
 ```
@@ -53,91 +53,137 @@ AutoTrainer(
 
 ---
 
-## Proses Retraining (Step-by-Step)
+## Proses *Retraining* (Step-by-Step)
+
+### Flowchart Keputusan *Retraining*
+
+```mermaid
+flowchart TD
+    A[Cek should_retrain] --> B{Sudah >= 20 jam\nsejak retrain terakhir?}
+    B -- Tidak --> Z[Skip retrain]
+    B -- Ya --> C{Jam 05:00 WIB\natau AUC < 0.65?}
+    C -- Tidak --> Z
+    C -- Ya --> D{Weekend?}
+    D -- Ya --> E[Deep training:\n15K bar, 80 rounds]
+    D -- Tidak --> F[Daily training:\n8K bar, 50 rounds]
+    E --> G[Backup model lama]
+    F --> G
+    G --> H[Fetch data dari MT5]
+    H --> I[Feature Engineering\n+ SMC Analysis]
+    I --> J[Train HMM + XGBoost]
+    J --> K[Validasi AUC]
+    K --> L{Test AUC >= 0.60?}
+    L -- Ya --> M[Simpan model baru]
+    L -- Tidak --> N[Rollback ke model lama]
+    M --> O[Record hasil ke DB]
+    N --> O
+    O --> P[Selesai]
+```
+
+### Detail Langkah-Langkah
 
 ```
 1. SHOULD RETRAIN CHECK
-   ├ Sudah >= 20 jam sejak retrain terakhir?
-   ├ Sekarang jam 05:00 WIB (±30 menit)?
-   ├ Weekend? → Deep training (15K bar)
-   └ AUC < 0.65? → Emergency retrain
+   +-- Sudah >= 20 jam sejak retrain terakhir?
+   +-- Sekarang jam 05:00 WIB (+-30 menit)?
+   +-- Weekend? -> Deep training (15K bar)
+   +-- AUC < 0.65? -> Emergency retrain
 
 2. BACKUP MODEL LAMA
-   ├ Copy xgboost_model.pkl → backups/YYYYMMDD_HHMMSS/
-   ├ Copy hmm_regime.pkl → backups/YYYYMMDD_HHMMSS/
-   └ Bersihkan backup lama (simpan 5 terakhir)
+   +-- Copy xgboost_model.pkl -> backups/YYYYMMDD_HHMMSS/
+   +-- Copy hmm_regime.pkl -> backups/YYYYMMDD_HHMMSS/
+   +-- Bersihkan backup lama (simpan 5 terakhir)
 
 3. FETCH DATA TERBARU
-   ├ Ambil 8K bar (daily) atau 15K bar (weekend) dari MT5
-   ├ Symbol: XAUUSD, Timeframe: M15
-   └ Validasi: minimal 1000 bar
+   +-- Ambil 8K bar (daily) atau 15K bar (weekend) dari MT5
+   +-- Symbol: XAUUSD, Timeframe: M15
+   +-- Validasi: minimal 1000 bar
 
 4. FEATURE ENGINEERING
-   ├ FeatureEngineer.calculate_all() → 40+ fitur
-   ├ SMCAnalyzer.calculate_all() → struktur pasar
-   └ create_target(lookahead=1) → label UP/DOWN
+   +-- FeatureEngineer.calculate_all() -> 40+ fitur
+   +-- SMCAnalyzer.calculate_all() -> struktur pasar
+   +-- create_target(lookahead=1) -> label UP/DOWN
 
 5. TRAINING HMM
-   ├ MarketRegimeDetector(n_regimes=3, lookback=500)
-   ├ hmm.fit(df)
-   └ Save → models/hmm_regime.pkl
+   +-- MarketRegimeDetector(n_regimes=3, lookback=500)
+   +-- hmm.fit(df)
+   +-- Save -> models/hmm_regime.pkl
 
 6. TRAINING XGBOOST
-   ├ TradingModel(confidence_threshold=0.60)
-   ├ xgb.fit(train_ratio=0.7, num_boost_round=50/80)
-   ├ Early stopping: 5 rounds
-   └ Save → models/xgboost_model.pkl
+   +-- TradingModel(confidence_threshold=0.60)
+   +-- xgb.fit(train_ratio=0.7, num_boost_round=50/80)
+   +-- Early stopping: 5 rounds
+   +-- Save -> models/xgboost_model.pkl
 
 7. VALIDASI
-   ├ Cek Train AUC & Test AUC
-   ├ Test AUC < 0.60? → ROLLBACK ke model lama (v4: dinaikkan dari 0.52)
-   ├ Test AUC < 0.65? → WARNING (alert)
-   └ Test AUC >= 0.65? → SUCCESS
+   +-- Cek Train AUC & Test AUC
+   +-- Test AUC < 0.60? -> ROLLBACK ke model lama (v4: dinaikkan dari 0.52)
+   +-- Test AUC < 0.65? -> WARNING (alert)
+   +-- Test AUC >= 0.65? -> SUCCESS
 
 8. RECORD HASIL
-   ├ Simpan ke PostgreSQL (training_runs table)
-   ├ Backup ke file (retrain_history.txt)
-   └ Log: durasi, AUC, accuracy, status
+   +-- Simpan ke PostgreSQL (training_runs table)
+   +-- Backup ke file (retrain_history.txt)
+   +-- Log: durasi, AUC, accuracy, status
 ```
 
 ---
 
-## Backup & Rollback
+## *Backup* & *Rollback*
 
-### Sistem Backup
+### Sistem *Backup*
 
 ```
 models/
-├── xgboost_model.pkl          # Model aktif
-├── hmm_regime.pkl             # Model aktif
-└── backups/
-    ├── 20250206_050015/       # Backup terbaru
-    │   ├── xgboost_model.pkl
-    │   └── hmm_regime.pkl
-    ├── 20250205_050012/       # Backup kemarin
-    │   ├── xgboost_model.pkl
-    │   └── hmm_regime.pkl
-    └── ... (max 5 backup)
++-- xgboost_model.pkl          # Model aktif
++-- hmm_regime.pkl             # Model aktif
++-- backups/
+    +-- 20250206_050015/       # Backup terbaru
+    |   +-- xgboost_model.pkl
+    |   +-- hmm_regime.pkl
+    +-- 20250205_050012/       # Backup kemarin
+    |   +-- xgboost_model.pkl
+    |   +-- hmm_regime.pkl
+    +-- ... (max 5 backup)
 ```
 
-### Kapan Rollback?
+### Kapan *Rollback*?
 
-```
-Model baru di-training
-    |
-    v
-Cek Test AUC
-    |
-    ├── AUC >= 0.65 ──> KEEP model baru ✅
-    |
-    ├── AUC 0.60-0.65 ──> KEEP tapi WARNING ⚠️
-    |                      (akan trigger emergency retrain nanti)
-    |
-    └── AUC < 0.60 ──> ROLLBACK ke model lama 🔄
-                        (v4: dinaikkan dari 0.52, karena 0.52 hampir = acak)
+#### Diagram Validasi *AUC*
+
+```mermaid
+flowchart TD
+    A[Model baru selesai di-training] --> B[Hitung Test AUC]
+    B --> C{Test AUC >= 0.65?}
+    C -- Ya --> D[KEEP model baru]
+    D --> D1[Status: SUCCESS]
+    C -- Tidak --> E{Test AUC >= 0.60?}
+    E -- Ya --> F[KEEP model baru\ndengan WARNING]
+    F --> F1[Status: WARNING]
+    F1 --> F2[Akan trigger\nemergency retrain nanti]
+    E -- Tidak --> G[ROLLBACK ke model lama]
+    G --> G1[Status: ROLLBACK]
+    G1 --> G2[v4: threshold dinaikkan\ndari 0.52 ke 0.60]
+
+    style D fill:#22c55e,color:#fff
+    style D1 fill:#22c55e,color:#fff
+    style F fill:#eab308,color:#000
+    style F1 fill:#eab308,color:#000
+    style F2 fill:#eab308,color:#000
+    style G fill:#ef4444,color:#fff
+    style G1 fill:#ef4444,color:#fff
+    style G2 fill:#ef4444,color:#fff
 ```
 
-### Method Rollback
+#### Ringkasan Keputusan
+
+| Kondisi | Aksi | Status |
+|---------|------|--------|
+| *AUC* >= 0.65 | KEEP model baru | SUCCESS |
+| *AUC* 0.60--0.65 | KEEP tapi WARNING (akan trigger *emergency* retrain nanti) | WARNING |
+| *AUC* < 0.60 | *ROLLBACK* ke model lama (v4: dinaikkan dari 0.52, karena 0.52 hampir = acak) | ROLLBACK |
+
+### Method *Rollback*
 
 ```python
 def rollback_models(reason="Manual rollback"):
@@ -151,28 +197,28 @@ def rollback_models(reason="Manual rollback"):
 
 ---
 
-## AUC Monitoring
+## *AUC* Monitoring
 
-### Apa Itu AUC?
+### Apa Itu *AUC*?
 
-AUC (Area Under Curve) mengukur **seberapa baik model membedakan sinyal BUY vs SELL**:
+*AUC* (*Area Under Curve*) mengukur **seberapa baik model membedakan sinyal BUY vs SELL**:
 
-| AUC | Arti | Aksi |
+| *AUC* | Arti | Aksi |
 |-----|------|------|
 | 0.80+ | Sangat bagus | Model dalam kondisi prima |
 | 0.65-0.80 | Bagus | Normal, lanjut trading |
-| 0.60-0.65 | Minimum | Warning, pertimbangkan retrain |
-| < 0.60 | Buruk | **ROLLBACK** + retrain segera (v4 threshold) |
+| 0.60-0.65 | Minimum | Warning, pertimbangkan *retraining* |
+| < 0.60 | Buruk | **ROLLBACK** + *retraining* segera (v4 threshold) |
 | 0.50 | Sama dengan tebak koin | Model tidak berguna |
 
-### Auto-Retrain on Low AUC
+### Auto-Retrain on Low *AUC*
 
 ```python
 def should_retrain_due_to_low_auc():
     """
     Cek AUC saat ini:
-      AUC < 0.65? → Perlu retrain
-      Tapi: sudah retrain < 4 jam lalu? → Tunggu
+      AUC < 0.65? -> Perlu retrain
+      Tapi: sudah retrain < 4 jam lalu? -> Tunggu
       (mencegah retrain loop)
     """
 ```
@@ -185,23 +231,23 @@ def should_retrain_due_to_low_auc():
 
 ```
 Table: training_runs
-├── id                 # Auto-increment
-├── training_type      # "daily" / "weekend"
-├── bars_used          # 8000 / 15000
-├── num_boost_rounds   # 50 / 80
-├── started_at         # Timestamp mulai
-├── completed_at       # Timestamp selesai
-├── duration_seconds   # Durasi training
-├── hmm_trained        # Boolean
-├── xgb_trained        # Boolean
-├── train_auc          # AUC di data training
-├── test_auc           # AUC di data test
-├── train_accuracy     # Akurasi training
-├── test_accuracy      # Akurasi test
-├── model_path         # Path model disimpan
-├── backup_path        # Path backup model lama
-├── success            # Boolean
-└── error_message      # Pesan error (jika gagal)
++-- id                 # Auto-increment
++-- training_type      # "daily" / "weekend"
++-- bars_used          # 8000 / 15000
++-- num_boost_rounds   # 50 / 80
++-- started_at         # Timestamp mulai
++-- completed_at       # Timestamp selesai
++-- duration_seconds   # Durasi training
++-- hmm_trained        # Boolean
++-- xgb_trained        # Boolean
++-- train_auc          # AUC di data training
++-- test_auc           # AUC di data test
++-- train_accuracy     # Akurasi training
++-- test_accuracy      # Akurasi test
++-- model_path         # Path model disimpan
++-- backup_path        # Path backup model lama
++-- success            # Boolean
++-- error_message      # Pesan error (jika gagal)
 ```
 
 ### File Fallback
@@ -209,9 +255,9 @@ Table: training_runs
 Jika PostgreSQL tidak tersedia:
 ```
 data/retrain_history.txt
-├── 2025-02-06T05:00:15+07:00
-├── 2025-02-05T05:00:12+07:00
-└── ... (append per retrain)
++-- 2025-02-06T05:00:15+07:00
++-- 2025-02-05T05:00:12+07:00
++-- ... (append per retrain)
 ```
 
 ---
@@ -256,18 +302,18 @@ if candle_count % 20 == 0:  # Setiap 20 candle baru
 | Data | 8.000 bar M15 (~83 hari) |
 | Train/Test Split | 70% / 30% |
 | XGBoost Rounds | 50 |
-| Early Stopping | 5 rounds |
+| *Early Stopping* | 5 rounds |
 | HMM Regimes | 3 |
 | HMM Lookback | 500 bar |
 
-### Weekend Deep Training (Sabtu-Minggu)
+### Weekend *Deep Training* (Sabtu-Minggu)
 
 | Parameter | Nilai |
 |-----------|-------|
 | Data | 15.000 bar M15 (~156 hari) |
 | Train/Test Split | 70% / 30% |
 | XGBoost Rounds | 80 |
-| Early Stopping | 5 rounds |
+| *Early Stopping* | 5 rounds |
 | HMM Regimes | 3 |
 | HMM Lookback | 500 bar |
 

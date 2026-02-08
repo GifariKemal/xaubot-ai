@@ -1,16 +1,60 @@
-# Telegram Notifications — Sistem Notifikasi Real-Time
+# *Telegram Notifications* — Sistem Notifikasi *Real-Time*
 
 > **File:** `src/telegram_notifier.py`
 > **Class:** `TelegramNotifier`
-> **API:** Telegram Bot API (async via aiohttp)
+> **API:** Telegram Bot API (*async* via aiohttp)
 
 ---
 
-## Apa Itu Telegram Notifications?
+## Arsitektur Notifikasi
 
-Telegram Notifications mengirimkan **laporan real-time** ke grup Telegram setiap kali terjadi event penting — trade dibuka/ditutup, laporan harian, alert darurat, dan status sistem.
+```mermaid
+flowchart LR
+    A["Event\n(Trade / Alert / Timer)"] --> B["TelegramNotifier\n(async aiohttp)"]
+    B --> C["Telegram Bot API\n(/sendMessage\n/sendPhoto\n/sendDocument)"]
+    C --> D["User / Grup Telegram"]
 
-**Analogi:** Telegram Notifications seperti **dashboard pilot di cockpit** — menampilkan semua informasi penting secara real-time tanpa harus melihat layar trading.
+    style A fill:#2d2d2d,stroke:#f5a623,color:#fff
+    style B fill:#2d2d2d,stroke:#4a9eff,color:#fff
+    style C fill:#2d2d2d,stroke:#50c878,color:#fff
+    style D fill:#2d2d2d,stroke:#ff6b6b,color:#fff
+```
+
+```mermaid
+flowchart TD
+    LOOP["Main Loop\n(setiap 1 detik)"] --> NEW_DAY{"New day?"}
+    NEW_DAY -- Ya --> DAILY["Daily Summary + Reset"]
+    NEW_DAY -- Tidak --> HOURLY{"Hourly timer?"}
+    HOURLY -- Ya --> HOUR_MSG["Hourly Analysis"]
+    HOURLY -- Tidak --> HALF{"30-min timer?"}
+    HALF -- Ya --> MARKET["Market Update"]
+    HALF -- Tidak --> TRADE{"Trade executed?"}
+    TRADE -- Ya --> OPEN["Trade Open Notification"]
+    TRADE -- Tidak --> CLOSE{"Position closed?"}
+    CLOSE -- Ya --> CLOSE_MSG["Trade Close Notification"]
+    CLOSE -- Tidak --> LIMIT{"Limit hit?"}
+    LIMIT -- Ya --> CRIT["Critical Limit Alert"]
+    LIMIT -- Tidak --> FLASH{"Flash crash?"}
+    FLASH -- Ya --> EMERG["Emergency Close Alert"]
+    FLASH -- Tidak --> LOOP
+
+    style LOOP fill:#1a1a2e,stroke:#4a9eff,color:#fff
+    style DAILY fill:#1a1a2e,stroke:#50c878,color:#fff
+    style HOUR_MSG fill:#1a1a2e,stroke:#50c878,color:#fff
+    style MARKET fill:#1a1a2e,stroke:#50c878,color:#fff
+    style OPEN fill:#1a1a2e,stroke:#f5a623,color:#fff
+    style CLOSE_MSG fill:#1a1a2e,stroke:#f5a623,color:#fff
+    style CRIT fill:#1a1a2e,stroke:#ff6b6b,color:#fff
+    style EMERG fill:#1a1a2e,stroke:#ff6b6b,color:#fff
+```
+
+---
+
+## Apa Itu *Telegram Notifications*?
+
+*Telegram Notifications* mengirimkan **laporan *real-time*** ke grup Telegram setiap kali terjadi event penting — trade dibuka/ditutup, laporan harian, alert darurat, dan status sistem.
+
+**Analogi:** *Telegram Notifications* seperti **dashboard pilot di cockpit** — menampilkan semua informasi penting secara *real-time* tanpa harus melihat layar trading.
 
 ---
 
@@ -40,23 +84,23 @@ enabled = bool(bot_token and chat_id)  # Auto-disable jika tidak dikonfigurasi
 
 | # | Tipe | Trigger | Frekuensi |
 |---|------|---------|-----------|
-| 1 | Trade Open | Order berhasil dieksekusi | Per trade |
-| 2 | Trade Close | Posisi ditutup | Per trade |
-| 3 | Market Update | Timer 30 menit | Setiap 30 menit |
-| 4 | Hourly Analysis | Timer 1 jam | Setiap 1 jam |
-| 5 | Daily Summary | Pergantian hari | 1x per hari |
-| 6 | Startup | Bot dinyalakan | 1x per sesi |
-| 7 | Shutdown | Bot dimatikan | 1x per sesi |
-| 8 | News Alert | Event ekonomi terdeteksi | Per event |
-| 9 | Critical Limit | Daily/total loss limit | Per event |
-| 10 | Emergency Close | Flash crash / darurat | Per event |
-| 11 | System Status | Status berkala | Per request |
+| 1 | *Trade Open* | Order berhasil dieksekusi | Per trade |
+| 2 | *Trade Close* | Posisi ditutup | Per trade |
+| 3 | *Market Update* | Timer 30 menit | Setiap 30 menit |
+| 4 | *Hourly Analysis* | Timer 1 jam | Setiap 1 jam |
+| 5 | *Daily Summary* | Pergantian hari | 1x per hari |
+| 6 | *Startup* | Bot dinyalakan | 1x per sesi |
+| 7 | *Shutdown* | Bot dimatikan | 1x per sesi |
+| 8 | *News Alert* | Event ekonomi terdeteksi | Per event |
+| 9 | *Critical Limit* | Daily/total loss limit | Per event |
+| 10 | *Emergency Close* | *Flash crash* / darurat | Per event |
+| 11 | *System Status* | Status berkala | Per request |
 
 ---
 
 ## Format Pesan
 
-### 1. Trade Open
+### 1. *Trade Open*
 
 ```
 🟢 LONG #123456
@@ -76,13 +120,13 @@ enabled = bool(bot_token and chat_id)  # Auto-disable jika tidak dikonfigurasi
 | 🟢/🔴 | BUY (hijau) / SELL (merah) |
 | LONG/SHORT | Arah posisi |
 | #123456 | Ticket ID dari broker |
-| R:R | Risk to Reward ratio |
-| AI: 75% | ML confidence |
-| medium_volatility | HMM regime |
+| R:R | *Risk to Reward ratio* |
+| AI: 75% | ML *confidence* |
+| medium_volatility | HMM *regime* |
 
 ---
 
-### 2. Trade Close
+### 2. *Trade Close*
 
 ```
 ✅ WIN #123456
@@ -106,7 +150,7 @@ enabled = bool(bot_token and chat_id)  # Auto-disable jika tidak dikonfigurasi
 
 ---
 
-### 3. Market Update (Setiap 30 Menit)
+### 3. *Market Update* (Setiap 30 Menit)
 
 ```
 📊 XAUUSD $4965.00
@@ -120,7 +164,7 @@ enabled = bool(bot_token and chat_id)  # Auto-disable jika tidak dikonfigurasi
 
 ---
 
-### 4. Hourly Analysis (Setiap 1 Jam)
+### 4. *Hourly Analysis* (Setiap 1 Jam)
 
 ```
 📊 HOURLY 14:00 WIB
@@ -152,7 +196,7 @@ Risk NORMAL
 
 ---
 
-### 5. Daily Summary
+### 5. *Daily Summary*
 
 ```
 🎉 DAILY REPORT 2025-02-06
@@ -187,7 +231,7 @@ Recent Trades
 
 ---
 
-### 6. Startup
+### 6. *Startup*
 
 ```
 🚀 BOT STARTED
@@ -211,7 +255,7 @@ Risk Settings
 
 ---
 
-### 7. Shutdown
+### 7. *Shutdown*
 
 ```
 🔴 BOT STOPPED
@@ -227,7 +271,7 @@ Session Summary
 
 ---
 
-### 8. News Alert
+### 8. *News Alert*
 
 ```
 🚨 NEWS DANGER_NEWS
@@ -245,7 +289,7 @@ Session Summary
 
 ---
 
-### 9. Critical Limit Alert
+### 9. *Critical Limit Alert*
 
 ```
 🚨 DAILY LOSS LIMIT REACHED 🚨
@@ -259,7 +303,7 @@ Will resume tomorrow automatically.
 
 ---
 
-### 10. Emergency Close
+### 10. *Emergency Close*
 
 ```
 🚨 EMERGENCY CLOSE COMPLETE
@@ -274,26 +318,62 @@ Total P/L: -$45.00
 
 | Alert Type | Emoji | Contoh |
 |-----------|-------|--------|
-| flash_crash | 🚨 | "Flash crash detected on XAUUSD" |
-| high_volatility | ⚡ | "Volatility spike detected" |
-| connection_error | 📡 | "MT5 connection lost" |
-| model_retrain | 🔄 | "ML model retrained successfully" |
-| market_close | 🔔 | "Market closing in 30 minutes" |
-| low_balance | 💰 | "Account balance below threshold" |
+| *flash_crash* | 🚨 | "Flash crash detected on XAUUSD" |
+| *high_volatility* | ⚡ | "Volatility spike detected" |
+| *connection_error* | 📡 | "MT5 connection lost" |
+| *model_retrain* | 🔄 | "ML model retrained successfully" |
+| *market_close* | 🔔 | "Market closing in 30 minutes" |
+| *low_balance* | 💰 | "Account balance below threshold" |
 
 ---
 
 ## 3 Metode Pengiriman
 
+```mermaid
+flowchart LR
+    N["TelegramNotifier"] --> SM["send_message()\n/sendMessage\nTeks biasa"]
+    N --> SP["send_photo()\n/sendPhoto\nChart / grafik"]
+    N --> SD["send_document()\n/sendDocument\nFile PDF"]
+
+    style N fill:#2d2d2d,stroke:#4a9eff,color:#fff
+    style SM fill:#2d2d2d,stroke:#50c878,color:#fff
+    style SP fill:#2d2d2d,stroke:#f5a623,color:#fff
+    style SD fill:#2d2d2d,stroke:#ff6b6b,color:#fff
+```
+
 | Metode | Endpoint | Kegunaan |
 |--------|----------|---------|
 | `send_message()` | `/sendMessage` | Teks biasa (semua notifikasi) |
-| `send_photo()` | `/sendPhoto` | Chart/grafik (daily report) |
+| `send_photo()` | `/sendPhoto` | Chart/grafik (*daily report*) |
 | `send_document()` | `/sendDocument` | File PDF (laporan detail) |
 
 ---
 
-## Error Handling
+## *Error Handling*
+
+```mermaid
+flowchart TD
+    SEND["send_message() / send_photo()"] --> TRY{"Try-Except"}
+    TRY -- Berhasil --> CHECK{"HTTP Status\n== 200?"}
+    CHECK -- Ya --> OK["Return True\n(Terkirim)"]
+    CHECK -- Tidak --> LOG_ERR["Log Error\nReturn False"]
+    TRY -- Exception --> LOG_WARN["Log Warning\nLanjut Trading"]
+
+    DISABLED{"Token / ChatID\nkosong?"} --> AUTO["Auto-disable\nReturn True"]
+
+    EMERG["Emergency Close"] --> CLOSE_POS["Tutup Posisi Dulu"]
+    CLOSE_POS --> TRY_NOTIF{"Kirim Notifikasi"}
+    TRY_NOTIF -- Gagal --> IGNORE["pass\n(Trading > Notifikasi)"]
+    TRY_NOTIF -- Berhasil --> OK2["Notifikasi Terkirim"]
+
+    style SEND fill:#1a1a2e,stroke:#4a9eff,color:#fff
+    style OK fill:#1a1a2e,stroke:#50c878,color:#fff
+    style OK2 fill:#1a1a2e,stroke:#50c878,color:#fff
+    style LOG_ERR fill:#1a1a2e,stroke:#ff6b6b,color:#fff
+    style LOG_WARN fill:#1a1a2e,stroke:#f5a623,color:#fff
+    style IGNORE fill:#1a1a2e,stroke:#f5a623,color:#fff
+    style AUTO fill:#1a1a2e,stroke:#888,color:#fff
+```
 
 ```
 Strategi: GRACEFUL DEGRADATION
@@ -313,6 +393,8 @@ Strategi: GRACEFUL DEGRADATION
    -> Bot tetap berjalan tanpa notifikasi
 ```
 
+Strategi ini menerapkan pola *graceful degradation* — kegagalan notifikasi **tidak pernah** menghentikan proses trading. Sistem *emergency close* akan tetap menutup posisi meskipun Telegram tidak responsif, menerapkan prinsip *circuit breaker* di mana komponen non-kritis diisolasi dari jalur kritis.
+
 ```python
 # Contoh: Emergency close TIDAK boleh gagal karena Telegram
 try:
@@ -323,20 +405,22 @@ except:
 
 ---
 
-## Rate Limiting
+## *Rate Limiting*
 
 | Notifikasi | Interval |
 |-----------|----------|
-| Trade Open/Close | Langsung (per event) |
-| Market Update | 30 menit |
-| Hourly Analysis | 1 jam |
-| Daily Summary | 1x per hari |
-| Startup/Shutdown | 1x per sesi |
-| Min message interval | 1 detik (variable) |
+| *Trade Open/Close* | Langsung (per event) |
+| *Market Update* | 30 menit |
+| *Hourly Analysis* | 1 jam |
+| *Daily Summary* | 1x per hari |
+| *Startup* / *Shutdown* | 1x per sesi |
+| Min *message interval* | 1 detik (variable) |
+
+*Rate limiting* mencegah flooding ke Telegram Bot API yang memiliki batas ~30 pesan/detik per grup. Interval minimum 1 detik antar pesan menjaga bot tetap dalam batas aman.
 
 ---
 
-## Kapan Notifikasi Dikirim di Main Loop
+## Kapan Notifikasi Dikirim di *Main Loop*
 
 ```
 Main Loop (setiap 1 detik)
@@ -362,9 +446,9 @@ Main Loop (setiap 1 detik)
 
 ---
 
-## Formatting HTML
+## *Formatting* HTML
 
-Semua pesan menggunakan HTML parse mode:
+Semua pesan menggunakan HTML *parse mode*:
 
 ```html
 <b>Bold</b>           -> Label penting
@@ -372,7 +456,7 @@ Semua pesan menggunakan HTML parse mode:
 <i>Italic</i>          -> Info tambahan, alasan signal
 ```
 
-Tree structure menggunakan box-drawing characters:
+Tree structure menggunakan *box-drawing characters*:
 
 ```
 ├  -> Item tengah

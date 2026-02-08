@@ -1,18 +1,42 @@
-# Stop Loss (S/L) — Sistem Proteksi Berlapis
+# *Stop Loss* (S/L) — Sistem Proteksi Berlapis
 
 > **File terkait:** `src/smc_polars.py`, `main_live.py`, `src/smart_risk_manager.py`
 
 ---
 
-## Apa Itu Stop Loss di Bot Ini?
+```mermaid
+block-beta
+    columns 1
+    block:layer1["Layer 1 — SMC ATR-Based Stop Loss"]:1
+        A["Dikirim ke broker sebagai SL aktif\n1.5 ATR dari entry (~$15-$30)"]
+    end
+    block:layer2["Layer 2 — Software Smart Exit"]:1
+        B["Bot monitor posisi & tutup otomatis\nDinamis berdasarkan konteks ($25-$50)"]
+    end
+    block:layer3["Layer 3 — Emergency Broker SL"]:1
+        C["Safety net 2% modal\nAktif jika software gagal ($100)"]
+    end
+    block:layer4["Layer 4 — Circuit Breaker"]:1
+        D["Halt total semua trading\nFlash crash 2.5% / daily limit -5%"]
+    end
 
-Stop Loss bukan hanya satu angka — ini adalah **sistem proteksi 4 lapis** yang bekerja bersamaan. Jika satu layer gagal, layer berikutnya siap melindungi.
-
-**Analogi:** SL di bot ini seperti sistem keamanan gedung — ada CCTV (software monitoring), security (broker SL), alarm kebakaran (emergency SL), dan sprinkler otomatis (circuit breaker).
+    style layer1 fill:#2d7d46,color:#fff
+    style layer2 fill:#2d6a9f,color:#fff
+    style layer3 fill:#b8860b,color:#fff
+    style layer4 fill:#a82020,color:#fff
+```
 
 ---
 
-## 4 Layer Stop Loss
+## Apa Itu *Stop Loss* di Bot Ini?
+
+*Stop Loss* bukan hanya satu angka — ini adalah **sistem proteksi 4 lapis** yang bekerja bersamaan. Jika satu layer gagal, layer berikutnya siap melindungi.
+
+**Analogi:** SL di bot ini seperti sistem keamanan gedung — ada CCTV (software monitoring), security (broker SL), alarm kebakaran (*Emergency* SL), dan sprinkler otomatis (*Circuit Breaker*).
+
+---
+
+## 4 Layer *Stop Loss*
 
 ```
 Layer 1: SMC ATR-Based SL      <- Dikirim ke broker sebagai SL aktif
@@ -38,7 +62,7 @@ Semakin jauh = semakin jarang tercapai (backup)
 
 ---
 
-## Layer 1: SMC ATR-Based Stop Loss
+## Layer 1: SMC *ATR*-Based *Stop Loss*
 
 **Sumber:** `smc_polars.py` (Lines 631-652, 694-702)
 **Dikirim ke:** Broker MT5 sebagai SL order aktif
@@ -65,7 +89,7 @@ SL       = MAX(swing_sl, atr_sl)       # $4965.00 (pilih yang LEBIH JAUH)
 
 ```
 Sebelum (v2): SL = swing_low ATAU entry * 0.995
-  -> Bisa sangat dekat, gampang kena whipsaw
+  -> Bisa sangat dekat, gampang kena *whipsaw*
 
 Sesudah (v3): SL = MIN(swing_low, entry - 1.5*ATR)
   -> Selalu minimal 1.5 ATR dari entry
@@ -74,7 +98,7 @@ Sesudah (v3): SL = MIN(swing_low, entry - 1.5*ATR)
 
 ---
 
-## Layer 2: Software Smart Exit
+## Layer 2: Software *Smart Exit*
 
 **Sumber:** `smart_risk_manager.py` (Lines 559-724)
 **Mekanisme:** Bot monitor posisi setiap detik dan tutup otomatis
@@ -106,7 +130,7 @@ Trigger exit jika:
 ```
 Hard SL (broker):
   - Kaku, tidak bisa diubah
-  - Bisa kena whipsaw lalu harga balik
+  - Bisa kena *whipsaw* lalu harga balik
   - Tidak bisa mempertimbangkan konteks
 
 Software SL (bot):
@@ -118,7 +142,7 @@ Software SL (bot):
 
 ---
 
-## Layer 3: Emergency Broker Stop Loss
+## Layer 3: *Emergency* Broker *Stop Loss*
 
 **Sumber:** `smart_risk_manager.py` (Lines 305-346)
 **Fungsi:** Jaring pengaman TERAKHIR jika software gagal (disconnect, crash, dll)
@@ -140,17 +164,17 @@ BUY:  SL = entry - $10.00 = $4940.00
 SELL: SL = entry + $10.00 = $4960.00
 ```
 
-### Kapan Emergency SL Tercapai?
+### Kapan *Emergency* SL Tercapai?
 
-Seharusnya **tidak pernah** — software SL ($50) akan menutup jauh sebelum emergency SL ($100). Emergency SL hanya tercapai jika:
+Seharusnya **tidak pernah** — software SL ($50) akan menutup jauh sebelum *Emergency* SL ($100). *Emergency* SL hanya tercapai jika:
 - Bot crash / disconnect
 - Server bermasalah
 - Internet putus
-- Harga gap melewati semua level
+- Harga *gap* melewati semua level
 
 ---
 
-## Layer 4: Circuit Breaker
+## Layer 4: *Circuit Breaker*
 
 **Sumber:** `risk_engine.py` (Lines 143-151)
 **Fungsi:** Halt trading total saat kondisi darurat
@@ -212,10 +236,10 @@ if not result.success and retcode == 10016:
 
 | Layer | Sumber | Jarak dari Entry | Max Loss | Kondisi Trigger |
 |-------|--------|-----------------|----------|-----------------|
-| **1. SMC ATR** | Broker SL aktif | 1.5 ATR (~$12-15) | ~$15-30 | Harga hit SL level |
+| **1. SMC *ATR*** | Broker SL aktif | 1.5 *ATR* (~$12-15) | ~$15-30 | Harga hit SL level |
 | **2. Software** | Bot monitoring | Dinamis | $25-50 | Loss threshold + konteks |
-| **3. Emergency** | Broker safety net | 2% modal ($10) | $100 | Software gagal |
-| **4. Circuit** | Halt total | Semua posisi | Unlimited cap | Flash crash / daily limit |
+| **3. *Emergency*** | Broker safety net | 2% modal ($10) | $100 | Software gagal |
+| **4. *Circuit Breaker*** | Halt total | Semua posisi | Unlimited cap | *Flash crash* / daily limit |
 
 ---
 
@@ -240,16 +264,16 @@ Entry BUY @ $4950, SL broker @ $4937
   -> Loss: ~$13 (bukan unlimited!)
 ```
 
-### Skenario 3: Weekend Gap
+### Skenario 3: Weekend *Gap*
 
 ```
 Jumat: Entry BUY @ $4950, SL broker @ $4937
-  -> Senin buka gap di $4910 (melewati SL)
+  -> Senin buka *gap* di $4910 (melewati SL)
   -> Broker eksekusi SL di harga terbaik ~$4910
   -> Loss: ~$40 (lebih dari SL tapi terproteksi)
 ```
 
-### Skenario 4: Flash Crash (Tanpa Broker SL Fallback)
+### Skenario 4: *Flash Crash* (Tanpa Broker SL Fallback)
 
 ```
 Entry BUY @ $4950, sl=0 (broker reject)

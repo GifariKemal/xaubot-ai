@@ -1,0 +1,13 @@
+ML V2 Backtest Results
+Generated: 2026-02-08 21:07:36.639023
+
+Model: ML V2 (model_d.pkl)
+Features: 76
+Test AUC: 0.7339
+
+Total Trades: 107
+Win Rate: 65.4%
+Net P&L: $408.59
+Profit Factor: 2.58
+Max Drawdown: 0.36%
+Sharpe Ratio: 5.97

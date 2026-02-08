@@ -1,9 +1,13 @@
 "use client";
 
+import { useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShieldAlert, AlertTriangle } from "lucide-react";
 import { cn, formatUSD } from "@/lib/utils";
+import { useAnimatedValue } from "@/hooks/use-animated-value";
 import type { RiskMode } from "@/types/trading";
 
 interface RiskCardProps {
@@ -18,123 +22,152 @@ function getRiskModeVariant(mode: string): "success" | "warning" | "danger" | "s
   switch (mode) {
     case "normal": return "success";
     case "recovery": return "warning";
-    case "protected": return "danger";
-    case "stopped": return "danger";
+    case "protected": case "stopped": return "danger";
     default: return "secondary";
   }
 }
 
 export function RiskCard({ dailyLoss, dailyProfit, consecutiveLosses, riskPercent, riskMode }: RiskCardProps) {
-  const isCritical = riskPercent >= 100;
   const isHigh = riskPercent >= 80;
   const isMedium = riskPercent >= 50;
-
-  const getRiskColor = () => {
-    if (isHigh) return "text-danger";
-    if (isMedium) return "text-warning";
-    return "text-success";
-  };
-
-  const getSegmentFill = () => {
-    if (isHigh) return "bg-danger";
-    if (isMedium) return "bg-warning";
-    return "bg-success";
-  };
-
   const mode = riskMode?.mode || "unknown";
+  const firstMount = useRef(true);
+
+  const animRisk = useAnimatedValue(riskPercent);
+  const animLoss = useAnimatedValue(dailyLoss);
+  const animProfit = useAnimatedValue(dailyProfit);
+
+  const getRiskColor = () => isHigh ? "text-danger" : isMedium ? "text-warning" : "text-success";
+  const getBarClass = () => isHigh ? "bar-red" : isMedium ? "bar-orange" : "bar-green";
+  const getTopClass = () => isHigh ? "accent-top-red" : isMedium ? "accent-top-orange" : "accent-top-green";
+
+  const shouldAnimate = firstMount.current;
+  if (firstMount.current) firstMount.current = false;
+
+  const netPL = dailyProfit - dailyLoss;
 
   return (
-    <Card className={cn(
-      "glass",
-      isCritical && "border-danger/50 ring-1 ring-danger/20",
-      isHigh && !isCritical && "border-danger/30"
-    )}>
-      <CardHeader>
-        <CardTitle className={cn(
-          "text-[11px] font-medium flex items-center gap-1.5 uppercase tracking-wider",
-          isHigh ? "text-danger" : "text-muted-foreground"
-        )}>
-          <ShieldAlert className="h-3.5 w-3.5" />
-          Risk
-          {/* Risk Mode Badge */}
-          <Badge
-            variant={getRiskModeVariant(mode)}
-            className={cn("ml-auto text-[9px] h-4 px-1 uppercase", mode === "stopped" && "animate-pulse")}
-          >
-            {mode}
-          </Badge>
-          {isCritical && (
-            <span className="flex items-center gap-1 text-[10px] bg-danger text-white px-1.5 py-0.5 rounded-full animate-pulse">
-              <AlertTriangle className="h-2.5 w-2.5" />
-              BREACHED
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        <div className="flex justify-between items-center">
-          <span className="text-[11px] text-muted-foreground">Daily Loss</span>
-          <span className="text-xs font-semibold font-number text-danger">{formatUSD(dailyLoss)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-[11px] text-muted-foreground">Daily Profit</span>
-          <span className="text-xs font-semibold font-number text-success">{formatUSD(dailyProfit)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-[11px] text-muted-foreground">Consec. Losses</span>
-          <span className={cn(
-            "text-xs font-semibold font-number",
-            consecutiveLosses >= 3 ? "text-warning" : "text-foreground"
-          )}>
-            {consecutiveLosses}
-          </span>
-        </div>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Card className={cn("glass h-full overflow-hidden flex flex-col cursor-pointer", getTopClass(), isHigh ? "glass-red" : isMedium ? "glass-orange" : "glass-green")}>
+          <CardHeader>
+            <CardTitle className={cn(
+              "text-sm font-medium flex items-center gap-1.5 uppercase tracking-wider",
+              isHigh ? "text-apple-red" : isMedium ? "text-apple-orange" : "text-apple-green"
+            )}>
+              <ShieldAlert className="h-4 w-4" />
+              Risk
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant={getRiskModeVariant(mode)} className={cn("ml-auto text-xs h-5 px-1.5 uppercase", mode === "stopped" && "animate-pulse")}>
+                    {mode}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{mode === "normal" ? "Full position sizing" : mode === "recovery" ? "Reduced lots after losses" : mode === "stopped" ? "Daily limit hit" : mode}</p>
+                </TooltipContent>
+              </Tooltip>
+              {riskPercent >= 100 && (
+                <span className="flex items-center gap-1 text-xs bg-danger text-white px-1.5 py-0.5 rounded-full animate-pulse">
+                  <AlertTriangle className="h-3 w-3" /> BREACHED
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 flex flex-col justify-between">
+            <div className="space-y-0.5">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Daily Loss</span>
+                <span className="text-base font-semibold font-number text-apple-red">{formatUSD(animLoss.displayValue)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Daily Profit</span>
+                <span className="text-base font-semibold font-number text-apple-green">{formatUSD(animProfit.displayValue)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Consec. Loss</span>
+                <span className={cn("text-base font-semibold font-number", consecutiveLosses >= 3 ? "text-apple-orange" : "text-foreground")}>
+                  {consecutiveLosses}
+                </span>
+              </div>
+            </div>
 
-        <div className="pt-1 border-t border-border">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-[11px] text-muted-foreground">Risk Used</span>
-            <span className={cn("text-sm font-bold font-number", getRiskColor())}>
-              {riskPercent.toFixed(0)}%
-            </span>
+            <div className="pt-1 border-t border-border">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-muted-foreground">Risk Used</span>
+                <span className={cn("text-lg font-bold font-number", getRiskColor())}>{animRisk.displayValue.toFixed(0)}%</span>
+              </div>
+              <div className="h-2.5 w-full bg-black/[0.04] rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    getBarClass(),
+                    shouldAnimate && "bar-animate-in"
+                  )}
+                  style={{ width: `${Math.min(animRisk.displayValue, 100)}%` }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </DialogTrigger>
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className={cn("flex items-center gap-2", isHigh ? "text-apple-red" : isMedium ? "text-apple-orange" : "text-apple-green")}>
+            <ShieldAlert className="h-5 w-5" />
+            Risk Management Detail
+          </DialogTitle>
+          <DialogDescription>Daily risk metrics and mode status</DialogDescription>
+        </DialogHeader>
+        <div className="pt-4 space-y-4">
+          <div className="flex items-center gap-3">
+            <Badge variant={getRiskModeVariant(mode)} className="text-sm px-3 py-1 uppercase">{mode}</Badge>
+            <span className={cn("text-3xl font-bold font-number", getRiskColor())}>{riskPercent.toFixed(1)}%</span>
+            <span className="text-muted-foreground">risk used</span>
           </div>
-          <div className="h-1.5 w-full bg-surface-light rounded-full overflow-hidden">
-            <div
-              className={cn("h-full rounded-full transition-all duration-500", getSegmentFill())}
-              style={{ width: `${Math.min(riskPercent, 100)}%` }}
-            />
+
+          <div className="h-3 w-full bg-black/[0.04] rounded-full overflow-hidden">
+            <div className={cn("h-full rounded-full transition-all", getBarClass())} style={{ width: `${Math.min(riskPercent, 100)}%` }} />
           </div>
-          {/* Remaining daily risk */}
-          {riskMode && riskMode.remainingDailyRisk > 0 && (
-            <div className="flex justify-between items-center mt-0.5">
-              <span className="text-[9px] text-muted-foreground/60">Remaining</span>
-              <span className="text-[9px] font-number text-muted-foreground/60">
-                {formatUSD(riskMode.remainingDailyRisk)}
-              </span>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Daily Loss</span>
+              <p className="text-xl font-bold font-number text-apple-red">{formatUSD(dailyLoss)}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Daily Profit</span>
+              <p className="text-xl font-bold font-number text-apple-green">{formatUSD(dailyProfit)}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Net P/L</span>
+              <p className={cn("text-xl font-bold font-number", netPL >= 0 ? "text-apple-green" : "text-apple-red")}>
+                {netPL >= 0 ? "+" : ""}{formatUSD(netPL)}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Consecutive Losses</span>
+              <p className={cn("text-xl font-bold font-number", consecutiveLosses >= 3 ? "text-apple-orange" : "text-foreground")}>
+                {consecutiveLosses}
+              </p>
+            </div>
+          </div>
+
+          {riskMode && (
+            <div className="pt-3 border-t border-border space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Recommended Lot</span>
+                <span className="font-semibold font-number text-apple-purple">{riskMode.recommendedLot}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Max Allowed Lot</span>
+                <span className="font-semibold font-number">{riskMode.maxAllowedLot}</span>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Total Loss Progress */}
-        {riskMode && riskMode.maxTotalLoss > 0 && (
-          <div className="pt-0.5">
-            <div className="flex justify-between items-center mb-0.5">
-              <span className="text-[10px] text-muted-foreground">Total Loss</span>
-              <span className="text-[10px] font-number text-muted-foreground">
-                {formatUSD(riskMode.totalLoss)} / {formatUSD(riskMode.maxTotalLoss)}
-              </span>
-            </div>
-            <div className="h-1 w-full bg-surface-light rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  (riskMode.totalLoss / riskMode.maxTotalLoss) >= 0.8 ? "bg-danger" : "bg-warning/60"
-                )}
-                style={{ width: `${riskMode.maxTotalLoss > 0 ? Math.min((riskMode.totalLoss / riskMode.maxTotalLoss) * 100, 100) : 0}%` }}
-              />
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,0 +1,11 @@
+#33 Impulse Trail + Trail Tuning Results
+Generated: 2026-02-08 11:43:14.406433
+Base: #31B (625 trades, 81.8% WR, $2,807)
+
+  A: Impulse 1.5x>1.0x trail: 625 trades, 81.4% WR, $2,847.16, DD: 2.4%, Sharpe: 4.02, PF: 2.21, Impulse: 252, vs #31B: $+40.60
+  B: Impulse 1.5x>1.5x trail: 625 trades, 81.8% WR, $2,865.11, DD: 2.4%, Sharpe: 4.03, PF: 2.22, Impulse: 253, vs #31B: $+58.55
+  C: Impulse 2.0x>1.0x trail: 625 trades, 81.8% WR, $2,794.44, DD: 2.4%, Sharpe: 3.96, PF: 2.19, Impulse: 94, vs #31B: $-12.12
+  D: A + wider start 5.0x: 625 trades, 81.4% WR, $2,847.16, DD: 2.4%, Sharpe: 4.02, PF: 2.21, Impulse: 252, vs #31B: $+40.60
+  E: A + start 5.0x step 3.5x: 624 trades, 81.4% WR, $2,820.03, DD: 2.4%, Sharpe: 3.99, PF: 2.20, Impulse: 252, vs #31B: $+13.47
+
+Best: B: Impulse 1.5x>1.5x trail

@@ -1,0 +1,8 @@
+#24 Final Combined Results (All 3 Winners)
+Generated: 2026-02-07 22:24:06.260094
+Improvements: #19B Skip TL + #20B EC mom<-50 + #22 ATR-Adaptive
+
+  A: 19B+20B+22C (wider): 725 trades, 76.8% WR, $2,076.47, DD: 3.7%, Sharpe: 2.56, PF: 1.63, vs base: $+626.61
+  B: 19B+20B+22D (tight+wide): 739 trades, 80.4% WR, $2,235.03, DD: 3.4%, Sharpe: 2.87, PF: 1.77, vs base: $+785.17
+
+Best: B: 19B+20B+22D (tight+wide)

@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  darkMode: ['class', '.dark'],
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -10,95 +10,113 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Dark theme colors (nof1.ai / SURGE-AI inspired)
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        surface: 'hsl(var(--surface))',
-        'surface-light': 'hsl(var(--surface-light))',
-        'surface-hover': 'hsl(var(--surface-hover))',
+        // Apple Liquid Glass theme colors
+        background: 'var(--color-background)',
+        foreground: 'var(--color-foreground)',
+        surface: 'var(--color-surface)',
+        'surface-light': 'var(--color-surface-light)',
+        'surface-hover': 'var(--color-surface-hover)',
 
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT: 'var(--color-card)',
+          foreground: 'var(--color-card-foreground)',
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+          DEFAULT: 'var(--color-popover)',
+          foreground: 'var(--color-popover-foreground)',
         },
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-          dark: 'hsl(var(--primary-dark))',
+          DEFAULT: 'var(--color-primary)',
+          foreground: 'var(--color-primary-foreground)',
+          dark: 'var(--color-primary-dark)',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: 'var(--color-secondary)',
+          foreground: 'var(--color-secondary-foreground)',
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: 'var(--color-muted)',
+          foreground: 'var(--color-muted-foreground)',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'var(--color-accent)',
+          foreground: 'var(--color-accent-foreground)',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: 'var(--color-destructive)',
+          foreground: 'var(--color-destructive-foreground)',
         },
         border: {
-          DEFAULT: 'hsl(var(--border))',
-          light: 'hsl(var(--border-light))',
+          DEFAULT: 'var(--color-border)',
+          light: 'var(--color-border-light)',
         },
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
+        input: 'var(--color-input)',
+        ring: 'var(--color-ring)',
 
         // Semantic colors
         success: {
-          DEFAULT: 'hsl(var(--success))',
-          bg: 'hsl(var(--success-bg))',
+          DEFAULT: 'var(--color-success)',
+          bg: 'var(--color-success-bg)',
         },
         warning: {
-          DEFAULT: 'hsl(var(--warning))',
-          bg: 'hsl(var(--warning-bg))',
+          DEFAULT: 'var(--color-warning)',
+          bg: 'var(--color-warning-bg)',
         },
         danger: {
-          DEFAULT: 'hsl(var(--danger))',
-          bg: 'hsl(var(--danger-bg))',
+          DEFAULT: 'var(--color-danger)',
+          bg: 'var(--color-danger-bg)',
         },
         info: {
-          DEFAULT: 'hsl(var(--info))',
-          bg: 'hsl(var(--info-bg))',
+          DEFAULT: 'var(--color-info)',
+          bg: 'var(--color-info-bg)',
+        },
+
+        // Apple system colors for direct use
+        apple: {
+          green: 'var(--apple-green)',
+          blue: 'var(--apple-blue)',
+          red: 'var(--apple-red)',
+          orange: 'var(--apple-orange)',
+          purple: 'var(--apple-purple)',
+          cyan: 'var(--apple-cyan)',
+          pink: 'var(--apple-pink)',
+          indigo: 'var(--apple-indigo)',
+          teal: 'var(--apple-teal)',
+          mint: 'var(--apple-mint)',
         },
 
         // Chart colors
         chart: {
-          '1': 'hsl(var(--chart-1))',
-          '2': 'hsl(var(--chart-2))',
-          '3': 'hsl(var(--chart-3))',
-          '4': 'hsl(var(--chart-4))',
-          '5': 'hsl(var(--chart-5))',
+          '1': 'var(--color-chart-1)',
+          '2': 'var(--color-chart-2)',
+          '3': 'var(--color-chart-3)',
+          '4': 'var(--color-chart-4)',
+          '5': 'var(--color-chart-5)',
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: 'var(--radius-lg)',
+        md: 'var(--radius-md)',
+        sm: 'var(--radius-sm)',
+        xl: 'var(--radius-xl)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['var(--font-ibm-plex-sans)', 'IBM Plex Sans', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-ibm-plex-mono)', 'IBM Plex Mono', 'monospace'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in': 'fadeIn 0.3s ease-in-out',
+        'fade-in': 'fadeIn 0.3s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'shimmer': 'shimmer 1.5s infinite',
+        'flash-green': 'flashGreen 0.6s ease-out',
+        'flash-red': 'flashRed 0.6s ease-out',
+        'bar-slide-in': 'barSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       },
       keyframes: {
         fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         slideUp: {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
@@ -107,6 +125,18 @@ const config: Config = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        flashGreen: {
+          '0%': { backgroundColor: 'rgba(52, 199, 89, 0.25)' },
+          '100%': { backgroundColor: 'transparent' },
+        },
+        flashRed: {
+          '0%': { backgroundColor: 'rgba(255, 59, 48, 0.25)' },
+          '100%': { backgroundColor: 'transparent' },
+        },
+        barSlideIn: {
+          '0%': { transform: 'scaleX(0)' },
+          '100%': { transform: 'scaleX(1)' },
         },
       },
     },

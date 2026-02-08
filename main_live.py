@@ -54,7 +54,9 @@ from src.smc_polars import SMCAnalyzer, SMCSignal
 from src.feature_eng import FeatureEngineer
 from src.regime_detector import MarketRegimeDetector, FlashCrashDetector, MarketRegime, RegimeState
 from src.risk_engine import RiskEngine
-from src.ml_model import TradingModel, get_default_feature_columns
+from backtests.ml_v2.ml_v2_model import TradingModelV2
+from backtests.ml_v2.ml_v2_feature_eng import MLV2FeatureEngineer
+from src.ml_model import get_default_feature_columns  # keep for fallback
 from src.position_manager import SmartPositionManager
 from src.session_filter import SessionFilter, create_wib_session_filter
 from src.auto_trainer import AutoTrainer, create_auto_trainer
@@ -123,11 +125,13 @@ class TradingBot:
         # Initialize risk engine
         self.risk_engine = RiskEngine(self.config)
         
-        # Initialize ML model (will load model)
-        self.ml_model = TradingModel(
+        # Initialize ML V2 Model D (76 features, AUC 0.7339)
+        self.ml_model = TradingModelV2(
             confidence_threshold=self.config.ml.confidence_threshold,
-            model_path="models/xgboost_model.pkl",
+            model_path="models/xgboost_model_v2d.pkl",
         )
+        self.fe_v2 = MLV2FeatureEngineer()
+        self._h1_df_cached = None  # Cache H1 DataFrame with indicators for V2 features
 
         # Initialize Smart Position Manager - ATR-ADAPTIVE (#24B)
         self.position_manager = SmartPositionManager(
@@ -225,20 +229,26 @@ class TradingBot:
             logger.error(f"Failed to load HMM model: {e}")
             models_ok = False
         
-        # Load XGBoost model
+        # Load ML V2 Model D
         try:
             self.ml_model.load()
             if self.ml_model.fitted:
-                logger.info("XGBoost model loaded successfully")
+                logger.info("ML V2 Model D loaded successfully")
                 logger.info(f"  Features: {len(self.ml_model.feature_names)}")
+                logger.info(f"  Type: {self.ml_model.model_type.value}")
             else:
-                logger.warning("XGBoost model not found or not fitted")
+                logger.warning("ML V2 Model D not found or not fitted")
                 models_ok = False
         except Exception as e:
-            logger.error(f"Failed to load XGBoost model: {e}")
+            logger.error(f"Failed to load ML V2 Model D: {e}")
             models_ok = False
         
         self._models_loaded = models_ok
+
+        # Write model metrics for dashboard
+        if models_ok:
+            self._write_model_metrics()
+
         return models_ok
 
     def _dash_log(self, level: str, message: str):
@@ -249,6 +259,50 @@ class TradingBot:
             "level": level,
             "message": message,
         })
+
+    def _write_model_metrics(self, retrain_results: dict = None):
+        """Write model metrics JSON for dashboard Model Insights feature."""
+        try:
+            import json as _json
+            metrics = {
+                "featureImportance": [],
+                "trainAuc": 0,
+                "testAuc": 0,
+                "sampleCount": 0,
+                "updatedAt": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
+            }
+
+            # Extract feature importance from XGBoost model
+            if self.ml_model.fitted and hasattr(self.ml_model, 'model') and self.ml_model.model is not None:
+                try:
+                    booster = self.ml_model.model
+                    importance = booster.get_score(importance_type='gain') if hasattr(booster, 'get_score') else {}
+                    if not importance and hasattr(booster, 'feature_importances_'):
+                        names = self.ml_model.feature_names if hasattr(self.ml_model, 'feature_names') else []
+                        importance = dict(zip(names, booster.feature_importances_))
+
+                    total = sum(importance.values()) if importance else 1
+                    sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+                    metrics["featureImportance"] = [
+                        {"name": name, "importance": round(val / total, 4)}
+                        for name, val in sorted_features[:20]
+                    ]
+                except Exception:
+                    pass
+
+            # Use retrain results if available
+            if retrain_results:
+                metrics["trainAuc"] = retrain_results.get("xgb_train_auc", 0)
+                metrics["testAuc"] = retrain_results.get("xgb_test_auc", 0)
+                metrics["sampleCount"] = retrain_results.get("sample_count", 0)
+            elif hasattr(self, 'auto_trainer') and hasattr(self.auto_trainer, 'last_auc'):
+                metrics["testAuc"] = self.auto_trainer.last_auc or 0
+
+            metrics_file = Path("data/model_metrics.json")
+            metrics_file.parent.mkdir(parents=True, exist_ok=True)
+            metrics_file.write_text(_json.dumps(metrics, indent=2))
+        except Exception as e:
+            logger.debug(f"Failed to write model metrics: {e}")
 
     def _write_dashboard_status(self):
         """Write current bot state to JSON file for Docker dashboard API."""
@@ -730,6 +784,11 @@ class TradingBot:
             if len(df_h1) < 20:
                 return "NEUTRAL"
 
+            # Calculate indicators + SMC on H1 and cache for V2 features
+            df_h1 = self.features.calculate_all(df_h1, include_ml_features=False)
+            df_h1 = self.smc.calculate_all(df_h1)
+            self._h1_df_cached = df_h1  # Cache for V2 features
+
             # #31B: Price vs EMA20 method (backtested winner)
             import numpy as np
             closes = df_h1["close"].to_list()
@@ -910,6 +969,8 @@ class TradingBot:
                     if len(df) == 0:
                         return
                     df = self.features.calculate_all(df, include_ml_features=True)
+                    df = self.smc.calculate_all(df)
+                    df = self.fe_v2.add_all_v2_features(df, self._h1_df_cached)
                     feature_cols = self._get_available_features(df)
                     ml_prediction = self.ml_model.predict(df, feature_cols)
                     await self._smart_position_management(
@@ -943,7 +1004,10 @@ class TradingBot:
         
         # 3. Apply SMC analysis
         df = self.smc.calculate_all(df)
-        
+
+        # 3b. Add V2 features for Model D (23 extra features)
+        df = self.fe_v2.add_all_v2_features(df, self._h1_df_cached)
+
         # 4. Detect regime
         try:
             df = self.regime_detector.predict(df)
@@ -2364,6 +2428,9 @@ class TradingBot:
                 logger.info(f"  XGBoost: {'OK' if self.ml_model.fitted else 'FAILED'}")
                 logger.info(f"  Train AUC: {results.get('xgb_train_auc', 0):.4f}")
                 logger.info(f"  Test AUC: {results.get('xgb_test_auc', 0):.4f}")
+
+                # Write updated model metrics for dashboard
+                self._write_model_metrics(retrain_results=results)
 
                 # Check if new model is worse - rollback if needed
                 # FIX: Increased minimum AUC from 0.52 to 0.60 (0.52 is barely better than random)

@@ -13,3 +13,6 @@ export { Sparkline } from "./sparkline";
 export { SettingsCard } from "./settings-card";
 export { BotStatusCard } from "./bot-status-card";
 export { EntryFilterCard } from "./entry-filter-card";
+export { PerformanceCard } from "./performance-card";
+export { ModelCard } from "./model-card";
+export { ModelDialog } from "./model-dialog";

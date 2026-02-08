@@ -1,18 +1,44 @@
-# Take Profit (T/P) — Sistem Pengambilan Profit Cerdas
+# *Take Profit* (T/P) — Sistem Pengambilan Profit Cerdas
 
 > **File terkait:** `src/smc_polars.py`, `main_live.py`, `src/smart_risk_manager.py`
 
 ---
 
-## Apa Itu Take Profit di Bot Ini?
+## Flowchart Prioritas *Take Profit*
 
-Take Profit bukan hanya satu target harga — ini adalah **sistem multi-layer** yang secara cerdas memutuskan kapan mengambil profit berdasarkan momentum, probabilitas, dan peak tracking.
+```mermaid
+flowchart TD
+    A["Evaluasi Posisi Terbuka"] --> B{"profit >= $40?"}
+    B -- Ya --> B1["Layer 1: Hard TP\nTutup langsung"]
+    B -- Tidak --> C{"profit >= $25\nDAN momentum < -30?"}
+    C -- Ya --> C1["Layer 2: Momentum TP\nAmankan profit"]
+    C -- Tidak --> D{"peak > $30\nDAN current < 60% peak?"}
+    D -- Ya --> D1["Layer 3: Peak Protection\nKunci sisa profit"]
+    D -- Tidak --> E{"profit >= $20\nDAN TP probability < 25%?"}
+    E -- Ya --> E1["Layer 4: Probability TP\nAmbil sekarang"]
+    E -- Tidak --> F{"profit $5-15\nDAN ML reversal\nDAN momentum < -50?"}
+    F -- Ya --> F1["Layer 5: Early Exit\nProfit kecil > loss"]
+    F -- Tidak --> G["Layer 6: Broker TP\nHarga hit level otomatis"]
 
-**Analogi:** TP di bot ini seperti **pemanen buah pintar** — tahu kapan buah sudah matang (hard TP), kapan cuaca akan buruk (momentum drop), dan kapan panen sebelum busuk (peak protection).
+    style B1 fill:#16a34a,color:#fff
+    style C1 fill:#2563eb,color:#fff
+    style D1 fill:#7c3aed,color:#fff
+    style E1 fill:#d97706,color:#fff
+    style F1 fill:#dc2626,color:#fff
+    style G fill:#64748b,color:#fff
+```
 
 ---
 
-## Layer Take Profit
+## Apa Itu *Take Profit* di Bot Ini?
+
+*Take Profit* bukan hanya satu target harga — ini adalah **sistem multi-layer** yang secara cerdas memutuskan kapan mengambil profit berdasarkan *momentum*, *probability*, dan *peak protection*.
+
+**Analogi:** TP di bot ini seperti **pemanen buah pintar** — tahu kapan buah sudah matang (*Hard TP*), kapan cuaca akan buruk (*momentum* drop), dan kapan panen sebelum busuk (*Peak Protection*).
+
+---
+
+## Layer *Take Profit*
 
 ```
 Layer 1: Broker TP           <- Target harga dikirim ke broker (SMC-generated)
@@ -77,7 +103,7 @@ Jika harga mencapai TP level, broker otomatis menutup posisi — tidak perlu bot
 
 ---
 
-## Layer 2: Hard Take Profit ($40)
+## Layer 2: *Hard Take Profit* ($40)
 
 **Sumber:** `smart_risk_manager.py` (Lines 595-599)
 
@@ -92,7 +118,7 @@ if current_profit >= 40:
 
 ---
 
-## Layer 3: Momentum-Based TP ($25+)
+## Layer 3: *Momentum*-Based TP ($25+)
 
 **Sumber:** `smart_risk_manager.py` (Lines 601-603)
 
@@ -103,7 +129,7 @@ if current_profit >= 25 and momentum < -30:
            "[SECURE] Securing $25.00 (momentum dropping)"
 ```
 
-### Bagaimana Momentum Dihitung
+### Bagaimana *Momentum* Dihitung
 
 ```python
 # PositionGuard.calculate_momentum() (Lines 113-131)
@@ -136,7 +162,7 @@ Profit ($)
 
 ---
 
-## Layer 4: Peak Protection ($30+ peak)
+## Layer 4: *Peak Protection* ($30+ peak)
 
 **Sumber:** `smart_risk_manager.py` (Lines 605-607)
 
@@ -174,7 +200,7 @@ Profit ($)
 
 ---
 
-## Layer 5: Probability-Based TP ($20+)
+## Layer 5: *Probability*-Based TP ($20+)
 
 **Sumber:** `smart_risk_manager.py` (Lines 609-611)
 
@@ -185,7 +211,7 @@ if tp_probability < 25 and current_profit >= 20:
            "[PROB] Taking profit $20 (TP prob: 15%)"
 ```
 
-### Cara Hitung TP Probability
+### Cara Hitung TP *Probability*
 
 ```python
 # PositionGuard.get_tp_probability() (Lines 133-168)
@@ -196,10 +222,10 @@ Factor 1: Progress ke TP (0-40 poin)
   -> Makin dekat ke TP = skor tinggi
 
 Factor 2: Momentum (0-30 poin)
-  -> Momentum positif = skor tinggi
+  -> *Momentum* positif = skor tinggi
 
-Factor 3: ML Confidence Trend (0-20 poin)
-  -> ML confidence naik = skor tinggi
+Factor 3: ML *Confidence* Trend (0-20 poin)
+  -> ML *confidence* naik = skor tinggi
 
 Factor 4: Time Penalty (0-10 poin DIKURANGI)
   -> 2 poin per jam (makin lama = makin rendah)
@@ -209,7 +235,7 @@ probability = factor1 + factor2 + factor3 - time_penalty
 
 ---
 
-## Layer 6: Early Exit (Profit Kecil + Reversal)
+## Layer 6: *Early Exit* (Profit Kecil + Reversal)
 
 **Sumber:** `smart_risk_manager.py` (Lines 617-627)
 
@@ -261,7 +287,7 @@ Entry BUY @ $4950, TP broker @ $4990
   -> Tutup sebelum broker TP level
 ```
 
-### Skenario 3: Momentum Drop
+### Skenario 3: *Momentum* Drop
 
 ```
 Entry BUY @ $4950
@@ -271,7 +297,7 @@ Entry BUY @ $4950
   -> MOMENTUM TP: amankan $25
 ```
 
-### Skenario 4: Peak Protection
+### Skenario 4: *Peak Protection*
 
 ```
 Entry BUY @ $4950
@@ -289,8 +315,8 @@ Entry BUY @ $4950
 | Layer | Trigger | Profit Min | Kondisi Tambahan |
 |-------|---------|-----------|------------------|
 | **1. Broker TP** | Harga hit level | - | Otomatis, independen |
-| **2. Hard TP** | profit >= $40 | $40 | Tidak ada |
-| **3. Momentum TP** | profit >= $25 | $25 | momentum < -30 |
-| **4. Peak Protection** | peak > $30 | ~$18+ | current < 60% peak |
-| **5. Probability TP** | profit >= $20 | $20 | TP probability < 25% |
-| **6. Early Exit** | profit $5-15 | $5 | ML reversal + momentum < -50 |
+| **2. *Hard TP*** | profit >= $40 | $40 | Tidak ada |
+| **3. *Momentum* TP** | profit >= $25 | $25 | *momentum* < -30 |
+| **4. *Peak Protection*** | peak > $30 | ~$18+ | current < 60% peak |
+| **5. *Probability* TP** | profit >= $20 | $20 | TP *probability* < 25% |
+| **6. *Early Exit*** | profit $5-15 | $5 | ML reversal + *momentum* < -50 |

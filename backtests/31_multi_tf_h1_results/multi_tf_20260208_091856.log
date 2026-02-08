@@ -1,0 +1,11 @@
+#31 Multi-Timeframe H1 Results
+Generated: 2026-02-08 09:18:56.106348
+Base: #28B (741 trades, 79.8% WR, $2,464)
+
+  A: H1 EMA strict: 476 trades, 79.2% WR, $1,311.37, DD: 2.9%, Sharpe: 2.49, PF: 1.64, H1 filtered: 2345, H1 dist: {'BEARISH': 123, 'BULLISH': 353}, vs #28B: $-1,152.43
+  B: H1 price vs EMA20: 625 trades, 81.8% WR, $2,806.56, DD: 2.5%, Sharpe: 3.97, PF: 2.19, H1 filtered: 1132, H1 dist: {'BEARISH': 235, 'BULLISH': 390}, vs #28B: $+342.76
+  C: H1 BOS direction: 221 trades, 82.4% WR, $1,207.63, DD: 1.6%, Sharpe: 4.79, PF: 2.51, H1 filtered: 4753, H1 dist: {'BEARISH': 60, 'BULLISH': 161}, vs #28B: $-1,256.17
+  D: H1 SELL only: 613 trades, 80.6% WR, $2,117.67, DD: 2.8%, Sharpe: 3.30, PF: 1.88, H1 filtered: 1136, H1 dist: {'BEARISH': 185, 'BULLISH': 338, 'NEUTRAL': 90}, vs #28B: $-346.13
+  E: H1 relaxed: 543 trades, 80.1% WR, $1,576.70, DD: 2.9%, Sharpe: 2.76, PF: 1.71, H1 filtered: 1675, H1 dist: {'BEARISH': 111, 'BULLISH': 340, 'NEUTRAL': 92}, vs #28B: $-887.10
+
+Best: B: H1 price vs EMA20

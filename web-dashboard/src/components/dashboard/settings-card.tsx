@@ -25,19 +25,19 @@ export function SettingsCard({ settings }: SettingsCardProps) {
   ];
 
   return (
-    <Card className="glass">
+    <Card className="glass h-full overflow-hidden flex flex-col">
       <CardHeader>
-        <CardTitle className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
-          <Settings2 className="h-3.5 w-3.5" />
-          Bot Settings
+        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+          <Settings2 className="h-4 w-4" />
+          Settings
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 overflow-auto">
         <div className="grid grid-cols-3 gap-x-3 gap-y-1">
           {rows.map((row) => (
-            <div key={row.label} className="flex justify-between items-center gap-1">
-              <span className="text-[10px] text-muted-foreground truncate">{row.label}</span>
-              <span className="text-[10px] font-semibold font-number text-foreground shrink-0">{row.value}</span>
+            <div key={row.label} className="flex justify-between items-center gap-1 rounded px-1 -mx-1 row-hover">
+              <span className="text-sm text-muted-foreground truncate">{row.label}</span>
+              <span className="text-sm font-semibold font-number text-foreground shrink-0">{row.value}</span>
             </div>
           ))}
         </div>

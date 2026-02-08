@@ -1,0 +1,507 @@
+================================================================================
+XAUBOT AI — #17 Liquidity Sweep Backtest
+Mode: FILTER | CV: relaxed (0.003) | Lookback: 30
+================================================================================
+Generated: 2026-02-07 15:13:05
+Period: 2025-08-01 to 2026-02-07
+
+--- SWEEP STATS ---
+  BSL Sweeps Detected:    2577
+  SSL Sweeps Detected:    1989
+  Sweep-Confirmed Trades: 457
+  Sweep-Blocked Trades:   202
+
+--- PERFORMANCE ---
+  Total Trades:    457
+  Wins:            209
+  Losses:          248
+  Win Rate:        45.7%
+  Net PnL:         $157.86
+  Profit Factor:   1.45
+  Max Drawdown:    0.6% ($31.79)
+  Avg Win:         $2.42
+  Avg Loss:        $1.41
+  Expectancy:      $0.35
+  Sharpe Ratio:    2.08
+
+--- ENTRY SOURCE BREAKDOWN ---
+  SWEEP+SMC   : 457 trades,  45.7% WR, $  157.86
+  SMC         :   0 trades,   0.0% WR, $    0.00
+
+--- EXIT REASONS ---
+  timeout             :  205 ( 44.9%)
+  max_loss            :   98 ( 21.4%)
+  take_profit         :   88 ( 19.3%)
+  weekend_close       :   19 (  4.2%)
+  smart_tp            :   17 (  3.7%)
+  market_signal       :   15 (  3.3%)
+  peak_protect        :    7 (  1.5%)
+  breakeven_exit      :    6 (  1.3%)
+  trailing_sl         :    2 (  0.4%)
+
+--- DIRECTION ---
+  BUY: 267 trades, 50.2% WR, $113.25
+  SELL: 190 trades, 39.5% WR, $44.61
+
+--- TRADE LOG ---
+   #       Entry Time  Dir      Entry       Exit   P/L($) Result        Exit Reason Sweep     Source
+------------------------------------------------------------------------------------------------------------------------
+   1 2025-08-01 01:00 SELL    3291.19    3291.67    -0.05   LOSS            timeout   BSL  SWEEP+SMC
+   2 2025-08-01 08:15  BUY    3292.99    3310.15     1.72    WIN        take_profit   SSL  SWEEP+SMC
+   3 2025-08-01 18:15  BUY    3349.39    3350.73     0.13    WIN      weekend_close   SSL  SWEEP+SMC
+   4 2025-08-04 01:30  BUY    3359.84    3353.31    -0.65   LOSS            timeout   SSL  SWEEP+SMC
+   5 2025-08-04 08:00  BUY    3359.69    3359.09    -0.06   LOSS            timeout   SSL  SWEEP+SMC
+   6 2025-08-04 14:30  BUY    3368.14    3372.75     0.46    WIN            timeout   SSL  SWEEP+SMC
+   7 2025-08-05 01:15  BUY    3374.55    3380.70     0.62    WIN        take_profit   SSL  SWEEP+SMC
+   8 2025-08-05 06:15 SELL    3373.15    3374.09    -0.09   LOSS            timeout   BSL  SWEEP+SMC
+   9 2025-08-05 12:45 SELL    3359.54    3375.41    -3.17   LOSS           max_loss   BSL  SWEEP+SMC
+  10 2025-08-05 19:00  BUY    3386.88    3379.68    -0.72   LOSS            timeout   SSL  SWEEP+SMC
+  11 2025-08-06 02:30  BUY    3382.50    3378.05    -0.44   LOSS           max_loss   SSL  SWEEP+SMC
+  12 2025-08-06 07:00 SELL    3374.50    3358.43     1.61    WIN        take_profit   BSL  SWEEP+SMC
+  13 2025-08-06 17:45  BUY    3379.20    3371.47    -0.77   LOSS            timeout   SSL  SWEEP+SMC
+  14 2025-08-07 01:15 SELL    3371.13    3379.84    -0.87   LOSS           max_loss   BSL  SWEEP+SMC
+  15 2025-08-07 07:00  BUY    3378.39    3396.01     1.76    WIN           smart_tp   SSL  SWEEP+SMC
+  16 2025-08-07 14:15  BUY    3381.74    3389.64     0.79    WIN            timeout   SSL  SWEEP+SMC
+  17 2025-08-08 01:45  BUY    3403.59    3387.09    -1.65   LOSS           max_loss   SSL  SWEEP+SMC
+  18 2025-08-08 06:15 SELL    3388.60    3394.82    -0.62   LOSS            timeout   BSL  SWEEP+SMC
+  19 2025-08-08 13:00  BUY    3396.93    3388.60    -0.83   LOSS           max_loss   SSL  SWEEP+SMC
+  20 2025-08-08 17:30 SELL    3386.66    3401.79    -1.51   LOSS           max_loss   BSL  SWEEP+SMC
+  21 2025-08-11 03:15 SELL    3387.86    3362.86     2.50    WIN        take_profit   BSL  SWEEP+SMC
+  22 2025-08-11 12:30 SELL    3358.72    3349.07     0.96    WIN            timeout   BSL  SWEEP+SMC
+  23 2025-08-11 23:00 SELL    3350.23    3356.31    -0.61   LOSS            timeout   BSL  SWEEP+SMC
+  24 2025-08-12 06:45 SELL    3349.32    3357.26    -0.79   LOSS           max_loss   BSL  SWEEP+SMC
+  25 2025-08-12 13:15 SELL    3349.35    3336.40     1.29    WIN        take_profit   BSL  SWEEP+SMC
+  26 2025-08-12 17:00 SELL    3335.73    3357.89    -4.43   LOSS           max_loss   BSL  SWEEP+SMC
+  27 2025-08-12 23:00 SELL    3346.63    3352.60    -0.60   LOSS           max_loss   BSL  SWEEP+SMC
+  28 2025-08-13 03:45 SELL    3343.42    3353.51    -1.01   LOSS           max_loss   BSL  SWEEP+SMC
+  29 2025-08-13 09:15  BUY    3354.92    3365.26     1.03    WIN        take_profit   SSL  SWEEP+SMC
+  30 2025-08-13 15:00  BUY    3357.18    3365.92     0.87    WIN        take_profit   SSL  SWEEP+SMC
+  31 2025-08-13 19:30  BUY    3357.28    3351.59    -0.57   LOSS           max_loss   SSL  SWEEP+SMC
+  32 2025-08-13 23:45 SELL    3355.84    3360.80    -0.50   LOSS           max_loss   BSL  SWEEP+SMC
+  33 2025-08-14 04:30  BUY    3366.68    3358.94    -0.77   LOSS            timeout   SSL  SWEEP+SMC
+  34 2025-08-14 11:00  BUY    3344.47    3354.17     0.97    WIN        take_profit   SSL  SWEEP+SMC
+  35 2025-08-14 14:30 SELL    3353.88    3344.26     0.96    WIN        take_profit   BSL  SWEEP+SMC
+  36 2025-08-14 18:00 SELL    3336.84    3340.72    -0.39   LOSS            timeout   BSL  SWEEP+SMC
+  37 2025-08-15 01:45 SELL    3333.14    3340.31    -0.72   LOSS            timeout   BSL  SWEEP+SMC
+  38 2025-08-15 08:15  BUY    3343.23    3341.65    -0.16   LOSS            timeout   SSL  SWEEP+SMC
+  39 2025-08-15 15:15 SELL    3337.36    3338.54    -0.12   LOSS            timeout   BSL  SWEEP+SMC
+  40 2025-08-15 23:00 SELL    3337.93    3336.09     0.18    WIN      weekend_close   BSL  SWEEP+SMC
+  41 2025-08-18 03:00 SELL    3334.71    3339.54    -0.48   LOSS           max_loss   BSL  SWEEP+SMC
+  42 2025-08-18 05:45  BUY    3343.25    3348.46     0.52    WIN            timeout   SSL  SWEEP+SMC
+  43 2025-08-18 14:15 SELL    3348.42    3341.71     1.34    WIN        take_profit   BSL  SWEEP+SMC
+  44 2025-08-18 18:30 SELL    3334.98    3333.11     0.37    WIN            timeout   BSL  SWEEP+SMC
+  45 2025-08-19 04:00  BUY    3331.27    3337.83     0.66    WIN        take_profit   SSL  SWEEP+SMC
+  46 2025-08-19 08:30  BUY    3338.45    3341.18     0.27    WIN            timeout   SSL  SWEEP+SMC
+  47 2025-08-19 17:00 SELL    3334.58    3318.69     3.18    WIN        take_profit   BSL  SWEEP+SMC
+  48 2025-08-19 23:00 SELL    3315.30    3317.17    -0.19   LOSS            timeout   BSL  SWEEP+SMC
+  49 2025-08-20 07:00  BUY    3318.59    3329.44     1.08    WIN        take_profit   SSL  SWEEP+SMC
+  50 2025-08-20 16:45  BUY    3344.80    3344.66    -0.01   LOSS            timeout   SSL  SWEEP+SMC
+  51 2025-08-20 23:30  BUY    3348.48    3343.93    -0.46   LOSS           max_loss   SSL  SWEEP+SMC
+  52 2025-08-21 05:45 SELL    3344.41    3338.91     0.55    WIN        take_profit   BSL  SWEEP+SMC
+  53 2025-08-21 09:45 SELL    3336.46    3341.35    -0.49   LOSS            timeout   BSL  SWEEP+SMC
+  54 2025-08-21 18:00  BUY    3338.67    3338.64    -0.01   LOSS            timeout   SSL  SWEEP+SMC
+  55 2025-08-22 02:15 SELL    3337.78    3331.75     0.60    WIN        take_profit   BSL  SWEEP+SMC
+  56 2025-08-22 08:30 SELL    3330.04    3330.37    -0.03   LOSS            timeout   BSL  SWEEP+SMC
+  57 2025-08-22 15:00 SELL    3325.60    3331.63    -1.21   LOSS           max_loss   BSL  SWEEP+SMC
+  58 2025-08-22 19:00  BUY    3371.34    3372.08     0.07    WIN      weekend_close   SSL  SWEEP+SMC
+  59 2025-08-25 01:15 SELL    3367.79    3365.47     0.23    WIN            timeout   BSL  SWEEP+SMC
+  60 2025-08-25 09:45  BUY    3368.82    3365.85    -0.59   LOSS            timeout   SSL  SWEEP+SMC
+  61 2025-08-25 16:15  BUY    3363.89    3369.32     1.09    WIN        take_profit   SSL  SWEEP+SMC
+  62 2025-08-26 02:00 SELL    3358.40    3374.72    -1.63   LOSS           max_loss   BSL  SWEEP+SMC
+  63 2025-08-26 06:00  BUY    3370.69    3376.86     0.62    WIN            timeout   SSL  SWEEP+SMC
+  64 2025-08-26 14:30  BUY    3378.83    3381.76     0.59    WIN            timeout   SSL  SWEEP+SMC
+  65 2025-08-26 23:00  BUY    3389.97    3386.09    -0.39   LOSS            timeout   SSL  SWEEP+SMC
+  66 2025-08-27 06:45 SELL    3380.53    3381.39    -0.09   LOSS            timeout   BSL  SWEEP+SMC
+  67 2025-08-27 13:15  BUY    3376.38    3382.57     0.62    WIN        take_profit   SSL  SWEEP+SMC
+  68 2025-08-27 17:45  BUY    3386.40    3395.71     1.86    WIN            timeout   SSL  SWEEP+SMC
+  69 2025-08-28 05:15 SELL    3386.74    3390.05    -0.33   LOSS            timeout   BSL  SWEEP+SMC
+  70 2025-08-28 11:45  BUY    3400.58    3397.16    -0.68   LOSS            timeout   SSL  SWEEP+SMC
+  71 2025-08-28 18:15  BUY    3406.26    3414.69     0.84    WIN            timeout   SSL  SWEEP+SMC
+  72 2025-08-29 06:00  BUY    3409.96    3409.67    -0.03   LOSS            timeout   SSL  SWEEP+SMC
+  73 2025-08-29 12:30 SELL    3408.01    3414.65    -1.33   LOSS           max_loss   BSL  SWEEP+SMC
+  74 2025-08-29 18:15  BUY    3444.72    3445.57     0.09    WIN      market_signal   SSL  SWEEP+SMC
+  75 2025-08-29 23:15  BUY    3449.91    3449.06    -0.08   LOSS      weekend_close   SSL  SWEEP+SMC
+  76 2025-09-01 03:00  BUY    3443.41    3437.91    -0.55   LOSS           max_loss   SSL  SWEEP+SMC
+  77 2025-09-01 07:00  BUY    3474.92    3474.29    -0.06   LOSS            timeout   SSL  SWEEP+SMC
+  78 2025-09-01 14:30  BUY    3470.87    3480.93     1.01    WIN        take_profit   SSL  SWEEP+SMC
+  79 2025-09-01 19:45  BUY    3477.20    3492.38     1.52    WIN        take_profit   SSL  SWEEP+SMC
+  80 2025-09-02 07:15  BUY    3494.18    3477.01    -1.72   LOSS           max_loss   SSL  SWEEP+SMC
+  81 2025-09-02 13:15 SELL    3480.05    3498.18    -1.81   LOSS           max_loss   BSL  SWEEP+SMC
+  82 2025-09-02 19:30  BUY    3526.18    3538.85     1.27    WIN      market_signal   SSL  SWEEP+SMC
+  83 2025-09-03 02:30  BUY    3526.37    3532.38     0.60    WIN            timeout   SSL  SWEEP+SMC
+  84 2025-09-03 11:15  BUY    3540.91    3562.12     4.24    WIN        take_profit   SSL  SWEEP+SMC
+  85 2025-09-03 20:00  BUY    3572.19    3560.05    -1.21   LOSS            timeout   SSL  SWEEP+SMC
+  86 2025-09-04 03:30  BUY    3557.68    3532.26    -2.54   LOSS           max_loss   SSL  SWEEP+SMC
+  87 2025-09-04 08:15 SELL    3531.34    3539.22    -0.79   LOSS            timeout   BSL  SWEEP+SMC
+  88 2025-09-04 14:45  BUY    3545.34    3542.81    -0.25   LOSS            timeout   SSL  SWEEP+SMC
+  89 2025-09-04 23:15  BUY    3549.61    3542.49    -0.71   LOSS           max_loss   SSL  SWEEP+SMC
+  90 2025-09-05 03:30  BUY    3551.58    3550.87    -0.07   LOSS            timeout   SSL  SWEEP+SMC
+  91 2025-09-05 12:15  BUY    3548.30    3556.47     0.82    WIN        take_profit   SSL  SWEEP+SMC
+  92 2025-09-05 18:00  BUY    3584.15    3594.38     1.02    WIN      weekend_close   SSL  SWEEP+SMC
+  93 2025-09-08 01:00 SELL    3590.25    3590.51    -0.03   LOSS            timeout   BSL  SWEEP+SMC
+  94 2025-09-08 08:30 SELL    3587.29    3596.91    -0.96   LOSS           max_loss   BSL  SWEEP+SMC
+  95 2025-09-08 12:00  BUY    3612.73    3634.67     2.19    WIN            timeout   SSL  SWEEP+SMC
+  96 2025-09-08 23:00  BUY    3635.77    3629.97    -0.58   LOSS           max_loss   SSL  SWEEP+SMC
+  97 2025-09-09 04:00  BUY    3639.63    3653.58     1.39    WIN           smart_tp   SSL  SWEEP+SMC
+  98 2025-09-09 08:00  BUY    3654.79    3642.65    -1.21   LOSS           max_loss   SSL  SWEEP+SMC
+  99 2025-09-09 11:30 SELL    3650.19    3652.62    -0.49   LOSS            timeout   BSL  SWEEP+SMC
+ 100 2025-09-09 18:30  BUY    3643.22    3632.75    -1.05   LOSS            timeout   SSL  SWEEP+SMC
+ 101 2025-09-10 02:00 SELL    3638.97    3623.46     1.55    WIN        take_profit   BSL  SWEEP+SMC
+ 102 2025-09-10 07:00  BUY    3641.06    3649.08     0.80    WIN            timeout   SSL  SWEEP+SMC
+ 103 2025-09-10 17:00  BUY    3653.69    3640.31    -1.34   LOSS           max_loss   SSL  SWEEP+SMC
+ 104 2025-09-10 20:45  BUY    3647.27    3638.52    -0.88   LOSS           max_loss   SSL  SWEEP+SMC
+ 105 2025-09-11 02:30  BUY    3644.27    3637.82    -0.64   LOSS           max_loss   SSL  SWEEP+SMC
+ 106 2025-09-11 07:45 SELL    3630.53    3621.71     0.88    WIN            timeout   BSL  SWEEP+SMC
+ 107 2025-09-11 16:15  BUY    3622.00    3637.97     1.60    WIN        take_profit   SSL  SWEEP+SMC
+ 108 2025-09-11 20:45  BUY    3634.90    3634.71    -0.02   LOSS            timeout   SSL  SWEEP+SMC
+ 109 2025-09-12 04:15  BUY    3642.63    3654.59     1.20    WIN           smart_tp   SSL  SWEEP+SMC
+ 110 2025-09-12 12:30  BUY    3644.50    3643.97    -0.05   LOSS            timeout   SSL  SWEEP+SMC
+ 111 2025-09-12 20:30  BUY    3649.39    3648.75    -0.13   LOSS      weekend_close   SSL  SWEEP+SMC
+ 112 2025-09-15 01:00  BUY    3643.67    3639.83    -0.38   LOSS           max_loss   SSL  SWEEP+SMC
+ 113 2025-09-15 04:15 SELL    3631.81    3645.23    -1.34   LOSS            timeout   BSL  SWEEP+SMC
+ 114 2025-09-15 10:45  BUY    3643.74    3642.53    -0.12   LOSS            timeout   SSL  SWEEP+SMC
+ 115 2025-09-15 17:15  BUY    3657.66    3680.33     2.27    WIN           smart_tp   SSL  SWEEP+SMC
+ 116 2025-09-15 23:00  BUY    3681.12    3680.02    -0.11   LOSS            timeout   SSL  SWEEP+SMC
+ 117 2025-09-16 06:30  BUY    3681.34    3689.20     0.79    WIN        take_profit   SSL  SWEEP+SMC
+ 118 2025-09-16 12:00  BUY    3694.91    3687.73    -1.44   LOSS            timeout   SSL  SWEEP+SMC
+ 119 2025-09-16 18:30 SELL    3680.21    3689.13    -1.78   LOSS            timeout   BSL  SWEEP+SMC
+ 120 2025-09-17 02:00  BUY    3694.06    3678.80    -1.53   LOSS           max_loss   SSL  SWEEP+SMC
+ 121 2025-09-17 08:45 SELL    3679.17    3674.55     0.46    WIN            timeout   BSL  SWEEP+SMC
+ 122 2025-09-17 18:00  BUY    3685.20    3659.97    -2.52   LOSS           max_loss   SSL  SWEEP+SMC
+ 123 2025-09-18 01:00 SELL    3663.18    3664.58    -0.14   LOSS            timeout   BSL  SWEEP+SMC
+ 124 2025-09-18 08:15 SELL    3657.79    3645.68     1.21    WIN        take_profit   BSL  SWEEP+SMC
+ 125 2025-09-18 11:30 SELL    3662.22    3670.96    -0.87   LOSS           max_loss   BSL  SWEEP+SMC
+ 126 2025-09-18 14:45  BUY    3666.98    3633.68    -3.33   LOSS           max_loss   SSL  SWEEP+SMC
+ 127 2025-09-18 20:30 SELL    3643.68    3638.32     0.54    WIN            timeout   BSL  SWEEP+SMC
+ 128 2025-09-19 06:00  BUY    3646.98    3652.55     0.56    WIN            timeout   SSL  SWEEP+SMC
+ 129 2025-09-19 16:30  BUY    3656.57    3676.64     4.01    WIN        take_profit   SSL  SWEEP+SMC
+ 130 2025-09-19 23:45  BUY    3684.58    3695.23     1.07    WIN            timeout   SSL  SWEEP+SMC
+ 131 2025-09-22 09:15  BUY    3706.06    3715.13     1.81    WIN            timeout   SSL  SWEEP+SMC
+ 132 2025-09-22 17:45  BUY    3725.74    3746.36     4.12    WIN        take_profit   SSL  SWEEP+SMC
+ 133 2025-09-22 23:15  BUY    3747.55    3743.36    -0.42   LOSS            timeout   SSL  SWEEP+SMC
+ 134 2025-09-23 08:00  BUY    3746.18    3760.72     1.45    WIN        take_profit   SSL  SWEEP+SMC
+ 135 2025-09-23 14:00  BUY    3780.20    3778.89    -0.13   LOSS            timeout   SSL  SWEEP+SMC
+ 136 2025-09-23 20:30  BUY    3777.96    3767.56    -2.08   LOSS           max_loss   SSL  SWEEP+SMC
+ 137 2025-09-24 01:15 SELL    3761.78    3764.42    -0.26   LOSS            timeout   BSL  SWEEP+SMC
+ 138 2025-09-24 09:00  BUY    3773.20    3764.89    -0.83   LOSS            timeout   SSL  SWEEP+SMC
+ 139 2025-09-24 15:30  BUY    3765.22    3758.93    -0.63   LOSS           max_loss   SSL  SWEEP+SMC
+ 140 2025-09-24 19:30 SELL    3738.41    3728.23     1.02    WIN      market_signal   BSL  SWEEP+SMC
+ 141 2025-09-25 01:15 SELL    3744.65    3733.99     1.07    WIN            timeout   BSL  SWEEP+SMC
+ 142 2025-09-25 09:45  BUY    3740.87    3754.57     1.37    WIN        take_profit   SSL  SWEEP+SMC
+ 143 2025-09-25 13:15  BUY    3756.80    3731.74    -5.01   LOSS           max_loss   SSL  SWEEP+SMC
+ 144 2025-09-25 18:45 SELL    3735.75    3746.44    -1.07   LOSS            timeout   BSL  SWEEP+SMC
+ 145 2025-09-26 02:15 SELL    3742.81    3752.28    -0.95   LOSS           max_loss   BSL  SWEEP+SMC
+ 146 2025-09-26 06:30 SELL    3744.93    3753.10    -0.82   LOSS           max_loss   BSL  SWEEP+SMC
+ 147 2025-09-26 11:45 SELL    3752.81    3742.86     0.99    WIN        take_profit   BSL  SWEEP+SMC
+ 148 2025-09-26 16:30  BUY    3758.11    3781.14     2.30    WIN        take_profit   SSL  SWEEP+SMC
+ 149 2025-09-26 19:45  BUY    3774.12    3778.76     0.46    WIN      weekend_close   SSL  SWEEP+SMC
+ 150 2025-09-29 01:15 SELL    3767.47    3783.10    -1.56   LOSS           max_loss   BSL  SWEEP+SMC
+ 151 2025-09-29 06:00  BUY    3797.14    3810.11     1.30    WIN            timeout   SSL  SWEEP+SMC
+ 152 2025-09-29 15:00  BUY    3824.35    3827.46     0.62    WIN            timeout   SSL  SWEEP+SMC
+ 153 2025-09-29 23:30  BUY    3830.56    3842.74     1.22    WIN        take_profit   SSL  SWEEP+SMC
+ 154 2025-09-30 06:30  BUY    3863.69    3866.85     0.32    WIN      market_signal   SSL  SWEEP+SMC
+ 155 2025-09-30 11:15 SELL    3823.53    3801.51     4.40    WIN      market_signal   BSL  SWEEP+SMC
+ 156 2025-09-30 17:45 SELL    3853.92    3854.98    -0.21   LOSS            timeout   BSL  SWEEP+SMC
+ 157 2025-10-01 02:30  BUY    3861.42    3860.64    -0.08   LOSS            timeout   SSL  SWEEP+SMC
+ 158 2025-10-01 09:30  BUY    3863.70    3876.16     1.25    WIN        take_profit   SSL  SWEEP+SMC
+ 159 2025-10-01 13:15  BUY    3886.30    3875.07    -1.12   LOSS            timeout   SSL  SWEEP+SMC
+ 160 2025-10-01 19:45 SELL    3870.73    3855.10     3.13    WIN        take_profit   BSL  SWEEP+SMC
+ 161 2025-10-01 23:30 SELL    3863.40    3864.82    -0.14   LOSS            timeout   BSL  SWEEP+SMC
+ 162 2025-10-02 07:15 SELL    3865.92    3872.11    -0.62   LOSS           max_loss   BSL  SWEEP+SMC
+ 163 2025-10-02 11:45  BUY    3874.35    3893.39     1.90    WIN        take_profit   SSL  SWEEP+SMC
+ 164 2025-10-02 18:45 SELL    3828.14    3855.52    -5.48   LOSS            timeout   BSL  SWEEP+SMC
+ 165 2025-10-03 02:15 SELL    3858.22    3847.97     1.03    WIN        take_profit   BSL  SWEEP+SMC
+ 166 2025-10-03 07:00 SELL    3845.34    3863.54    -1.82   LOSS           max_loss   BSL  SWEEP+SMC
+ 167 2025-10-03 13:00  BUY    3865.23    3882.25     3.40    WIN            timeout   SSL  SWEEP+SMC
+ 168 2025-10-03 23:45  BUY    3886.32    3900.62     1.43    WIN        take_profit   SSL  SWEEP+SMC
+ 169 2025-10-06 04:15  BUY    3902.90    3933.23     3.03    WIN        take_profit   SSL  SWEEP+SMC
+ 170 2025-10-06 09:30  BUY    3926.83    3931.51     0.94    WIN            timeout   SSL  SWEEP+SMC
+ 171 2025-10-06 18:15  BUY    3949.89    3973.92     4.81    WIN            timeout   SSL  SWEEP+SMC
+ 172 2025-10-07 05:45  BUY    3964.69    3955.74    -0.90   LOSS           max_loss   SSL  SWEEP+SMC
+ 173 2025-10-07 12:00 SELL    3958.62    3976.79    -3.63   LOSS           max_loss   BSL  SWEEP+SMC
+ 174 2025-10-07 18:15  BUY    3984.94    3979.83    -0.51   LOSS            timeout   SSL  SWEEP+SMC
+ 175 2025-10-08 01:45  BUY    3989.28    4019.49     3.02    WIN           smart_tp   SSL  SWEEP+SMC
+ 176 2025-10-08 09:30  BUY    4030.60    4033.70     0.31    WIN            timeout   SSL  SWEEP+SMC
+ 177 2025-10-08 19:15  BUY    4055.42    4043.74    -1.17   LOSS            timeout   SSL  SWEEP+SMC
+ 178 2025-10-09 02:45 SELL    4011.55    4026.63    -1.51   LOSS            timeout   BSL  SWEEP+SMC
+ 179 2025-10-09 09:30  BUY    4030.06    4031.02     0.10    WIN            timeout   SSL  SWEEP+SMC
+ 180 2025-10-09 19:00 SELL    4016.59    3954.78    12.36    WIN        take_profit   BSL  SWEEP+SMC
+ 181 2025-10-09 23:30 SELL    3974.44    3981.74    -0.73   LOSS            timeout   BSL  SWEEP+SMC
+ 182 2025-10-10 07:45 SELL    3966.09    3986.56    -2.05   LOSS           max_loss   BSL  SWEEP+SMC
+ 183 2025-10-10 13:30  BUY    3997.88    3982.14    -1.57   LOSS            timeout   SSL  SWEEP+SMC
+ 184 2025-10-10 20:15  BUY    3984.44    3995.14     1.07    WIN      weekend_close   SSL  SWEEP+SMC
+ 185 2025-10-13 01:00  BUY    4021.68    4065.27     4.36    WIN            timeout   SSL  SWEEP+SMC
+ 186 2025-10-13 11:30  BUY    4073.89    4115.54     4.17    WIN           smart_tp   SSL  SWEEP+SMC
+ 187 2025-10-13 23:15  BUY    4110.49    4140.49     3.00    WIN        take_profit   SSL  SWEEP+SMC
+ 188 2025-10-14 06:30  BUY    4161.80    4106.47    -5.53   LOSS           max_loss   SSL  SWEEP+SMC
+ 189 2025-10-14 11:45 SELL    4143.75    4126.69     3.41    WIN       peak_protect   BSL  SWEEP+SMC
+ 190 2025-10-14 20:00  BUY    4145.14    4168.31     4.63    WIN            timeout   SSL  SWEEP+SMC
+ 191 2025-10-15 05:30  BUY    4171.41    4197.91     2.65    WIN        take_profit   SSL  SWEEP+SMC
+ 192 2025-10-15 12:15  BUY    4189.94    4194.63     0.47    WIN            timeout   SSL  SWEEP+SMC
+ 193 2025-10-15 23:00  BUY    4208.91    4226.82     1.79    WIN            timeout   SSL  SWEEP+SMC
+ 194 2025-10-16 10:45  BUY    4230.48    4271.22     8.15    WIN        take_profit   SSL  SWEEP+SMC
+ 195 2025-10-16 20:45  BUY    4293.67    4329.00     7.07    WIN           smart_tp   SSL  SWEEP+SMC
+ 196 2025-10-17 03:15  BUY    4357.67    4361.41     0.37    WIN            timeout   SSL  SWEEP+SMC
+ 197 2025-10-17 11:45 SELL    4347.51    4301.01     9.30    WIN        take_profit   BSL  SWEEP+SMC
+ 198 2025-10-17 17:15 SELL    4240.63    4239.63     0.10    WIN     breakeven_exit   BSL  SWEEP+SMC
+ 199 2025-10-17 23:30  BUY    4247.04    4247.38     0.03    WIN      weekend_close   SSL  SWEEP+SMC
+ 200 2025-10-20 07:00  BUY    4261.62    4260.61    -0.10   LOSS            timeout   SSL  SWEEP+SMC
+ 201 2025-10-20 14:45  BUY    4279.10    4320.09     8.20    WIN           smart_tp   SSL  SWEEP+SMC
+ 202 2025-10-20 18:00  BUY    4346.12    4377.76     6.33    WIN      market_signal   SSL  SWEEP+SMC
+ 203 2025-10-21 02:15  BUY    4362.31    4346.07    -1.62   LOSS           max_loss   SSL  SWEEP+SMC
+ 204 2025-10-21 08:15 SELL    4332.95    4274.07     5.89    WIN        take_profit   BSL  SWEEP+SMC
+ 205 2025-10-21 13:30 SELL    4260.15    4173.85     8.63    WIN           smart_tp   BSL  SWEEP+SMC
+ 206 2025-10-21 23:00 SELL    4120.53    4082.36     3.82    WIN        take_profit   BSL  SWEEP+SMC
+ 207 2025-10-22 05:30 SELL    4112.22    4146.58    -3.44   LOSS           max_loss   BSL  SWEEP+SMC
+ 208 2025-10-22 10:45  BUY    4132.70    4106.93    -5.15   LOSS           max_loss   SSL  SWEEP+SMC
+ 209 2025-10-23 05:15  BUY    4081.00    4110.17     2.92    WIN        take_profit   SSL  SWEEP+SMC
+ 210 2025-10-23 11:15  BUY    4113.97    4109.01    -0.50   LOSS            timeout   SSL  SWEEP+SMC
+ 211 2025-10-23 18:00  BUY    4144.15    4134.94    -1.84   LOSS            timeout   SSL  SWEEP+SMC
+ 212 2025-10-24 01:30 SELL    4111.47    4143.32    -3.18   LOSS           max_loss   BSL  SWEEP+SMC
+ 213 2025-10-24 08:15  BUY    4112.45    4099.89    -1.26   LOSS           max_loss   SSL  SWEEP+SMC
+ 214 2025-10-24 11:30 SELL    4056.23    4082.95    -2.67   LOSS            timeout   BSL  SWEEP+SMC
+ 215 2025-10-24 18:00  BUY    4118.77    4106.91    -1.19   LOSS      weekend_close   SSL  SWEEP+SMC
+ 216 2025-10-27 00:00 SELL    4104.45    4077.43     2.70    WIN        take_profit   BSL  SWEEP+SMC
+ 217 2025-10-27 03:15 SELL    4093.26    4062.23     3.10    WIN        take_profit   BSL  SWEEP+SMC
+ 218 2025-10-27 08:30  BUY    4079.87    4053.55    -2.63   LOSS           max_loss   SSL  SWEEP+SMC
+ 219 2025-10-27 13:15 SELL    4030.03    4004.94     2.51    WIN       peak_protect   BSL  SWEEP+SMC
+ 220 2025-10-28 00:00 SELL    3985.16    4010.08    -2.49   LOSS           max_loss   BSL  SWEEP+SMC
+ 221 2025-10-28 06:15 SELL    3971.23    3921.59     4.96    WIN           smart_tp   BSL  SWEEP+SMC
+ 222 2025-10-28 13:00 SELL    3915.87    3959.00    -4.31   LOSS            timeout   BSL  SWEEP+SMC
+ 223 2025-10-28 19:30  BUY    3963.85    3943.33    -2.05   LOSS            timeout   SSL  SWEEP+SMC
+ 224 2025-10-29 03:00  BUY    3976.71    3955.71    -2.10   LOSS            timeout   SSL  SWEEP+SMC
+ 225 2025-10-29 09:30  BUY    3994.96    4006.53     1.16    WIN            timeout   SSL  SWEEP+SMC
+ 226 2025-10-29 18:00 SELL    3997.14    3948.01     4.91    WIN        take_profit   BSL  SWEEP+SMC
+ 227 2025-10-30 00:00 SELL    3937.86    3943.32    -0.55   LOSS            timeout   BSL  SWEEP+SMC
+ 228 2025-10-30 08:30  BUY    3965.58    3966.58     0.10    WIN     breakeven_exit   SSL  SWEEP+SMC
+ 229 2025-10-30 16:00  BUY    4010.86    4007.41    -0.69   LOSS            timeout   SSL  SWEEP+SMC
+ 230 2025-10-31 00:00  BUY    4021.83    4009.71    -1.21   LOSS            timeout   SSL  SWEEP+SMC
+ 231 2025-10-31 06:30 SELL    4000.26    4019.66    -1.94   LOSS            timeout   BSL  SWEEP+SMC
+ 232 2025-10-31 13:00 SELL    4005.86    4026.72    -2.09   LOSS           max_loss   BSL  SWEEP+SMC
+ 233 2025-10-31 18:00 SELL    3978.77    3998.91    -2.01   LOSS      weekend_close   BSL  SWEEP+SMC
+ 234 2025-11-03 02:00 SELL    3968.24    4006.30    -3.81   LOSS           max_loss   BSL  SWEEP+SMC
+ 235 2025-11-03 07:45  BUY    4013.70    4000.34    -1.34   LOSS            timeout   SSL  SWEEP+SMC
+ 236 2025-11-03 17:30 SELL    4021.13    3999.66     2.15    WIN        take_profit   BSL  SWEEP+SMC
+ 237 2025-11-03 20:45 SELL    4006.38    3994.29     1.21    WIN            timeout   BSL  SWEEP+SMC
+ 238 2025-11-04 08:15 SELL    3975.31    3999.22    -2.39   LOSS           max_loss   BSL  SWEEP+SMC
+ 239 2025-11-04 14:45 SELL    3984.74    3961.02     4.74    WIN        take_profit   BSL  SWEEP+SMC
+ 240 2025-11-04 18:45 SELL    3968.85    3936.78     6.41    WIN            timeout   BSL  SWEEP+SMC
+ 241 2025-11-05 07:30  BUY    3969.72    3969.62    -0.01   LOSS            timeout   SSL  SWEEP+SMC
+ 242 2025-11-05 14:00 SELL    3964.13    3976.60    -2.49   LOSS            timeout   BSL  SWEEP+SMC
+ 243 2025-11-05 20:30  BUY    3979.59    3973.17    -0.64   LOSS            timeout   SSL  SWEEP+SMC
+ 244 2025-11-06 04:00  BUY    3977.18    3992.96     1.58    WIN        take_profit   SSL  SWEEP+SMC
+ 245 2025-11-06 11:30  BUY    4012.20    4008.31    -0.39   LOSS            timeout   SSL  SWEEP+SMC
+ 246 2025-11-06 18:30 SELL    3979.06    3983.89    -0.48   LOSS            timeout   BSL  SWEEP+SMC
+ 247 2025-11-07 02:00 SELL    3987.06    3995.51    -0.84   LOSS           max_loss   BSL  SWEEP+SMC
+ 248 2025-11-07 05:30  BUY    3994.65    4004.35     0.97    WIN            timeout   SSL  SWEEP+SMC
+ 249 2025-11-07 15:00  BUY    3995.93    3985.25    -1.07   LOSS           max_loss   SSL  SWEEP+SMC
+ 250 2025-11-07 19:00  BUY    3999.70    4002.99     0.33    WIN      weekend_close   SSL  SWEEP+SMC
+ 251 2025-11-10 01:15  BUY    4008.28    4029.18     2.09    WIN        take_profit   SSL  SWEEP+SMC
+ 252 2025-11-10 05:45  BUY    4050.34    4076.57     2.62    WIN            timeout   SSL  SWEEP+SMC
+ 253 2025-11-10 14:30  BUY    4094.58    4075.69    -3.78   LOSS           max_loss   SSL  SWEEP+SMC
+ 254 2025-11-10 20:15  BUY    4114.07    4132.20     3.63    WIN      market_signal   SSL  SWEEP+SMC
+ 255 2025-11-11 05:45  BUY    4146.65    4129.52    -1.71   LOSS           max_loss   SSL  SWEEP+SMC
+ 256 2025-11-11 12:15 SELL    4142.02    4129.34     2.54    WIN        take_profit   BSL  SWEEP+SMC
+ 257 2025-11-11 18:45 SELL    4113.07    4129.50    -3.29   LOSS            timeout   BSL  SWEEP+SMC
+ 258 2025-11-12 02:30  BUY    4141.51    4106.65    -3.49   LOSS           max_loss   SSL  SWEEP+SMC
+ 259 2025-11-12 08:30  BUY    4116.75    4136.62     1.99    WIN        take_profit   SSL  SWEEP+SMC
+ 260 2025-11-12 16:45  BUY    4136.56    4157.55     4.20    WIN        take_profit   SSL  SWEEP+SMC
+ 261 2025-11-12 19:30  BUY    4202.42    4208.59     0.62    WIN      market_signal   SSL  SWEEP+SMC
+ 262 2025-11-12 23:00  BUY    4192.70    4187.67    -0.50   LOSS            timeout   SSL  SWEEP+SMC
+ 263 2025-11-13 06:45  BUY    4209.24    4222.93     1.37    WIN            timeout   SSL  SWEEP+SMC
+ 264 2025-11-13 15:45  BUY    4231.57    4218.01    -2.71   LOSS           max_loss   SSL  SWEEP+SMC
+ 265 2025-11-13 18:30 SELL    4197.68    4178.46     3.84    WIN       peak_protect   BSL  SWEEP+SMC
+ 266 2025-11-14 02:30 SELL    4186.53    4210.75    -2.42   LOSS           max_loss   BSL  SWEEP+SMC
+ 267 2025-11-14 09:00 SELL    4171.26    4125.80     9.09    WIN           smart_tp   BSL  SWEEP+SMC
+ 268 2025-11-14 16:45 SELL    4082.51    4097.94    -1.54   LOSS            timeout   BSL  SWEEP+SMC
+ 269 2025-11-17 01:15 SELL    4103.53    4076.54     2.70    WIN        take_profit   BSL  SWEEP+SMC
+ 270 2025-11-17 08:00 SELL    4058.50    4087.13    -2.86   LOSS            timeout   BSL  SWEEP+SMC
+ 271 2025-11-17 14:45 SELL    4077.07    4089.93    -2.57   LOSS           max_loss   BSL  SWEEP+SMC
+ 272 2025-11-17 17:45 SELL    4064.27    4022.41     4.19    WIN        take_profit   BSL  SWEEP+SMC
+ 273 2025-11-18 01:00 SELL    4050.00    4003.78     4.62    WIN        take_profit   BSL  SWEEP+SMC
+ 274 2025-11-18 11:30  BUY    4037.21    4052.79     3.12    WIN       peak_protect   SSL  SWEEP+SMC
+ 275 2025-11-18 20:15  BUY    4065.65    4064.35    -0.13   LOSS            timeout   SSL  SWEEP+SMC
+ 276 2025-11-19 05:30 SELL    4073.06    4083.65    -1.06   LOSS           max_loss   BSL  SWEEP+SMC
+ 277 2025-11-19 09:45  BUY    4086.72    4120.15     3.34    WIN        take_profit   SSL  SWEEP+SMC
+ 278 2025-11-19 19:15 SELL    4072.13    4076.57    -0.89   LOSS            timeout   BSL  SWEEP+SMC
+ 279 2025-11-20 02:45  BUY    4102.89    4065.58    -3.73   LOSS           max_loss   SSL  SWEEP+SMC
+ 280 2025-11-20 06:30 SELL    4076.43    4063.29     1.31    WIN            timeout   BSL  SWEEP+SMC
+ 281 2025-11-20 15:30  BUY    4080.45    4051.06    -5.88   LOSS           max_loss   SSL  SWEEP+SMC
+ 282 2025-11-20 23:00 SELL    4077.01    4053.53     2.35    WIN        take_profit   BSL  SWEEP+SMC
+ 283 2025-11-21 07:30  BUY    4048.58    4036.06    -1.25   LOSS           max_loss   SSL  SWEEP+SMC
+ 284 2025-11-21 10:45 SELL    4040.96    4064.36    -2.34   LOSS           max_loss   BSL  SWEEP+SMC
+ 285 2025-11-21 17:45  BUY    4069.61    4085.61     1.60    WIN      weekend_close   SSL  SWEEP+SMC
+ 286 2025-11-24 01:15 SELL    4070.55    4052.36     1.82    WIN            timeout   BSL  SWEEP+SMC
+ 287 2025-11-24 12:00  BUY    4072.95    4090.00     1.71    WIN            timeout   SSL  SWEEP+SMC
+ 288 2025-11-24 23:15  BUY    4132.22    4146.00     1.38    WIN            timeout   SSL  SWEEP+SMC
+ 289 2025-11-25 09:15 SELL    4136.98    4114.70     4.46    WIN        take_profit   BSL  SWEEP+SMC
+ 290 2025-11-25 15:00 SELL    4138.09    4118.60     1.95    WIN        take_profit   BSL  SWEEP+SMC
+ 291 2025-11-25 19:15  BUY    4149.49    4130.23    -1.93   LOSS            timeout   SSL  SWEEP+SMC
+ 292 2025-11-26 02:45  BUY    4142.38    4164.84     2.25    WIN        take_profit   SSL  SWEEP+SMC
+ 293 2025-11-26 07:30  BUY    4162.51    4159.76    -0.28   LOSS            timeout   SSL  SWEEP+SMC
+ 294 2025-11-26 14:00  BUY    4170.85    4155.98    -2.97   LOSS           max_loss   SSL  SWEEP+SMC
+ 295 2025-11-26 17:00 SELL    4152.23    4166.66    -1.44   LOSS            timeout   BSL  SWEEP+SMC
+ 296 2025-11-26 23:30 SELL    4164.51    4152.98     1.15    WIN        take_profit   BSL  SWEEP+SMC
+ 297 2025-11-27 05:45 SELL    4147.23    4159.92    -1.27   LOSS            timeout   BSL  SWEEP+SMC
+ 298 2025-11-27 12:15 SELL    4152.56    4157.03    -0.89   LOSS            timeout   BSL  SWEEP+SMC
+ 299 2025-11-27 19:00 SELL    4155.24    4161.77    -0.65   LOSS           max_loss   BSL  SWEEP+SMC
+ 300 2025-11-28 03:30  BUY    4192.33    4184.78    -0.76   LOSS            timeout   SSL  SWEEP+SMC
+ 301 2025-11-28 10:00 SELL    4173.12    4176.32    -0.32   LOSS            timeout   BSL  SWEEP+SMC
+ 302 2025-11-28 16:45  BUY    4198.29    4243.38     4.51    WIN        take_profit   SSL  SWEEP+SMC
+ 303 2025-12-01 06:00  BUY    4238.58    4253.39     1.48    WIN            timeout   SSL  SWEEP+SMC
+ 304 2025-12-01 15:30  BUY    4261.87    4238.87    -2.30   LOSS            timeout   SSL  SWEEP+SMC
+ 305 2025-12-02 01:45 SELL    4227.26    4201.34     2.59    WIN        take_profit   BSL  SWEEP+SMC
+ 306 2025-12-02 05:45 SELL    4216.61    4205.35     1.13    WIN            timeout   BSL  SWEEP+SMC
+ 307 2025-12-02 16:30  BUY    4217.88    4181.19    -7.34   LOSS           max_loss   SSL  SWEEP+SMC
+ 308 2025-12-02 20:00 SELL    4192.42    4207.66    -3.05   LOSS            timeout   BSL  SWEEP+SMC
+ 309 2025-12-03 03:45  BUY    4214.30    4207.67    -0.66   LOSS            timeout   SSL  SWEEP+SMC
+ 310 2025-12-03 10:30 SELL    4208.60    4214.03    -0.54   LOSS            timeout   BSL  SWEEP+SMC
+ 311 2025-12-03 17:00  BUY    4217.50    4201.11    -1.64   LOSS            timeout   SSL  SWEEP+SMC
+ 312 2025-12-03 23:30 SELL    4209.49    4194.94     1.46    WIN        take_profit   BSL  SWEEP+SMC
+ 313 2025-12-04 07:30 SELL    4183.90    4196.83    -1.29   LOSS            timeout   BSL  SWEEP+SMC
+ 314 2025-12-04 14:00  BUY    4200.70    4207.88     1.44    WIN            timeout   SSL  SWEEP+SMC
+ 315 2025-12-04 23:15  BUY    4208.41    4199.50    -0.89   LOSS           max_loss   SSL  SWEEP+SMC
+ 316 2025-12-05 06:15  BUY    4212.27    4224.31     1.20    WIN            timeout   SSL  SWEEP+SMC
+ 317 2025-12-05 17:30  BUY    4253.66    4221.45    -3.22   LOSS           max_loss   SSL  SWEEP+SMC
+ 318 2025-12-05 20:30 SELL    4211.74    4205.79     1.19    WIN      weekend_close   BSL  SWEEP+SMC
+ 319 2025-12-08 01:00 SELL    4198.04    4209.74    -1.17   LOSS            timeout   BSL  SWEEP+SMC
+ 320 2025-12-08 07:30  BUY    4214.55    4207.93    -0.66   LOSS            timeout   SSL  SWEEP+SMC
+ 321 2025-12-08 14:00  BUY    4212.21    4202.96    -0.93   LOSS           max_loss   SSL  SWEEP+SMC
+ 322 2025-12-08 18:00 SELL    4183.40    4188.52    -0.51   LOSS            timeout   BSL  SWEEP+SMC
+ 323 2025-12-09 01:30 SELL    4194.44    4194.77    -0.03   LOSS            timeout   BSL  SWEEP+SMC
+ 324 2025-12-09 08:30 SELL    4180.87    4198.64    -1.78   LOSS           max_loss   BSL  SWEEP+SMC
+ 325 2025-12-09 16:45  BUY    4204.83    4212.01     0.72    WIN            timeout   SSL  SWEEP+SMC
+ 326 2025-12-10 02:30  BUY    4207.42    4216.81     0.94    WIN        take_profit   SSL  SWEEP+SMC
+ 327 2025-12-10 06:00 SELL    4208.08    4192.21     1.59    WIN        take_profit   BSL  SWEEP+SMC
+ 328 2025-12-10 16:00 SELL    4204.85    4190.75     2.82    WIN        take_profit   BSL  SWEEP+SMC
+ 329 2025-12-10 19:45 SELL    4199.61    4207.53    -1.58   LOSS           max_loss   BSL  SWEEP+SMC
+ 330 2025-12-10 23:30 SELL    4227.96    4243.56    -1.56   LOSS           max_loss   BSL  SWEEP+SMC
+ 331 2025-12-11 12:00 SELL    4220.40    4227.19    -0.68   LOSS            timeout   BSL  SWEEP+SMC
+ 332 2025-12-11 18:30  BUY    4261.57    4283.60     2.20    WIN      market_signal   SSL  SWEEP+SMC
+ 333 2025-12-11 23:00  BUY    4272.87    4270.21    -0.27   LOSS            timeout   SSL  SWEEP+SMC
+ 334 2025-12-12 07:30  BUY    4277.86    4297.94     2.01    WIN        take_profit   SSL  SWEEP+SMC
+ 335 2025-12-12 13:00  BUY    4335.79    4300.60    -3.52   LOSS            timeout   SSL  SWEEP+SMC
+ 336 2025-12-15 04:45  BUY    4326.17    4342.62     1.64    WIN            timeout   SSL  SWEEP+SMC
+ 337 2025-12-15 14:30  BUY    4345.54    4335.11    -2.09   LOSS           max_loss   SSL  SWEEP+SMC
+ 338 2025-12-15 17:30 SELL    4323.18    4295.83     5.47    WIN           smart_tp   BSL  SWEEP+SMC
+ 339 2025-12-15 20:45 SELL    4312.91    4314.47    -0.16   LOSS            timeout   BSL  SWEEP+SMC
+ 340 2025-12-16 06:00 SELL    4287.62    4277.75     0.99    WIN            timeout   BSL  SWEEP+SMC
+ 341 2025-12-16 15:00  BUY    4295.72    4319.25     4.71    WIN           smart_tp   SSL  SWEEP+SMC
+ 342 2025-12-16 18:30  BUY    4294.88    4322.66     2.78    WIN            timeout   SSL  SWEEP+SMC
+ 343 2025-12-17 06:00  BUY    4324.43    4310.95    -1.35   LOSS           max_loss   SSL  SWEEP+SMC
+ 344 2025-12-17 12:30  BUY    4314.88    4329.33     2.89    WIN        take_profit   SSL  SWEEP+SMC
+ 345 2025-12-17 17:45  BUY    4329.96    4338.96     0.90    WIN            timeout   SSL  SWEEP+SMC
+ 346 2025-12-18 03:30 SELL    4326.61    4336.61    -1.00   LOSS            timeout   BSL  SWEEP+SMC
+ 347 2025-12-18 10:00 SELL    4328.44    4315.27     2.63    WIN        take_profit   BSL  SWEEP+SMC
+ 348 2025-12-18 17:30  BUY    4337.49    4372.01     6.90    WIN        take_profit   SSL  SWEEP+SMC
+ 349 2025-12-18 20:45  BUY    4331.73    4329.67    -0.41   LOSS            timeout   SSL  SWEEP+SMC
+ 350 2025-12-19 04:30 SELL    4315.70    4323.84    -0.81   LOSS            timeout   BSL  SWEEP+SMC
+ 351 2025-12-19 11:00 SELL    4326.55    4330.01    -0.35   LOSS            timeout   BSL  SWEEP+SMC
+ 352 2025-12-19 17:30  BUY    4339.95    4346.65     0.67    WIN      weekend_close   SSL  SWEEP+SMC
+ 353 2025-12-22 01:15  BUY    4348.33    4381.55     3.32    WIN           smart_tp   SSL  SWEEP+SMC
+ 354 2025-12-22 06:00  BUY    4396.35    4400.90     0.45    WIN      market_signal   SSL  SWEEP+SMC
+ 355 2025-12-22 09:30  BUY    4416.11    4410.15    -0.60   LOSS            timeout   SSL  SWEEP+SMC
+ 356 2025-12-22 16:15  BUY    4426.33    4432.36     1.21    WIN            timeout   SSL  SWEEP+SMC
+ 357 2025-12-23 02:00  BUY    4465.95    4485.21     1.93    WIN      market_signal   SSL  SWEEP+SMC
+ 358 2025-12-23 06:15  BUY    4486.17    4481.23    -0.49   LOSS            timeout   SSL  SWEEP+SMC
+ 359 2025-12-23 13:30  BUY    4488.38    4478.09    -2.06   LOSS           max_loss   SSL  SWEEP+SMC
+ 360 2025-12-23 18:15 SELL    4461.50    4491.94    -3.04   LOSS            timeout   BSL  SWEEP+SMC
+ 361 2025-12-24 01:45  BUY    4503.05    4493.01    -1.00   LOSS            timeout   SSL  SWEEP+SMC
+ 362 2025-12-24 08:30 SELL    4494.19    4495.17    -0.10   LOSS            timeout   BSL  SWEEP+SMC
+ 363 2025-12-24 16:30 SELL    4480.84    4458.25     2.26    WIN        take_profit   BSL  SWEEP+SMC
+ 364 2025-12-26 01:00  BUY    4488.53    4507.16     1.86    WIN            timeout   SSL  SWEEP+SMC
+ 365 2025-12-26 09:45  BUY    4510.98    4509.56    -0.28   LOSS            timeout   SSL  SWEEP+SMC
+ 366 2025-12-26 16:30  BUY    4520.76    4547.51     5.35    WIN        take_profit   SSL  SWEEP+SMC
+ 367 2025-12-26 20:30  BUY    4529.63    4525.22    -0.88   LOSS      weekend_close   SSL  SWEEP+SMC
+ 368 2025-12-29 02:15 SELL    4486.44    4513.76    -2.73   LOSS            timeout   BSL  SWEEP+SMC
+ 369 2025-12-29 08:45 SELL    4474.88    4464.20     1.07    WIN            timeout   BSL  SWEEP+SMC
+ 370 2025-12-29 17:30 SELL    4331.10    4332.15    -0.21   LOSS            timeout   BSL  SWEEP+SMC
+ 371 2025-12-30 01:00 SELL    4340.28    4356.37    -1.61   LOSS           max_loss   BSL  SWEEP+SMC
+ 372 2025-12-30 06:15  BUY    4362.96    4353.11    -0.99   LOSS            timeout   SSL  SWEEP+SMC
+ 373 2025-12-30 12:45  BUY    4384.61    4366.31    -1.83   LOSS            timeout   SSL  SWEEP+SMC
+ 374 2025-12-30 19:15  BUY    4374.65    4354.77    -1.99   LOSS           max_loss   SSL  SWEEP+SMC
+ 375 2025-12-31 01:15 SELL    4333.75    4348.41    -1.47   LOSS            timeout   BSL  SWEEP+SMC
+ 376 2025-12-31 08:00 SELL    4299.19    4327.07    -2.79   LOSS            timeout   BSL  SWEEP+SMC
+ 377 2025-12-31 14:45  BUY    4313.69    4336.34     2.26    WIN        take_profit   SSL  SWEEP+SMC
+ 378 2025-12-31 19:45  BUY    4321.77    4317.13    -0.46   LOSS            timeout   SSL  SWEEP+SMC
+ 379 2026-01-02 03:15  BUY    4348.98    4388.62     3.96    WIN            timeout   SSL  SWEEP+SMC
+ 380 2026-01-02 13:45  BUY    4392.92    4371.84    -2.11   LOSS           max_loss   SSL  SWEEP+SMC
+ 381 2026-01-02 18:00 SELL    4322.30    4322.50    -0.04   LOSS      weekend_close   BSL  SWEEP+SMC
+ 382 2026-01-05 03:00  BUY    4402.74    4401.68    -0.11   LOSS            timeout   SSL  SWEEP+SMC
+ 383 2026-01-05 10:00  BUY    4424.12    4417.74    -0.64   LOSS            timeout   SSL  SWEEP+SMC
+ 384 2026-01-05 16:30 SELL    4429.62    4443.72    -1.41   LOSS           max_loss   BSL  SWEEP+SMC
+ 385 2026-01-05 23:00  BUY    4446.85    4434.89    -1.20   LOSS           max_loss   SSL  SWEEP+SMC
+ 386 2026-01-06 05:00  BUY    4462.51    4459.26    -0.33   LOSS            timeout   SSL  SWEEP+SMC
+ 387 2026-01-06 12:30 SELL    4451.01    4475.58    -2.46   LOSS           max_loss   BSL  SWEEP+SMC
+ 388 2026-01-06 19:15  BUY    4487.14    4490.76     0.36    WIN            timeout   SSL  SWEEP+SMC
+ 389 2026-01-07 04:45 SELL    4474.37    4473.37     0.10    WIN     breakeven_exit   BSL  SWEEP+SMC
+ 390 2026-01-07 13:15 SELL    4458.90    4435.33     4.71    WIN        take_profit   BSL  SWEEP+SMC
+ 391 2026-01-07 17:30 SELL    4442.14    4458.70    -3.31   LOSS           max_loss   BSL  SWEEP+SMC
+ 392 2026-01-07 23:00  BUY    4453.98    4442.76    -1.12   LOSS           max_loss   SSL  SWEEP+SMC
+ 393 2026-01-08 07:00 SELL    4427.08    4430.85    -0.38   LOSS            timeout   BSL  SWEEP+SMC
+ 394 2026-01-08 13:30 SELL    4426.37    4411.62     1.47    WIN        take_profit   BSL  SWEEP+SMC
+ 395 2026-01-08 17:00  BUY    4448.10    4447.25    -0.09   LOSS            timeout   SSL  SWEEP+SMC
+ 396 2026-01-09 01:15  BUY    4476.74    4463.14    -1.36   LOSS            timeout   SSL  SWEEP+SMC
+ 397 2026-01-09 07:45  BUY    4467.75    4467.69    -0.01   LOSS            timeout   SSL  SWEEP+SMC
+ 398 2026-01-09 17:15  BUY    4505.25    4498.80    -0.64   LOSS            timeout   SSL  SWEEP+SMC
+ 399 2026-01-09 23:45  BUY    4509.63    4537.59     2.80    WIN           smart_tp   SSL  SWEEP+SMC
+ 400 2026-01-12 03:45  BUY    4570.08    4587.63     1.76    WIN            timeout   SSL  SWEEP+SMC
+ 401 2026-01-12 12:15  BUY    4592.36    4586.88    -0.55   LOSS            timeout   SSL  SWEEP+SMC
+ 402 2026-01-12 18:45  BUY    4616.84    4593.44    -4.68   LOSS            timeout   SSL  SWEEP+SMC
+ 403 2026-01-13 02:30 SELL    4586.05    4598.68    -1.26   LOSS            timeout   BSL  SWEEP+SMC
+ 404 2026-01-13 09:00 SELL    4584.59    4584.76    -0.02   LOSS            timeout   BSL  SWEEP+SMC
+ 405 2026-01-13 15:30  BUY    4617.70    4604.51    -1.32   LOSS            timeout   SSL  SWEEP+SMC
+ 406 2026-01-13 23:15 SELL    4587.85    4619.76    -3.19   LOSS            timeout   BSL  SWEEP+SMC
+ 407 2026-01-14 07:45  BUY    4619.87    4637.24     1.74    WIN        take_profit   SSL  SWEEP+SMC
+ 408 2026-01-14 11:45  BUY    4630.29    4619.53    -1.08   LOSS           max_loss   SSL  SWEEP+SMC
+ 409 2026-01-14 19:00 SELL    4615.52    4641.69    -2.62   LOSS           max_loss   BSL  SWEEP+SMC
+ 410 2026-01-14 23:30 SELL    4621.20    4588.75     3.24    WIN        take_profit   BSL  SWEEP+SMC
+ 411 2026-01-15 06:00 SELL    4593.69    4604.00    -1.03   LOSS            timeout   BSL  SWEEP+SMC
+ 412 2026-01-15 12:30  BUY    4617.79    4597.66    -4.03   LOSS           max_loss   SSL  SWEEP+SMC
+ 413 2026-01-15 18:00 SELL    4622.03    4601.69     2.03    WIN        take_profit   BSL  SWEEP+SMC
+ 414 2026-01-15 23:00 SELL    4611.98    4596.84     1.51    WIN        take_profit   BSL  SWEEP+SMC
+ 415 2026-01-16 08:45 SELL    4597.89    4600.19    -0.23   LOSS            timeout   BSL  SWEEP+SMC
+ 416 2026-01-16 15:15 SELL    4586.97    4615.83    -5.77   LOSS           max_loss   BSL  SWEEP+SMC
+ 417 2026-01-16 19:30 SELL    4580.57    4589.01    -0.84   LOSS      weekend_close   BSL  SWEEP+SMC
+ 418 2026-01-19 01:00  BUY    4653.97    4669.37     1.54    WIN            timeout   SSL  SWEEP+SMC
+ 419 2026-01-19 09:30  BUY    4664.63    4660.59    -0.40   LOSS            timeout   SSL  SWEEP+SMC
+ 420 2026-01-19 16:15 SELL    4667.80    4678.95    -1.11   LOSS           max_loss   BSL  SWEEP+SMC
+ 421 2026-01-20 02:15 SELL    4659.36    4680.19    -2.08   LOSS           max_loss   BSL  SWEEP+SMC
+ 422 2026-01-20 08:15  BUY    4712.34    4726.64     1.43    WIN            timeout   SSL  SWEEP+SMC
+ 423 2026-01-20 17:00  BUY    4744.64    4759.03     1.44    WIN            timeout   SSL  SWEEP+SMC
+ 424 2026-01-21 03:00  BUY    4807.88    4865.24     5.74    WIN      market_signal   SSL  SWEEP+SMC
+ 425 2026-01-21 09:00  BUY    4837.07    4869.29     6.44    WIN            timeout   SSL  SWEEP+SMC
+ 426 2026-01-21 17:30 SELL    4837.30    4826.27     2.21    WIN       peak_protect   BSL  SWEEP+SMC
+ 427 2026-01-21 23:00 SELL    4823.92    4778.83     4.51    WIN        take_profit   BSL  SWEEP+SMC
+ 428 2026-01-22 04:15 SELL    4787.45    4825.45    -3.80   LOSS            timeout   BSL  SWEEP+SMC
+ 429 2026-01-22 10:45  BUY    4830.66    4819.58    -1.11   LOSS            timeout   SSL  SWEEP+SMC
+ 430 2026-01-22 17:15  BUY    4853.92    4898.81     4.49    WIN           smart_tp   SSL  SWEEP+SMC
+ 431 2026-01-22 23:00  BUY    4922.82    4948.26     2.54    WIN        take_profit   SSL  SWEEP+SMC
+ 432 2026-01-23 03:30  BUY    4950.97    4946.24    -0.47   LOSS            timeout   SSL  SWEEP+SMC
+ 433 2026-01-23 12:00 SELL    4921.40    4944.47    -4.61   LOSS            timeout   BSL  SWEEP+SMC
+ 434 2026-01-23 18:45  BUY    4980.35    4978.64    -0.17   LOSS      weekend_close   SSL  SWEEP+SMC
+ 435 2026-01-26 01:00  BUY    5021.26    5038.91     1.76    WIN      market_signal   SSL  SWEEP+SMC
+ 436 2026-01-26 04:30  BUY    5088.35    5077.67    -1.07   LOSS            timeout   SSL  SWEEP+SMC
+ 437 2026-01-26 11:15  BUY    5096.80    5072.09    -2.47   LOSS            timeout   SSL  SWEEP+SMC
+ 438 2026-01-26 18:00  BUY    5101.29    5054.43    -4.69   LOSS           max_loss   SSL  SWEEP+SMC
+ 439 2026-01-26 23:45 SELL    5011.81    5062.20    -5.04   LOSS           max_loss   BSL  SWEEP+SMC
+ 440 2026-01-27 05:30  BUY    5074.43    5087.99     1.36    WIN            timeout   SSL  SWEEP+SMC
+ 441 2026-01-27 14:15  BUY    5078.96    5064.42    -1.45   LOSS           max_loss   SSL  SWEEP+SMC
+ 442 2026-01-27 18:45  BUY    5087.35    5141.87     5.45    WIN           smart_tp   SSL  SWEEP+SMC
+ 443 2026-01-28 01:30  BUY    5164.25    5243.35     7.91    WIN      market_signal   SSL  SWEEP+SMC
+ 444 2026-01-28 11:30  BUY    5266.88    5261.51    -0.54   LOSS            timeout   SSL  SWEEP+SMC
+ 445 2026-01-28 18:00 SELL    5284.33    5313.23    -2.89   LOSS           max_loss   BSL  SWEEP+SMC
+ 446 2026-01-28 23:00  BUY    5386.83    5474.64     8.78    WIN      market_signal   SSL  SWEEP+SMC
+ 447 2026-01-29 03:30  BUY    5539.85    5540.85     0.10    WIN     breakeven_exit   SSL  SWEEP+SMC
+ 448 2026-01-29 12:00 SELL    5523.69    5506.75     3.39    WIN       peak_protect   BSL  SWEEP+SMC
+ 449 2026-01-29 15:30 SELL    5525.98    5477.91     9.61    WIN        take_profit   BSL  SWEEP+SMC
+ 450 2026-01-29 23:00  BUY    5398.33    5399.33     0.10    WIN     breakeven_exit   SSL  SWEEP+SMC
+ 451 2026-02-03 15:15  BUY    4933.97    4955.64     4.33    WIN       peak_protect   SSL  SWEEP+SMC
+ 452 2026-02-03 23:00  BUY    4957.74    4985.34     2.76    WIN        trailing_sl   SSL  SWEEP+SMC
+ 453 2026-02-04 05:30  BUY    5062.86    5056.58    -0.63   LOSS            timeout   SSL  SWEEP+SMC
+ 454 2026-02-04 13:45 SELL    5047.52    4981.31    13.24    WIN        take_profit   BSL  SWEEP+SMC
+ 455 2026-02-04 19:00 SELL    4921.23    4953.25    -3.20   LOSS            timeout   BSL  SWEEP+SMC
+ 456 2026-02-05 04:30 SELL    4896.19    4842.97     5.32    WIN        trailing_sl   BSL  SWEEP+SMC
+ 457 2026-02-05 11:30 SELL    4889.68    4888.68     0.10    WIN     breakeven_exit   BSL  SWEEP+SMC
+
+================================================================================

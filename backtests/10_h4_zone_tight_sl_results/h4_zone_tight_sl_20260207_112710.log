@@ -1,0 +1,41 @@
+================================================================================
+XAUBOT AI — SMC + H4 Zone + Tight SL (RR 1:2)
+================================================================================
+Generated: 2026-02-07 11:27:10
+Period: 2025-08-01 to 2026-02-07
+
+--- H4 ZONE FILTER STATS ---
+  Total filtered:     6983
+  BUY filtered:       4140
+  SELL filtered:      2843
+  Trades in OB zone:  3
+  Trades in FVG zone: 4
+
+--- TIGHT SL STATS ---
+  H4 zone SL used:    2
+  Baseline SL used:   5
+  Avg tight SL dist:  $77.37
+  Avg baseline SL dist: $58.27
+
+--- PERFORMANCE ---
+  Trades: 7 | Wins: 6 | Losses: 1
+  Win Rate: 85.7% | PF: 3.38
+  Net PnL: $79.81 | Sharpe: 8.73
+  Max DD: 0.7% ($33.60)
+  Avg Win: $18.90 | Avg Loss: $33.60
+
+--- EXIT REASONS ---
+  trailing_sl         :    6 (85.7%)
+  max_loss            :    1 (14.3%)
+
+--- DIRECTION ---
+  BUY: 5 trades, 100.0% WR, $83.30
+  SELL: 2 trades, 50.0% WR, $-3.49
+
+--- H4 ZONE TYPE ---
+  OB  : 3 trades, 66.7% WR, $13.30
+  FVG : 4 trades, 100.0% WR, $66.51
+
+--- SL TYPE BREAKDOWN ---
+  h4_zone     : 2 trades, 100.0% WR, $42.18
+  baseline    : 5 trades, 80.0% WR, $37.63

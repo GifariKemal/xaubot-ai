@@ -1,16 +1,46 @@
-# Feature Engineering
+# *Feature Engineering*
 
 > **File:** `src/feature_eng.py`
 > **Class:** `FeatureEngineer`
-> **Framework:** Pure Polars (vectorized, tanpa loop, tanpa TA-Lib)
+> **Framework:** Pure Polars (vectorized, tanpa loop, tanpa TA-Lib — bukan Pandas)
 
 ---
 
-## Apa Itu Feature Engineering?
+## Pipeline *Feature Engineering*
 
-Feature Engineering adalah proses **mengubah data harga mentah (OHLCV) menjadi 40+ fitur numerik** yang bisa dibaca oleh model machine learning. Ini adalah "mata" dari AI — tanpa fitur yang baik, model tidak bisa belajar apapun.
+```mermaid
+flowchart LR
+    A["OHLCV Data\n(open, high, low,\nclose, volume, time)"] --> B["calculate_all()"]
 
-**Analogi:** Feature Engineering adalah **alat ukur** — thermometer, barometer, kompas — yang mengubah data mentah menjadi informasi bermakna.
+    subgraph B["calculate_all()"]
+        direction TB
+        B1["calculate_rsi()"]
+        B2["calculate_atr()"]
+        B3["calculate_macd()"]
+        B4["calculate_bollinger_bands()"]
+        B5["calculate_ema_crossover()"]
+        B6["calculate_volume_features()"]
+        B7["calculate_ml_features()\n(returns, volatility,\nlags, trend, time)"]
+        B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7
+    end
+
+    B --> C["40+ Fitur Numerik"]
+    C --> D["ML Ready\n(XGBoost Input)"]
+
+    style A fill:#2d3748,stroke:#63b3ed,color:#fff
+    style C fill:#2d3748,stroke:#48bb78,color:#fff
+    style D fill:#2d3748,stroke:#f6ad55,color:#fff
+```
+
+> **Performa:** Seluruh pipeline dijalankan dalam **< 100ms** untuk 5000 bar menggunakan Pure Polars (vectorized, 10-100x lebih cepat dari Pandas loop). Menghasilkan **40+ fitur** yang siap digunakan model ML.
+
+---
+
+## Apa Itu *Feature Engineering*?
+
+*Feature Engineering* adalah proses **mengubah data harga mentah (OHLCV) menjadi 40+ fitur numerik** yang bisa dibaca oleh model machine learning. Ini adalah "mata" dari AI -- tanpa fitur yang baik, model tidak bisa belajar apapun.
+
+**Analogi:** *Feature Engineering* adalah **alat ukur** -- thermometer, barometer, kompas -- yang mengubah data mentah menjadi informasi bermakna.
 
 ---
 
@@ -39,7 +69,7 @@ Output: DataFrame dengan 40+ kolom fitur
 
 ## Kategori 1: Indikator Teknikal
 
-### RSI (Relative Strength Index) — Period 14
+### RSI (*Relative Strength Index*) -- Period 14
 
 ```
 Formula: RSI = 100 - (100 / (1 + RS))
@@ -49,15 +79,15 @@ Smoothing: Wilder's EMA (alpha = 1/14)
 
 | Nilai | Interpretasi |
 |-------|-------------|
-| RSI > 70 | Overbought (potensi turun) |
-| RSI < 30 | Oversold (potensi naik) |
+| RSI > 70 | *Overbought* (potensi turun) |
+| RSI < 30 | *Oversold* (potensi naik) |
 | RSI ~ 50 | Netral |
 
 **Output:** `rsi`
 
 ---
 
-### ATR (Average True Range) — Period 14
+### ATR (*Average True Range*) -- Period 14
 
 ```
 True Range = max(High-Low, |High-PrevClose|, |Low-PrevClose|)
@@ -67,14 +97,14 @@ ATR% = (ATR / Close) * 100
 
 | Kondisi | Interpretasi |
 |---------|-------------|
-| ATR tinggi | Pasar volatile (pergerakan besar) |
+| ATR tinggi | Pasar *volatile* (pergerakan besar) |
 | ATR rendah | Pasar tenang (pergerakan kecil) |
 
 **Output:** `atr`, `atr_percent`
 
 ---
 
-### MACD (Moving Average Convergence Divergence) — 12/26/9
+### MACD (*Moving Average Convergence Divergence*) -- 12/26/9
 
 ```
 MACD Line  = EMA(12) - EMA(26)
@@ -84,8 +114,8 @@ Histogram  = MACD Line - Signal
 
 | Kondisi | Interpretasi |
 |---------|-------------|
-| Histogram > 0 & naik | Bullish momentum menguat |
-| Histogram < 0 & turun | Bearish momentum menguat |
+| Histogram > 0 & naik | Bullish *momentum* menguat |
+| Histogram < 0 & turun | Bearish *momentum* menguat |
 | MACD cross Signal ke atas | Potensi reversal naik |
 | MACD cross Signal ke bawah | Potensi reversal turun |
 
@@ -93,7 +123,7 @@ Histogram  = MACD Line - Signal
 
 ---
 
-### Bollinger Bands — Period 20, StdDev 2.0
+### *Bollinger Bands* -- Period 20, StdDev 2.0
 
 ```
 Middle = SMA(20)
@@ -108,32 +138,34 @@ Width  = (Upper - Lower) / Middle
 | %B > 1 | Harga di atas upper band (extreme bullish) |
 | %B < 0 | Harga di bawah lower band (extreme bearish) |
 | %B ~ 0.5 | Harga di tengah |
-| Width melebar | Volatilitas meningkat |
-| Width menyempit | Volatilitas menurun (squeeze) |
+| Width melebar | *Volatility* meningkat |
+| Width menyempit | *Volatility* menurun (squeeze) |
 
 **Output:** `bb_middle`, `bb_upper`, `bb_lower`, `bb_width`, `bb_percent_b`
 
 ---
 
-### EMA Crossover — 9/21
+### EMA *Crossover* -- 9/21
 
 ```
 EMA9  = Exponential Moving Average (cepat)
 EMA21 = Exponential Moving Average (lambat)
 ```
 
+*EMA* (*Exponential Moving Average*) memberikan bobot lebih besar pada data terbaru, sehingga lebih responsif terhadap perubahan harga dibanding SMA.
+
 | Kondisi | Interpretasi |
 |---------|-------------|
-| EMA9 > EMA21 | Tren naik |
-| EMA9 < EMA21 | Tren turun |
-| EMA9 cross atas EMA21 | Sinyal beli |
-| EMA9 cross bawah EMA21 | Sinyal jual |
+| EMA9 > EMA21 | *Trend* naik |
+| EMA9 < EMA21 | *Trend* turun |
+| EMA9 cross atas EMA21 | Sinyal beli (*bullish crossover*) |
+| EMA9 cross bawah EMA21 | Sinyal jual (*bearish crossover*) |
 
 **Output:** `ema_9`, `ema_21`, `ema_cross_bull`, `ema_cross_bear`
 
 ---
 
-## Kategori 2: Volume Features — Period 20
+## Kategori 2: Volume Features -- Period 20
 
 ```
 volume_sma        = Rolling Mean(volume, 20)
@@ -142,7 +174,7 @@ volume_increasing = 1 jika volume > volume sebelumnya
 high_volume       = 1 jika volume_ratio > 1.5
 ```
 
-**Fungsi:** Konfirmasi breakout — pergerakan besar harus didukung volume tinggi.
+**Fungsi:** Konfirmasi breakout -- pergerakan besar harus didukung volume tinggi.
 
 **Catatan:** Jika kolom volume tidak ada di data, fitur ini di-skip (graceful degradation).
 
@@ -150,7 +182,7 @@ high_volume       = 1 jika volume_ratio > 1.5
 
 ## Kategori 3: ML-Specific Features
 
-### Returns & Momentum
+### *Returns* & *Momentum*
 
 ```
 returns_1   = (Close[t] / Close[t-1]) - 1     # Return 1 bar
@@ -159,7 +191,7 @@ returns_20  = (Close[t] / Close[t-20]) - 1    # Return 20 bar
 log_returns = ln(Close[t] / Close[t-1])        # Log return
 ```
 
-**Fungsi:** Mengukur kecepatan dan arah pergerakan harga dalam berbagai timeframe.
+**Fungsi:** Mengukur kecepatan dan arah pergerakan harga (*momentum*) dalam berbagai timeframe.
 
 ---
 
@@ -174,7 +206,7 @@ dist_from_sma_20 = (Close / SMA20) - 1            # Jarak (%) dari rata-rata
 
 ---
 
-### Volatility
+### *Volatility*
 
 ```
 volatility_20       = StdDev(log_returns, 20)       # Realized volatility
@@ -182,11 +214,11 @@ normalized_range    = (High - Low) / Close           # Range sebagai % harga
 avg_normalized_range = SMA(normalized_range, 14)     # Rata-rata range 14 bar
 ```
 
-**Fungsi:** Input penting untuk HMM regime detection dan risk sizing.
+**Fungsi:** Input penting untuk HMM regime detection dan risk sizing. *Volatility* yang tinggi menandakan pasar bergejolak dan mempengaruhi ukuran posisi.
 
 ---
 
-### Lag Features
+### *Lag Features*
 
 ```
 close_lag_1 = Close[t-1]
@@ -195,11 +227,11 @@ close_lag_3 = Close[t-3]
 close_lag_5 = Close[t-5]
 ```
 
-**Fungsi:** Auto-regressive features — menangkap pola harga berulang.
+**Fungsi:** Auto-regressive features -- menangkap pola harga berulang. *Lag features* memberikan konteks historis langsung kepada model.
 
 ---
 
-### Trend Features
+### *Trend* Features
 
 ```
 higher_high = 1 jika High[t] > High[t-1], else 0
@@ -208,11 +240,11 @@ hh_count_5  = Sum(higher_high, 5 bar)   # Berapa kali HH dalam 5 bar
 ll_count_5  = Sum(lower_low, 5 bar)     # Berapa kali LL dalam 5 bar
 ```
 
-**Fungsi:** Mengukur konsistensi tren — banyak HH = strong uptrend.
+**Fungsi:** Mengukur konsistensi *trend* -- banyak HH = strong uptrend.
 
 ---
 
-### Time Features
+### *Time Features*
 
 ```
 hour           = Jam (0-23)
@@ -221,7 +253,7 @@ london_session = 1 jika jam 08:00-16:00 UTC
 ny_session     = 1 jika jam 13:00-21:00 UTC
 ```
 
-**Fungsi:** Pasar berperilaku berbeda tiap sesi — London volatile, Asian tenang.
+**Fungsi:** Pasar berperilaku berbeda tiap sesi -- London *volatile*, Asian tenang. *Time features* membantu model mengenali pola berbasis waktu.
 
 **Catatan:** Hanya dihitung jika kolom `time` bertipe Datetime.
 
@@ -273,7 +305,7 @@ X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 ```
 
 ### Normalisasi
-**Tidak dilakukan** — XGBoost berbasis tree, scale-invariant (tidak perlu scaling).
+**Tidak dilakukan** -- XGBoost berbasis tree, scale-invariant (tidak perlu scaling).
 
 ### Cleanup Kolom Temporary
 Setiap method membersihkan kolom sementara yang diawali `_` (misal `_delta`, `_avg_gain`, dll).
@@ -283,7 +315,7 @@ Setiap method membersihkan kolom sementara yang diawali `_` (misal `_delta`, `_a
 ## Fitur yang Digunakan vs Tidak
 
 ### Digunakan oleh XGBoost (24+ fitur)
-Semua indikator teknikal, returns, volatility, trend, time, SMC numerik, regime.
+Semua indikator teknikal, *returns*, *volatility*, *trend*, *time features*, SMC numerik, regime.
 
 ### Tidak Digunakan (Excluded)
 - Kolom OHLCV asli: `time`, `open`, `high`, `low`, `close`, `volume`
@@ -297,14 +329,14 @@ Semua indikator teknikal, returns, volatility, trend, time, SMC numerik, regime.
 
 | Indikator | Parameter | Default | Configurable |
 |-----------|-----------|---------|-------------|
-| RSI | period | 14 | Ya |
-| ATR | period | 14 | Ya |
-| MACD | fast/slow/signal | 12/26/9 | Ya |
-| Bollinger Bands | period, std_dev | 20, 2.0 | Ya |
-| EMA Crossover | fast/slow | 9/21 | Ya |
+| RSI (*Relative Strength Index*) | period | 14 | Ya |
+| ATR (*Average True Range*) | period | 14 | Ya |
+| MACD (*Moving Average Convergence Divergence*) | fast/slow/signal | 12/26/9 | Ya |
+| *Bollinger Bands* | period, std_dev | 20, 2.0 | Ya |
+| EMA *Crossover* | fast/slow | 9/21 | Ya |
 | Volume | period | 20 | Ya |
-| Returns | lookback | [1, 5, 20] | Hardcoded |
-| Volatility | window | 20 | Hardcoded |
+| *Returns* | lookback | [1, 5, 20] | Hardcoded |
+| *Volatility* | window | 20 | Hardcoded |
 | Session | London hours | 08-16 UTC | Hardcoded |
 | Session | NY hours | 13-21 UTC | Hardcoded |
 
@@ -313,5 +345,6 @@ Semua indikator teknikal, returns, volatility, trend, time, SMC numerik, regime.
 ## Performa
 
 - **5000 bar features:** < 100ms (sangat cepat)
-- **Framework:** Polars vectorized (10-100x lebih cepat dari Pandas loop)
-- **Memory:** ~1.6MB untuk 40 fitur x 5000 bar
+- **Framework:** Pure Polars vectorized (10-100x lebih cepat dari Pandas loop) -- **bukan Pandas**
+- **Memory:** ~1.6MB untuk 40+ fitur x 5000 bar
+- **Total fitur:** 40+ kolom numerik siap ML

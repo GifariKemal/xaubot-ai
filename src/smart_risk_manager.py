@@ -716,12 +716,9 @@ class SmartRiskManager:
         if guard.reversal_warnings >= 3 and current_profit < -10:
             return True, ExitReason.TREND_REVERSAL, f"[WARN] Multiple reversal warnings ({guard.reversal_warnings}x) - Loss: ${current_profit:.2f}"
 
-        # === CHECK 5: MAXIMUM LOSS PER TRADE (LEBIH KETAT) ===
-        # Close jika loss sudah 50%+ dari max (sebelumnya 80%)
+        # === CHECK 5: MAXIMUM LOSS PER TRADE ===
+        # Close jika loss sudah 50%+ dari max — no exceptions
         if current_profit <= -(self.max_loss_per_trade * 0.50):
-            # Hanya hold jika golden time SANGAT dekat (1 jam) dan momentum tidak terlalu buruk
-            if hours_to_golden <= 1 and hours_to_golden > 0 and momentum > -40:
-                return False, None, f"LAST CHANCE HOLD: Loss ${abs(current_profit):.2f} | Golden in {hours_to_golden}h - waiting for recovery"
             return True, ExitReason.POSITION_LIMIT, f"[S/L] Position loss limit: ${current_profit:.2f} (50% of ${self.max_loss_per_trade:.2f})"
 
         # === CHECK 5: STALL DETECTION ===

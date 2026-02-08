@@ -1,0 +1,24 @@
+MODEL COMPARISON REPORT
+==========================================================================================
+
+V1 (Live): models/xgboost_model.pkl
+  Features: 37
+  Trades: 107
+  Win Rate: 43.9%
+  Net P&L: $19.37
+  Profit Factor: 1.04
+  Sharpe: 0.25
+
+V2 (ML V2): backtests/36_ml_v2_results/model_d.pkl
+  Features: 76
+  Trades: 107
+  Win Rate: 65.4%
+  Net P&L: $408.59
+  Profit Factor: 2.58
+  Sharpe: 5.97
+
+IMPROVEMENTS (V2 vs V1):
+  Win Rate: +21.5%
+  Net P&L: $+389.22
+  Profit Factor: +1.54
+  Sharpe: +5.72

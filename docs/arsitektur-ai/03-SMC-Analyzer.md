@@ -1,13 +1,45 @@
-# SMC Analyzer (Smart Money Concepts)
+# SMC Analyzer (*Smart Money Concepts*)
 
 > **File:** `src/smc_polars.py`
 > **Framework:** Pure Polars (vectorized, tanpa loop)
 
 ---
 
+## Pipeline Analisis SMC
+
+Berikut adalah alur lengkap pipeline analisis *Smart Money Concepts*, dari data OHLCV mentah hingga menghasilkan sinyal trading:
+
+```mermaid
+flowchart TD
+    A["Data OHLCV\n(Polars DataFrame)"] --> B["calculate_all(df)"]
+
+    B --> C["calculate_swing_points()\nDeteksi swing points\n(fractal high/low)"]
+    C --> D["calculate_fvg()\nDeteksi Fair Value Gap\n(imbalance harga)"]
+    D --> E["calculate_order_blocks()\nDeteksi Order Block\n(zona institusi)\n-- butuh swing points --"]
+    E --> F["calculate_bos_choch()\nDeteksi BOS dan CHoCH\n(struktur pasar)\n-- butuh swing points --"]
+
+    F --> G["DataFrame + semua kolom SMC"]
+
+    G --> H["generate_signal(df)"]
+    H --> I["Cek struktur & zona\ndalam 10 candle terakhir"]
+    I --> J["Hitung entry, stop loss, take profit\n(ATR-based, min 1:2 R:R)"]
+    J --> K["calculate_confidence()\nScoring 40% – 85%"]
+    K --> L["SMCSignal\n(signal_type, entry, SL, TP,\nconfidence, reason)"]
+    L --> M["Dikombinasikan dengan\nXGBoost + HMM"]
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style B fill:#16213e,stroke:#0f3460,color:#fff
+    style G fill:#16213e,stroke:#0f3460,color:#fff
+    style H fill:#16213e,stroke:#0f3460,color:#fff
+    style L fill:#1a1a2e,stroke:#e94560,color:#fff
+    style M fill:#0f3460,stroke:#e94560,color:#fff
+```
+
+---
+
 ## Apa Itu SMC?
 
-Smart Money Concepts adalah metode analisis berdasarkan **cara institusi besar (bank, hedge fund) trading**. SMC membaca **struktur pasar** dan **jejak uang besar** untuk menemukan zona entry yang presisi.
+*Smart Money Concepts* adalah metode analisis berdasarkan **cara institusi besar (bank, hedge fund) trading**. SMC membaca **struktur pasar** dan **jejak uang besar** untuk menemukan zona *entry* yang presisi.
 
 **Analogi:** SMC adalah **peta jalan** — menunjukkan zona penting, rambu lalu lintas, dan rute terbaik.
 
@@ -17,16 +49,16 @@ Smart Money Concepts adalah metode analisis berdasarkan **cara institusi besar (
 
 | # | Konsep | Fungsi | Lines |
 |---|--------|--------|-------|
-| 1 | Swing Points | Puncak & lembah penting | 185-261 |
-| 2 | Fair Value Gap (FVG) | Imbalance/gap harga | 84-183 |
-| 3 | Order Block (OB) | Zona order institusi | 263-368 |
-| 4 | Break of Structure (BOS) | Kelanjutan tren | 370-457 |
-| 5 | Change of Character (CHoCH) | Pembalikan tren | 370-457 |
-| 6 | Liquidity Zones | Kumpulan stop loss | 459-551 |
+| 1 | *Swing Points* | Puncak & lembah penting | 185-261 |
+| 2 | *Fair Value Gap* (FVG) | Imbalance/gap harga | 84-183 |
+| 3 | *Order Block* (OB) | Zona order institusi | 263-368 |
+| 4 | *Break of Structure* (BOS) | Kelanjutan tren | 370-457 |
+| 5 | *Change of Character* (CHoCH) | Pembalikan tren | 370-457 |
+| 6 | *Liquidity Zones* | Kumpulan *stop loss* | 459-551 |
 
 ---
 
-## 1. Swing Points (Fractal High/Low)
+## 1. *Swing Points* (Fractal High/Low)
 
 **Fungsi:** Mendeteksi puncak dan lembah penting di chart.
 
@@ -44,7 +76,7 @@ Swing High: High di center point = Maximum dalam window 11 bar ke belakang
 Swing Low:  Low di center point = Minimum dalam window 11 bar ke belakang
 
 Catatan: Deteksi terlambat swing_length bar (5 bar), tapi
-         TIDAK menggunakan data masa depan (zero lookahead).
+         TIDAK menggunakan data masa depan (zero *lookback*).
 ```
 
 ### Visualisasi
@@ -61,16 +93,16 @@ Catatan: Deteksi terlambat swing_length bar (5 bar), tapi
 ### Output
 | Kolom | Nilai | Keterangan |
 |-------|-------|-----------|
-| `swing_high` | 1 / 0 | 1 jika swing high |
-| `swing_low` | -1 / 0 | -1 jika swing low |
-| `swing_high_level` | float | Harga di swing high |
-| `swing_low_level` | float | Harga di swing low |
-| `last_swing_high` | float | Swing high terakhir (forward fill) |
-| `last_swing_low` | float | Swing low terakhir (forward fill) |
+| `swing_high` | 1 / 0 | 1 jika *swing high* |
+| `swing_low` | -1 / 0 | -1 jika *swing low* |
+| `swing_high_level` | float | Harga di *swing high* |
+| `swing_low_level` | float | Harga di *swing low* |
+| `last_swing_high` | float | *Swing high* terakhir (forward fill) |
+| `last_swing_low` | float | *Swing low* terakhir (forward fill) |
 
 ---
 
-## 2. Fair Value Gap (FVG)
+## 2. *Fair Value Gap* (FVG)
 
 **Fungsi:** Mendeteksi **imbalance/gap** di harga — zona yang belum "diisi" oleh pasar.
 
@@ -110,11 +142,11 @@ Bullish FVG Zone:
 | `fvg_bottom` | float | Batas bawah gap |
 | `fvg_mid` | float | Titik tengah (target retracement) |
 
-**Peran:** Zona entry ideal — harga cenderung **kembali mengisi gap** sebelum melanjutkan.
+**Peran:** Zona *entry* ideal — harga cenderung **kembali mengisi gap** sebelum melanjutkan.
 
 ---
 
-## 3. Order Block (OB)
+## 3. *Order Block* (OB)
 
 **Fungsi:** Mendeteksi candle terakhir sebelum pergerakan besar — zona dimana institusi menaruh order.
 
@@ -163,9 +195,9 @@ Bullish OB:                     Bearish OB:
 
 ---
 
-## 4. Break of Structure (BOS)
+## 4. *Break of Structure* (BOS)
 
-**Fungsi:** Mendeteksi **kelanjutan tren** — harga menembus swing point searah tren.
+**Fungsi:** Mendeteksi **kelanjutan tren** — harga menembus *swing point* searah tren.
 
 ### Algoritma
 
@@ -204,9 +236,9 @@ Bearish BOS:
 
 ---
 
-## 5. Change of Character (CHoCH)
+## 5. *Change of Character* (CHoCH)
 
-**Fungsi:** Mendeteksi **pembalikan tren** — harga menembus swing point berlawanan tren.
+**Fungsi:** Mendeteksi **pembalikan tren** — harga menembus *swing point* berlawanan tren.
 
 ### Algoritma
 
@@ -248,9 +280,9 @@ Bullish CHoCH (tren turun -> balik naik):
 
 ---
 
-## 6. Liquidity Zones
+## 6. *Liquidity Zones*
 
-**Fungsi:** Mendeteksi kumpulan stop loss (equal highs/lows) yang bisa "disapu" oleh institusi.
+**Fungsi:** Mendeteksi kumpulan *stop loss* (equal highs/lows) yang bisa "disapu" oleh institusi.
 
 ### Algoritma
 
@@ -288,9 +320,52 @@ Buy Side Liquidity (BSL):        Sell Side Liquidity (SSL):
 
 ## Signal Generation
 
+### Logika Pembentukan Sinyal
+
+Sinyal trading dihasilkan dari kombinasi **struktur pasar** dan **zona harga**. Diagram berikut menunjukkan bagaimana komponen SMC digabungkan menjadi sinyal akhir:
+
+```mermaid
+flowchart LR
+    subgraph Struktur["Struktur Pasar"]
+        MS["market_structure\n(bullish / bearish)"]
+        BOS["BOS\n(kelanjutan tren)"]
+        CHoCH["CHoCH\n(pembalikan tren)"]
+    end
+
+    subgraph Zona["Zona Harga"]
+        FVG["Fair Value Gap\n(imbalance)"]
+        OB["Order Block\n(zona institusi)"]
+    end
+
+    MS --> COND{"Struktur ATAU\nBreak searah?"}
+    BOS --> COND
+    CHoCH --> COND
+
+    FVG --> ZONE{"Ada FVG ATAU\nOrder Block?"}
+    OB --> ZONE
+
+    COND -->|Ya| COMBINE{"Struktur + Zona\n= Valid Setup?"}
+    ZONE -->|Ya| COMBINE
+
+    COMBINE -->|Bullish| BULL["BUY Signal"]
+    COMBINE -->|Bearish| BEAR["SELL Signal"]
+    COMBINE -->|Tidak lengkap| NONE["None\n(tidak ada sinyal)"]
+
+    BULL --> CALC["Hitung entry, SL, TP\n(ATR-based)"]
+    BEAR --> CALC
+
+    CALC --> CONF["calculate_confidence()\nScoring 40%–85%"]
+    CONF --> SIGNAL["SMCSignal"]
+
+    style Struktur fill:#1a1a2e,stroke:#e94560,color:#fff
+    style Zona fill:#16213e,stroke:#0f3460,color:#fff
+    style SIGNAL fill:#0f3460,stroke:#e94560,color:#fff
+    style NONE fill:#333,stroke:#666,color:#aaa
+```
+
 ### ATR-Based Dynamic SL/TP (v4 Update)
 
-Sebelum menghitung SL dan TP, sistem mengambil nilai ATR untuk kalkulasi dinamis:
+Sebelum menghitung *stop loss* dan *take profit*, sistem mengambil nilai ATR untuk kalkulasi dinamis:
 
 ```python
 atr = latest["atr"]              # Dari Feature Engineering
@@ -349,25 +424,15 @@ AND (ada FVG bearish ATAU Order Block bearish):
 
 ### Perbandingan Evolusi SL/TP
 
-```
-┌────────────┬─────────────────────┬──────────────────────┬──────────────────────────┐
-│ Komponen   │ v2 (lama)           │ v3                   │ v4 (sekarang)            │
-├────────────┼─────────────────────┼──────────────────────┼──────────────────────────┤
-│ Entry      │ Zone price (FVG/OB) │ Zone price (FVG/OB)  │ SELALU current_close     │
-├────────────┼─────────────────────┼──────────────────────┼──────────────────────────┤
-│ SL (BUY)   │ entry * 0.995       │ MIN(swing, 1.5ATR)   │ MIN(swing, 1.5ATR)       │
-│            │ (bisa terlalu dekat)│                      │ + enforce min distance   │
-├────────────┼─────────────────────┼──────────────────────┼──────────────────────────┤
-│ TP         │ risk * 2            │ MIN(risk*2, 4*ATR)   │ risk * 2.0 (ENFORCED)    │
-│            │ (tanpa batas)       │ (dibatasi)           │ SKIP jika RR < 2.0       │
-├────────────┼─────────────────────┼──────────────────────┼──────────────────────────┤
-│ ATR default│ close * 1%          │ close * 1%           │ $12 (realistis XAUUSD)   │
-├────────────┼─────────────────────┼──────────────────────┼──────────────────────────┤
-│ Lookahead  │ Ada (shift -1)      │ Ada (shift -1)       │ TIDAK ADA (zero future)  │
-└────────────┴─────────────────────┴──────────────────────┴──────────────────────────┘
-```
+| Komponen | v2 (lama) | v3 | v4 (sekarang) |
+|----------|-----------|-----|---------------|
+| *Entry* | Zone price (FVG/OB) | Zone price (FVG/OB) | **SELALU** current_close |
+| *SL* (BUY) | entry × 0.995 (bisa terlalu dekat) | MIN(swing, 1.5 ATR) | MIN(swing, 1.5 ATR) + enforce min distance |
+| *TP* | risk × 2 (tanpa batas) | MIN(risk×2, 4×ATR) (dibatasi) | risk × 2.0 (**ENFORCED**), SKIP jika RR < 2.0 |
+| ATR *default* | close × 1% | close × 1% | $12 (realistis XAUUSD) |
+| *Lookahead* | Ada (shift -1) | Ada (shift -1) | **TIDAK ADA** (zero future) |
 
-### Sistem Confidence (v5: Calibrated Weighted Scoring)
+### Sistem *Confidence* (v5: Calibrated Weighted Scoring)
 
 ```
 Sebelum (v4):                     Sesudah (v5):
@@ -383,16 +448,16 @@ Sebelum (v4):                     Sesudah (v5):
 Kalkulasi confidence sekarang menggunakan metode calculate_confidence():
   1. Base = 40% (minimum, selalu ada)
   2. Structure aligned = +15% (market_structure searah sinyal)
-  3. BOS/CHoCH = +12% (ada break of structure/character)
-  4. FVG = +8% (ada Fair Value Gap)
-  5. Order Block = +10% (ada Order Block)
-  6. Trend strength = +10% (ada ≥2 BOS searah dalam 20 bar terakhir)
+  3. BOS/CHoCH = +12% (ada *Break of Structure* / *Change of Character*)
+  4. FVG = +8% (ada *Fair Value Gap*)
+  5. Order Block = +10% (ada *Order Block*)
+  6. Trend strength = +10% (ada >=2 BOS searah dalam 20 bar terakhir)
   7. Fresh level = +5% (first touch of key level)
   8. Cap di 85% (tidak pernah 100% yakin)
 
 Contoh:
   BUY signal, structure bullish, ada BOS + FVG + OB, trend kuat:
-  = 40% + 15% + 12% + 8% + 10% + 10% = 95% → cap 85%
+  = 40% + 15% + 12% + 8% + 10% + 10% = 95% -> cap 85%
 
   BUY signal, structure bearish, ada CHoCH + FVG saja:
   = 40% + 0% + 12% + 8% + 0% + 0% = 60%
@@ -427,23 +492,17 @@ SMCConfig:
 
 ## Integrasi dalam Pipeline
 
-```
-Data OHLCV
-    |
-    v
-smc.calculate_all(df)
-    |--- calculate_fair_value_gaps()
-    |--- calculate_swing_points()
-    |--- calculate_order_blocks()     <- butuh swing points
-    |--- calculate_structure_breaks() <- butuh swing points
-    |--- calculate_liquidity_zones()
-    |
-    v
-smc.generate_signal(df)
-    |
-    v
-SMCSignal (entry, SL, TP, confidence)
-    |
-    v
-Dikombinasikan dengan XGBoost + HMM
+```mermaid
+flowchart TD
+    A["Data OHLCV"] --> B["smc.calculate_all(df)"]
+    B --> B1["calculate_swing_points()"]
+    B --> B2["calculate_fvg()"]
+    B --> B3["calculate_order_blocks()\n(butuh swing points)"]
+    B --> B4["calculate_bos_choch()\n(butuh swing points)"]
+    B1 --> C["smc.generate_signal(df)"]
+    B2 --> C
+    B3 --> C
+    B4 --> C
+    C --> D["SMCSignal\n(entry, stop loss, take profit, confidence)"]
+    D --> E["Dikombinasikan dengan\nXGBoost + HMM"]
 ```

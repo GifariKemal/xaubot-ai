@@ -1,0 +1,11 @@
+#29 Confluence Scoring Results
+Generated: 2026-02-08 06:48:29.232714
+Base: #28B (741 trades, 79.8% WR, $2,464)
+
+  A: Min 2 SMC elements: 694 trades, 76.5% WR, $1,662.83, DD: 5.3%, Sharpe: 2.21, PF: 1.49, Filtered: 369, Elem dist: {2: 459, 3: 227, 4: 8}, vs #28B: $-800.97
+  B: Min conf >= 0.55: 741 trades, 79.8% WR, $2,463.80, DD: 3.5%, Sharpe: 3.23, PF: 1.83, Filtered: 0, Elem dist: {1: 126, 2: 389, 3: 215, 4: 11}, vs #28B: $+0.00
+  C: Min conf >= 0.60: 738 trades, 79.1% WR, $2,067.82, DD: 3.5%, Sharpe: 2.64, PF: 1.65, Filtered: 20, Elem dist: {1: 124, 2: 387, 3: 216, 4: 11}, vs #28B: $-395.98
+  D: 2 elem + conf>=0.55: 694 trades, 76.5% WR, $1,662.83, DD: 5.3%, Sharpe: 2.21, PF: 1.49, Filtered: 369, Elem dist: {2: 459, 3: 227, 4: 8}, vs #28B: $-800.97
+  E: Min 3 SMC elements: 410 trades, 69.5% WR, $151.95, DD: 9.2%, Sharpe: 0.31, PF: 1.06, Filtered: 2808, Elem dist: {3: 404, 4: 6}, vs #28B: $-2,311.85
+
+Best: B: Min conf >= 0.55

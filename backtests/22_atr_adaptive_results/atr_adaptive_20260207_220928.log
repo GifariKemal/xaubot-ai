@@ -1,0 +1,10 @@
+#22 ATR-Adaptive Exit Results
+Generated: 2026-02-07 22:09:28.783855
+
+  A: baseline_equiv: 738 trades, 77.9% WR, $1,647.94, vs base: $+198.08
+  B: tighter: 748 trades, 78.3% WR, $1,474.95, vs base: $+25.09
+  C: wider: 732 trades, 76.1% WR, $1,845.24, vs base: $+395.38
+  D: tight_be+wide_trail: 743 trades, 79.1% WR, $1,822.86, vs base: $+373.00
+  E: very_tight: 754 trades, 79.0% WR, $1,257.15, vs base: $-192.71
+
+Best: C: wider

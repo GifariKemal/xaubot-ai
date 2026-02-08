@@ -1,4 +1,4 @@
-# XGBoost — Signal Predictor
+# XGBoost — *Signal Predictor*
 
 > **File:** `src/ml_model.py`
 > **Model:** `models/xgboost_model.pkl`
@@ -6,249 +6,128 @@
 
 ---
 
-## Apa Itu XGBoost?
+## Apa Itu XGBoost *Signal Predictor*?
 
-XGBoost (eXtreme Gradient Boosting) adalah algoritma machine learning berbasis **ensemble decision tree**. Model ini belajar dari puluhan fitur teknikal untuk **memprediksi arah harga** di bar berikutnya.
-
-**Analogi:** XGBoost adalah **navigator AI** — menentukan apakah harga akan naik atau turun.
+XGBoost (*Extreme Gradient Boosting*) adalah model *machine learning* yang memprediksi **sinyal *trading*** — BUY, SELL, atau HOLD — berdasarkan **37 fitur teknikal**. Model ini berfungsi sebagai **konfirmasi kedua** setelah analisis SMC.
 
 ---
 
-## Fungsi Utama
+## Alur Prediksi
 
-XGBoost bertugas **memprediksi probabilitas harga naik atau turun** di bar M15 berikutnya, lalu menghasilkan signal BUY, SELL, atau HOLD.
-
-```
-prob_up > 0.65   ->  BUY
-prob_down > 0.65 ->  SELL
-lainnya          ->  HOLD (tidak cukup yakin)
+```mermaid
+graph LR
+    A["37 Fitur Teknikal"] --> B["XGBoost Model"]
+    B --> C["Probabilitas per Kelas"]
+    C --> D["BUY: 72%"]
+    C --> E["SELL: 18%"]
+    C --> F["HOLD: 10%"]
+    D --> G["Signal: BUY<br/>Confidence: 72%"]
 ```
 
 ---
 
-## Arsitektur Model
+## 37 *Features* (Fitur *Input*)
+
+Model menerima 37 fitur yang dihitung oleh `FeatureEngineer`:
+
+| Grup | Fitur | Jumlah |
+|------|-------|--------|
+| **Momentum** | RSI 14, RSI 7, MACD, *MACD Signal*, *MACD Histogram* | 5 |
+| **Volatilitas** | ATR 14, *Bollinger Upper/Lower/Width*, *Keltner Channel* | 5 |
+| **Trend** | EMA 9/20/50, SMA 20/50, *EMA Crossover* | 6 |
+| **Volume** | *Volume Ratio*, *Volume MA*, *OBV*, *Volume Change* | 4 |
+| ***Price Action*** | *Body Size*, *Shadow Ratio*, *Candle Pattern*, Jarak dari EMA | 5 |
+| **Struktur** | *Higher High/Lower Low*, *Swing Detection*, BOS/CHoCH | 4 |
+| ***Derived*** | *Returns* (1/3/5 bar), *Volatility Ratio*, *Momentum Score* | 5 |
+| ***Lagged*** | Fitur-fitur di atas dengan *lag* 1-3 bar | 3 |
+
+---
+
+## *Output*: Prediksi
 
 ```python
-params = {
-    "objective": "binary:logistic",   # Klasifikasi biner (naik/turun)
-    "eval_metric": "auc",             # Area Under Curve
-    "max_depth": 3,                   # Kedalaman tree (anti-overfitting)
-    "learning_rate": 0.05,            # Lambat & stabil
-    "min_child_weight": 10,           # Minimum sampel per leaf
-    "subsample": 0.7,                 # 70% data per round
-    "colsample_bytree": 0.6,          # 60% fitur per tree
-    "reg_alpha": 1.0,                 # L1 regularization
-    "reg_lambda": 5.0,                # L2 regularization (kuat)
-    "gamma": 1.0,                     # Min loss reduction per split
-}
-```
-
-**Anti-Overfitting:**
-- Tree dangkal (depth 3, bukan 6)
-- Early stopping setelah 5 round tanpa improvement
-- Feature subsampling 60%
-- Regularisasi L2 kuat (lambda=5.0)
-
----
-
-## Input (24 Fitur)
-
-### Indikator Teknikal
-| Fitur | Sumber | Fungsi |
-|-------|--------|--------|
-| `rsi` | Feature Eng | Overbought/oversold |
-| `atr`, `atr_percent` | Feature Eng | Volatilitas |
-| `macd`, `macd_signal`, `macd_histogram` | Feature Eng | Momentum tren |
-| `bb_percent_b`, `bb_width` | Feature Eng | Posisi dalam Bollinger Band |
-| `ema_9`, `ema_21` | Feature Eng | Tren jangka pendek |
-
-### Returns & Momentum
-| Fitur | Formula | Fungsi |
-|-------|---------|--------|
-| `returns_1` | `close[t]/close[t-1] - 1` | Return 1 bar |
-| `returns_5` | `close[t]/close[t-5] - 1` | Return 5 bar |
-| `returns_20` | `close[t]/close[t-20] - 1` | Return 20 bar |
-| `log_returns` | `ln(close[t]/close[t-1])` | Log return |
-
-### Volatilitas & Posisi Harga
-| Fitur | Fungsi |
-|-------|--------|
-| `volatility_20` | Realized volatility 20 bar |
-| `normalized_range` | (High-Low)/Close |
-| `avg_normalized_range` | Rata-rata range 14 bar |
-| `price_position` | Posisi 0-1 dalam range |
-| `dist_from_sma_20` | Jarak dari SMA 20 |
-
-### Smart Money Concepts (SMC)
-| Fitur | Fungsi |
-|-------|--------|
-| `swing_high`, `swing_low` | Fractal structure |
-| `fvg_signal` | Fair Value Gap (1/-1/0) |
-| `ob` | Order Block (1/-1/0) |
-| `bos`, `choch` | Break of Structure, Change of Character |
-| `market_structure` | Bullish/Bearish (1/-1/0) |
-
-### Waktu & Regime
-| Fitur | Fungsi |
-|-------|--------|
-| `hour`, `weekday` | Pola jam & hari |
-| `london_session`, `ny_session` | Flag sesi trading |
-| `regime` | HMM regime state (0/1/2) |
-
----
-
-## Cara Kerja
-
-### Proses Prediksi (Setiap Loop)
-
-```
-DataFrame lengkap (200 bar + semua fitur)
-        |
-        v
-Ambil baris terakhir (1 bar)
-        |
-        v
-Pilih 24 fitur yang sesuai dengan training
-        |
-        v
-Buat DMatrix (format XGBoost)
-        |
-        v
-model.predict() -> probabilitas harga NAIK (0-1)
-        |
-        v
-Tentukan signal:
-  prob_up > 0.65   -> BUY
-  prob_down > 0.65 -> SELL
-  lainnya          -> HOLD
-        |
-        v
-Output: PredictionResult
-  - signal: "BUY" / "SELL" / "HOLD"
-  - probability: 0-1 (prob naik)
-  - confidence: max(prob_up, prob_down)
-  - feature_importance: {fitur: skor}
-```
-
-### Proses Training
-
-```
-1. Ambil 10,000 bar M15 XAUUSD
-2. Feature engineering (40+ kolom)
-3. SMC analysis (swing, FVG, OB, BOS, CHoCH)
-4. Buat target: 1 jika close[t+1] > close[t], else 0
-5. Split: 70% train, 30% test
-   PENTING: 50-bar gap antara train & test set (v4)
-   → Mencegah temporal leakage (autocorrelation antar bar berdekatan)
-   → Train: bar 0 sampai split_point
-   → Test: bar split_point + 50 sampai akhir
-6. Train XGBoost 50 round + early stopping (patience=5)
-7. Evaluasi: Train AUC vs Test AUC
-8. Simpan model + feature names ke .pkl
+@dataclass
+class MLPrediction:
+    signal: str          # "BUY", "SELL", atau "HOLD"
+    confidence: float    # 0.0 - 1.0
+    probabilities: Dict  # {"BUY": 0.72, "SELL": 0.18, "HOLD": 0.10}
 ```
 
 ---
 
-## Output & Dampak ke Trading
+## Peran dalam Sistem
 
-### 1. Validasi Signal SMC
+XGBoost **bukan pembuat keputusan utama** — fungsinya adalah **konfirmasi dan filter**:
 
-```
-SMC bilang BUY + XGBoost setuju (>55%)    -> TRADE
-SMC bilang BUY + XGBoost netral (<55%)    -> SKIP
-SMC bilang BUY + XGBoost bilang SELL >75% -> TOLAK (veto)
-```
-
-### 2. Confidence Gate
-
-```
-ML confidence < 55%  -> Tidak boleh entry (terlalu tidak yakin)
-ML confidence 55-65% -> Entry dengan lot kecil
-ML confidence > 65%  -> Entry dengan lot penuh
+```mermaid
+graph TD
+    SMC["SMC Analyzer<br/>Sinyal Utama"] --> COMBINE["Kombinasi Sinyal"]
+    ML["XGBoost<br/>Konfirmasi"] --> COMBINE
+    COMBINE --> CHECK{"ML setuju?"}
+    CHECK -->|"Ya (≥50%)"| PASS["✅ Lanjut ke filter berikutnya"]
+    CHECK -->|"Sangat tidak setuju (>65%)"| VETO["🛑 VETO — blokir entry"]
+    CHECK -->|"Ragu (<50%)"| SKIP["⚠️ Skip — confidence terlalu rendah"]
 ```
 
-### 3. Exit Signal (Penutupan Posisi)
+### Aturan Kombinasi:
 
-```
-Posisi BUY terbuka
-XGBoost prediksi SELL dengan confidence > 75%
--> TUTUP posisi (ML reversal exit)
-```
+| Kondisi | Aksi |
+|---------|------|
+| SMC = BUY, ML = BUY (≥50%) | ✅ **Konfirmasi** — lanjut |
+| SMC = BUY, ML = HOLD | ⚠️ *Skip* — ML tidak yakin |
+| SMC = BUY, ML = SELL (≥65%) | 🛑 **VETO** — ML *strongly disagree* |
+| SMC = BUY, ML = SELL (<65%) | ✅ *Pass* — ML kurang yakin untuk veto |
 
-### 4. Feature Importance
+---
+
+## *Confidence Threshold*
+
+| Level | Nilai | Penggunaan |
+|-------|-------|------------|
+| **Minimum** | **0.50** | Batas paling rendah untuk diterima |
+| ***Entry*** | **0.65-0.70** | *Default* dari `DynamicConfidence` |
+| ***High*** | **0.75** | Sinyal kuat — *lot multiplier* aktif |
+| ***Very High*** | **0.80** | Sangat yakin — batas atas |
+
+*Threshold* disesuaikan secara dinamis oleh `DynamicConfidenceManager` berdasarkan kondisi pasar.
+
+---
+
+## *Training*
 
 ```python
-# Contoh output (top 5)
-{
-    "market_structure": 0.85,   # Fitur paling penting
-    "rsi": 0.68,
-    "atr_percent": 0.65,
-    "macd_histogram": 0.52,
-    "bos": 0.48,
-}
+# train_models.py
+model = XGBClassifier(
+    n_estimators=500,
+    max_depth=6,
+    learning_rate=0.01,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    min_child_weight=3,
+    reg_alpha=0.1,    # L1 regularization
+    reg_lambda=1.0,   # L2 regularization
+)
+
+# Training data: 1000+ bar XAUUSD M15
+# Label: Pergerakan harga setelah N bar
+# Validasi: Walk-forward dengan 80/20 split
 ```
 
-Menunjukkan fitur mana yang paling berpengaruh dalam keputusan model.
+### ***Auto-Retrain***
+
+Model otomatis di-*retrain* oleh `AutoTrainer` setiap **7 hari** atau saat:
+- Akurasi prediksi turun signifikan
+- Distribusi pasar berubah
+- *Confidence calibration* menyimpang
 
 ---
 
-## Metrik Evaluasi
+## Penyimpanan Model
 
-```python
-{
-    "train_auc": 0.6234,      # Performa di data training
-    "test_auc": 0.5932,       # Performa di data testing
-    "train_samples": 7000,
-    "test_samples": 3000,
-    "num_features": 24,
-}
-```
-
-| AUC | Interpretasi |
-|-----|-------------|
-| 0.50 | Sama dengan tebak acak |
-| 0.55 | Sedikit lebih baik dari acak |
-| < 0.60 | **ROLLBACK** — terlalu rendah untuk trading (v4 threshold) |
-| 0.60-0.65 | Minimum acceptable, warning |
-| 0.65+ | Cukup baik untuk trading |
-| 0.70+ | Sangat baik |
-
-**Rollback threshold:** Jika test AUC < 0.60, model otomatis rollback ke versi sebelumnya. (v4: dinaikkan dari 0.52 karena 0.52 hampir sama dengan tebak acak)
-
----
-
-## Auto-Retraining
-
-- **Jadwal:** Harian pukul 05:00 WIB
-- **Data:** 8,000 bar (daily) / 15,000 bar (weekend deep training)
-- **Cek retrain:** Setiap 20 candle M15 (~5 jam) — candle-based, bukan time-based
-- **Proses:** Backup lama -> retrain -> validasi AUC -> simpan/rollback
-- **Rollback:** AUC < 0.60 → otomatis rollback (v4: dinaikkan dari 0.52)
-- **Minimum interval:** 20 jam antar retrain (cegah overfitting)
-- **Train/test gap:** 50 bar antara train dan test set (anti temporal leakage)
-
----
-
-## Contoh Skenario
-
-**Skenario 1: Signal kuat**
-```
-RSI=35 (oversold), MACD rising, BOS bullish, market_structure=1
--> XGBoost: prob_up=0.78 -> BUY (confidence 78%)
--> Lot penuh, entry dieksekusi
-```
-
-**Skenario 2: Konflik dengan SMC**
-```
-SMC signal: BUY
-XGBoost: prob_down=0.82 -> SELL (confidence 82%)
--> Signal DITOLAK (ML strongly disagrees >75%)
--> Tidak ada trade
-```
-
-**Skenario 3: Tidak yakin**
-```
-RSI=50, MACD flat, regime=1
--> XGBoost: prob_up=0.53 -> HOLD (confidence 53% < 55%)
--> Tidak ada trade — tunggu signal lebih jelas
-```
+| Properti | Nilai |
+|----------|-------|
+| **Format** | `.pkl` (*pickle*) via `xgboost` |
+| **Lokasi** | `models/xgboost_model.pkl` |
+| **Ukuran** | ~1-5 MB |
+| **Fitur** | 37 kolom (harus identik saat *training* dan *inference*) |
+| ***Retrain*** | Otomatis tiap 7 hari |

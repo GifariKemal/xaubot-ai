@@ -1,0 +1,11 @@
+#28 Smart Breakeven Results
+Generated: 2026-02-08 06:07:56.973899
+Base: #24B (739 trades, 80.4% WR, $2,235)
+
+  A: Smart BE 0.3x ATR: 740 trades, 80.1% WR, $2,055.84, DD: 4.3%, Sharpe: 2.69, PF: 1.70, BE: 235 (avg $4.01, 235 wins), FC cuts: 0, vs #24B: $-179.16
+  B: Smart BE 0.5x ATR: 741 trades, 79.8% WR, $2,463.80, DD: 3.5%, Sharpe: 3.23, PF: 1.83, BE: 227 (avg $5.98, 227 wins), FC cuts: 0, vs #24B: $+228.80
+  C: First-candle 0.5x ATR: 828 trades, 63.9% WR, $1,573.30, DD: 3.0%, Sharpe: 2.12, PF: 1.59, BE: 181 (avg $4.01, 181 wins), FC cuts: 299, vs #24B: $-661.70
+  D: A+C (0.3x BE + FC): 827 trades, 63.4% WR, $1,411.75, DD: 3.0%, Sharpe: 1.94, PF: 1.52, BE: 173 (avg $4.07, 173 wins), FC cuts: 302, vs #24B: $-823.25
+  E: B+C (0.5x BE + FC): 830 trades, 65.1% WR, $1,891.09, DD: 2.1%, Sharpe: 2.57, PF: 1.69, BE: 173 (avg $5.89, 173 wins), FC cuts: 288, vs #24B: $-343.91
+
+Best: B: Smart BE 0.5x ATR

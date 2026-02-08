@@ -1,0 +1,24 @@
+ML V2 Full Overhaul — Training Results
+Generated: 2026-02-08 20:45:07.137235
+Dataset: 50000 M15 bars
+
+=== FEATURE COUNTS ===
+Base features (V1): 53
+H1 MTF features: 8
+Continuous SMC features: 7
+Regime features: 4
+Price action features: 4
+Total V2 features: 23
+
+=== EXPERIMENT RESULTS ===
+Config     Name                       Feats  Train AUC   Test AUC  Overfit
+----------------------------------------------------------------------
+Baseline   Baseline (V1)                 53     0.0000     0.0000     0.00
+A          A: Better Target              53     0.0000     0.0000     0.00
+B          B: +H1 Features               61     0.0000     0.0000     0.00
+C          C: +Continuous SMC            68     0.0000     0.0000     0.00
+D          D: All 60 Features            76     0.0000     0.0000     0.00
+E          E: Ensemble                   76     0.0000     0.0000     0.00
+
+Best Config: Baseline (Baseline (V1))
+  Test AUC: 0.0000

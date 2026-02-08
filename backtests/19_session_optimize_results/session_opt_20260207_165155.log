@@ -1,0 +1,31 @@
+================================================================================
+XAUBOT AI — #19 Session Optimize (B: skip_TL)
+================================================================================
+Period: 2025-08-01 to 2026-02-07
+Session blocked: 220
+
+  Trades: 471 | WR: 46.7%
+  Net PnL: $145.78 | PF: 1.34
+  Max DD: 0.8% | Sharpe: 1.47
+  Avg Win: $2.63 | Avg Loss: $1.73
+
+--- SESSION BREAKDOWN ---
+  NY Session                    : 108 trades,  47.2% WR, $   71.07
+  London Early                  :  71 trades,  50.7% WR, $   60.03
+  London-NY Overlap (Golden)    :  95 trades,  49.5% WR, $   21.34
+  Sydney-Tokyo                  : 197 trades,  43.7% WR, $   -6.67
+
+--- DIRECTION ---
+  BUY: 276 trades, 50.0% WR, $77.32
+  SELL: 195 trades, 42.1% WR, $68.46
+
+--- EXIT REASONS ---
+  timeout             :  206 ( 43.7%)
+  max_loss            :  101 ( 21.4%)
+  take_profit         :   93 ( 19.7%)
+  weekend_close       :   20 (  4.2%)
+  smart_tp            :   19 (  4.0%)
+  market_signal       :   15 (  3.2%)
+  breakeven_exit      :    8 (  1.7%)
+  peak_protect        :    5 (  1.1%)
+  trailing_sl         :    4 (  0.8%)

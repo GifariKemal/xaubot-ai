@@ -31,6 +31,11 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Jakarta
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-trading_db}
+      DB_USER: ${DB_USER:-trading_bot}
+      DB_PASSWORD: ${DB_PASSWORD:-trading_bot_2026}
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:

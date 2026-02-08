@@ -1,0 +1,11 @@
+#32 ML Exit Optimizer Results
+Generated: 2026-02-08 10:25:00.005539
+Base: #31B (625 trades, 81.8% WR, $2,807)
+
+  A: ML reversal 0.65: 625 trades, 81.8% WR, $2,806.56, DD: 2.5%, Sharpe: 3.97, PF: 2.19, vs #31B: $+0.00
+  B: ML tighten trail: 625 trades, 81.8% WR, $2,809.33, DD: 2.5%, Sharpe: 3.97, PF: 2.19, vs #31B: $+2.77
+  C: ML hold boost: 625 trades, 81.8% WR, $2,806.56, DD: 2.5%, Sharpe: 3.97, PF: 2.19, vs #31B: $+0.00
+  D: A+B combined: 625 trades, 81.8% WR, $2,809.33, DD: 2.5%, Sharpe: 3.97, PF: 2.19, vs #31B: $+2.77
+  E: A+B+C all: 625 trades, 81.8% WR, $2,809.33, DD: 2.5%, Sharpe: 3.97, PF: 2.19, vs #31B: $+2.77
+
+Best: B: ML tighten trail

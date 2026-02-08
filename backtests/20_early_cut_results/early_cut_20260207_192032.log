@@ -1,0 +1,33 @@
+#20 Early Cut Tuning Results
+Generated: 2026-02-07 19:20:32.439516
+
+Config: A: mom<-40
+  Trades: 685, WR: 72.4%, Net: $1,466.96
+  DD: 5.5%, Sharpe: 1.97, PF: 1.42
+  Early cuts: 91 (13.3%), EC P/L: $-2,024.13
+
+Config: B: mom<-50
+  Trades: 681, WR: 73.4%, Net: $1,575.33
+  DD: 5.4%, Sharpe: 2.12, PF: 1.46
+  Early cuts: 85 (12.5%), EC P/L: $-1,958.01
+
+Config: C: loss>=40%
+  Trades: 672, WR: 73.1%, Net: $1,522.08
+  DD: 5.7%, Sharpe: 2.06, PF: 1.45
+  Early cuts: 69 (10.3%), EC P/L: $-1,809.31
+
+Config: D: loss>=50%
+  Trades: 664, WR: 73.8%, Net: $1,407.53
+  DD: 7.3%, Sharpe: 1.83, PF: 1.40
+  Early cuts: 56 (8.4%), EC P/L: $-1,781.14
+
+Config: E: mom<-40+loss>=40%
+  Trades: 670, WR: 73.3%, Net: $1,429.91
+  DD: 5.6%, Sharpe: 1.93, PF: 1.41
+  Early cuts: 68 (10.1%), EC P/L: $-1,822.08
+
+Config: F: disabled
+  Trades: 664, WR: 73.8%, Net: $1,407.53
+  DD: 7.3%, Sharpe: 1.83, PF: 1.40
+  Early cuts: 0 (0.0%), EC P/L: $0.00
+

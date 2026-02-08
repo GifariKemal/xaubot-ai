@@ -1,0 +1,11 @@
+#26 SELL Improvement Results
+Generated: 2026-02-07 23:38:06.417970
+Base: #24B (739 trades, 80.4% WR, $2,235)
+
+  A: SELL conf>=0.55: 739 trades, 80.4% WR, $2,235.03, DD: 3.4%, Sharpe: 2.87, PF: 1.77, SELL filtered: 0, BUY: 433@83.1%/$1,739.01, SELL: 306@76.5%/$496.02, vs #24B: $+0.03
+  B: SELL require BOS: 571 trades, 81.1% WR, $1,752.45, DD: 2.7%, Sharpe: 2.92, PF: 1.77, SELL filtered: 1439, BUY: 470@83.0%/$1,598.83, SELL: 101@72.3%/$153.62, vs #24B: $-482.55
+  C: SELL RR 1:1.2: 741 trades, 80.2% WR, $2,159.46, DD: 3.4%, Sharpe: 2.80, PF: 1.73, SELL filtered: 0, BUY: 433@82.7%/$1,684.64, SELL: 308@76.6%/$474.83, vs #24B: $-75.54
+  D: A+B (conf+BOS): 571 trades, 81.1% WR, $1,752.45, DD: 2.7%, Sharpe: 2.92, PF: 1.77, SELL filtered: 1439, BUY: 470@83.0%/$1,598.83, SELL: 101@72.3%/$153.62, vs #24B: $-482.55
+  E: A+B+C (all): 571 trades, 81.1% WR, $1,785.15, DD: 2.7%, Sharpe: 2.97, PF: 1.79, SELL filtered: 1442, BUY: 470@83.0%/$1,598.83, SELL: 101@72.3%/$186.32, vs #24B: $-449.85
+
+Best: A: SELL conf>=0.55

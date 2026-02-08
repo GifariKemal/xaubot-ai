@@ -10,8 +10,9 @@ WORKDIR /app
 COPY web-dashboard/api/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only the API code
+# Copy the API code
 COPY web-dashboard/api/main.py main.py
+COPY web-dashboard/api/db.py db.py
 
 # Create data directory (will be overridden by volume mount)
 RUN mkdir -p data

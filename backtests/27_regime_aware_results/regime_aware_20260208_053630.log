@@ -1,0 +1,25 @@
+#27 Regime-Aware Entry Results
+Generated: 2026-02-08 05:36:30.925686
+Base: #24B (739 trades, 80.4% WR, $2,235)
+
+  A: Regime thresholds: 724 trades, 80.7% WR, $2,027.85, DD: 3.3%, Sharpe: 2.75, PF: 1.74, Filtered: 96, BUY: 428@82.5%, SELL: 296@78.0%, vs #24B: $-207.15
+    low_volatility: 365 trades, 79.5% WR, $1,072.05
+    medium_volatility: 350 trades, 81.7% WR, $884.97
+    high_volatility: 9 trades, 88.9% WR, $70.83
+  B: Skip SELL in low vol: 722 trades, 79.4% WR, $1,579.73, DD: 4.0%, Sharpe: 2.06, PF: 1.50, Filtered: 169, BUY: 435@84.4%, SELL: 287@71.8%, vs #24B: $-655.27
+    low_volatility: 214 trades, 85.5% WR, $1,026.48
+    medium_volatility: 481 trades, 77.5% WR, $374.00
+    high_volatility: 27 trades, 63.0% WR, $179.26
+  C: Skip all high vol: 718 trades, 80.4% WR, $1,909.73, DD: 3.3%, Sharpe: 2.62, PF: 1.69, Filtered: 242, BUY: 425@81.9%, SELL: 293@78.2%, vs #24B: $-325.27
+    low_volatility: 366 trades, 79.2% WR, $1,068.58
+    medium_volatility: 352 trades, 81.5% WR, $841.15
+  D: A+B combined: 708 trades, 79.7% WR, $1,438.91, DD: 3.9%, Sharpe: 2.00, PF: 1.49, Filtered: 270, BUY: 430@83.3%, SELL: 278@74.1%, vs #24B: $-796.09
+    low_volatility: 213 trades, 83.6% WR, $802.54
+    medium_volatility: 486 trades, 77.8% WR, $565.54
+    high_volatility: 9 trades, 88.9% WR, $70.83
+  E: Direction matrix: 711 trades, 79.6% WR, $1,389.62, DD: 4.0%, Sharpe: 1.94, PF: 1.46, Filtered: 265, BUY: 435@83.7%, SELL: 276@73.2%, vs #24B: $-845.38
+    low_volatility: 214 trades, 85.0% WR, $994.12
+    medium_volatility: 485 trades, 77.5% WR, $380.20
+    high_volatility: 12 trades, 66.7% WR, $15.31
+
+Best: A: Regime thresholds

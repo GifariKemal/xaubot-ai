@@ -6,11 +6,11 @@
 
 ---
 
-## Apa Itu Train Models?
+## Apa Itu *Train Models*?
 
-Train Models adalah script **pelatihan awal** yang dijalankan sekali sebelum bot mulai trading. Mengambil data historis dari MT5, melatih HMM dan XGBoost, lalu menyimpan model ke file `.pkl`.
+*Train Models* adalah script **pelatihan awal** yang dijalankan sekali sebelum bot mulai trading. Mengambil data historis dari MT5, melatih HMM dan XGBoost, lalu menyimpan model ke file `.pkl`.
 
-**Analogi:** Train Models seperti **sekolah penerbangan** — melatih pilot (model AI) sebelum terbang pertama kali. Setelah itu, pelatihan rutin dilakukan oleh Auto Trainer (13).
+**Analogi:** *Train Models* seperti **sekolah penerbangan** — melatih pilot (model AI) sebelum terbang pertama kali. Setelah itu, pelatihan rutin dilakukan oleh Auto Trainer (13).
 
 ---
 
@@ -23,6 +23,30 @@ python train_models.py
 ---
 
 ## Pipeline Training
+
+```mermaid
+flowchart TD
+    A[Load Config] --> B[Connect MT5]
+    B --> C[Fetch Data]
+    C --> D[Feature Engineering]
+    D --> E[Train HMM]
+    E --> F[Train XGBoost]
+    F --> G[Save Models]
+
+    A:::config
+    B:::mt5
+    C:::data
+    D:::data
+    E:::model
+    F:::model
+    G:::save
+
+    classDef config fill:#4a90d9,color:#fff
+    classDef mt5 fill:#50c878,color:#fff
+    classDef data fill:#f5a623,color:#fff
+    classDef model fill:#d0021b,color:#fff
+    classDef save fill:#7b68ee,color:#fff
+```
 
 ```
 1. LOAD CONFIG
@@ -54,9 +78,9 @@ python train_models.py
 7. TRAIN XGBOOST
    ├── TradingModel(confidence_threshold=0.60)
    ├── fit(train_ratio=0.7, boost_rounds=50, early_stop=5)
-   ├── Log: top 10 feature importance
-   ├── Walk-forward validation (train=500, test=50, step=50)
-   ├── Log: avg train/test AUC, overfitting ratio
+   ├── Log: top 10 *feature importance*
+   ├── *Walk-forward* validation (train=500, test=50, step=50)
+   ├── Log: avg train/test *AUC*, overfitting ratio
    └── Save → models/xgboost_model.pkl
 
 8. DISCONNECT
@@ -70,11 +94,11 @@ python train_models.py
 |-----------|-------|------------|
 | Data | 10.000 bar M15 | ~104 hari |
 | Train/Test Split | 70% / 30% | Lebih banyak test data |
-| XGBoost Rounds | 50 | Anti-overfitting |
-| Early Stopping | 5 rounds | Stop lebih awal |
+| XGBoost Rounds | 50 | *Anti-overfitting* |
+| *Early Stopping* | 5 rounds | Stop lebih awal |
 | HMM Regimes | 3 | Low/Medium/High volatility |
 | HMM Lookback | 500 bar | Window training |
-| Walk-forward Window | 500 train / 50 test | Validasi robustness |
+| *Walk-forward* Window | 500 train / 50 test | Validasi robustness |
 
 ---
 
@@ -82,7 +106,7 @@ python train_models.py
 
 ```
 models/
-├── xgboost_model.pkl    # Model XGBoost (binary classifier)
+├── xgboost_model.pkl    # Model XGBoost (*binary classifier*)
 └── hmm_regime.pkl       # Model HMM (regime detector)
 
 data/
@@ -158,7 +182,7 @@ logs/
 | **Kapan** | Manual, 1x | Otomatis, harian |
 | **Data** | 10K bar | 8K (daily) / 15K (weekend) |
 | **Backup** | Tidak | Ya (5 terakhir) |
-| **Rollback** | Tidak | Ya (AUC < 0.52) |
+| **Rollback** | Tidak | Ya (*AUC* < 0.60) |
 | **Database** | Tidak | Ya (PostgreSQL) |
-| **Walk-forward** | Ya | Tidak |
+| *Walk-forward* | Ya | Tidak |
 | **Tujuan** | Setup awal | Maintenance rutin |

@@ -1,0 +1,11 @@
+#30 Dynamic Risk-Reward Results
+Generated: 2026-02-08 07:16:02.652327
+Base: #28B (741 trades, 79.8% WR, $2,464)
+
+  A: Session RR: 740 trades, 79.5% WR, $2,370.77, DD: 3.7%, Sharpe: 3.17, PF: 1.80, TP modified: 480, TP rate: 3.9%, Avg RR: 1.48, vs #28B: $-93.03
+  B: ATR TP 3.0x: 742 trades, 79.0% WR, $2,122.34, DD: 3.8%, Sharpe: 2.89, PF: 1.70, TP modified: 742, TP rate: 3.8%, Avg RR: 1.11, vs #28B: $-341.46
+  C: ATR TP 4.0x: 741 trades, 79.4% WR, $2,363.52, DD: 3.8%, Sharpe: 3.08, PF: 1.78, TP modified: 741, TP rate: 1.6%, Avg RR: 1.49, vs #28B: $-100.28
+  D: Session + ATR floor: 740 trades, 79.3% WR, $2,348.39, DD: 3.7%, Sharpe: 3.10, PF: 1.78, TP modified: 523, TP rate: 2.6%, Avg RR: 1.54, vs #28B: $-115.41
+  E: Tighter TP 0.8x: 741 trades, 79.5% WR, $2,372.93, DD: 3.5%, Sharpe: 3.20, PF: 1.80, TP modified: 741, TP rate: 5.8%, Avg RR: 1.20, vs #28B: $-90.87
+
+Best: E: Tighter TP 0.8x

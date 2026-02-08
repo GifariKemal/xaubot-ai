@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci && npm install @next/swc-linux-x64-musl --save-optional 2>/dev/null || true
 
 # Build the source code
 FROM base AS builder

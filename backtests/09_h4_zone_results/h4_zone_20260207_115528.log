@@ -1,0 +1,36 @@
+================================================================================
+XAUBOT AI — SMC + H4 Zone Filter (SL unchanged)
+================================================================================
+Generated: 2026-02-07 11:55:28
+Period: 2025-08-01 to 2026-02-07
+
+--- H4 ZONE FILTER STATS ---
+  Total filtered:     6850
+  BUY filtered:       4055
+  SELL filtered:      2795
+  Trades in OB zone:  6
+  Trades in FVG zone: 16
+
+--- PERFORMANCE ---
+  Trades: 22 | Wins: 18 | Losses: 4
+  Win Rate: 81.8% | PF: 4.60
+  Net PnL: $361.45 | Sharpe: 8.34
+  Max DD: 0.9% ($46.98)
+  Avg Win: $25.65 | Avg Loss: $25.08
+
+--- EXIT REASONS ---
+  trailing_sl         :   12 (54.5%)
+  breakeven_exit      :    3 (13.6%)
+  early_cut           :    2 (9.1%)
+  smart_tp            :    2 (9.1%)
+  peak_protect        :    1 (4.5%)
+  take_profit         :    1 (4.5%)
+  max_loss            :    1 (4.5%)
+
+--- DIRECTION ---
+  BUY: 16 trades, 81.2% WR, $154.66
+  SELL: 6 trades, 83.3% WR, $206.79
+
+--- H4 ZONE TYPE ---
+  OB  : 6 trades, 83.3% WR, $90.05
+  FVG : 16 trades, 81.2% WR, $271.40

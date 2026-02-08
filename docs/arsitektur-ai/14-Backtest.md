@@ -51,32 +51,29 @@ self.dynamic_confidence = create_dynamic_confidence()
 
 Semua filter entry di-replikasi:
 
-```
-Untuk setiap bar dalam data historis:
-    |
-    v
-[1] COOLDOWN: Jarak >= 20 bar dari trade terakhir? (~5 menit M15)
-    |YES
-[2] SESSION: Bukan Off Hours (04:00-06:00 WIB)?
-    |YES
-[3] GOLDEN TIME: (opsional) Hanya 19:00-23:00 WIB?
-    |YES
-[4] REGIME: Bukan CRISIS?
-    |YES
-[5] SMC SIGNAL: Ada signal dari SMCAnalyzer?
-    |YES
-[6] DYNAMIC CONFIDENCE: Market quality bukan AVOID?
-    |YES
-[7] ML THRESHOLD: Confidence >= threshold (50%-65%)?
-    |YES
-[8] ML AGREEMENT: ML tidak strongly disagree (>65% berlawanan)?
-    |YES
-[9] SIGNAL CONFIRMATION: Signal muncul 2x berturut?
-    |YES
-[10] PULLBACK FILTER: Momentum tidak berlawanan?
-    |YES
-    v
-EXECUTE SIMULATED TRADE
+```mermaid
+flowchart TD
+    START["Untuk setiap bar dalam data historis"] --> F1{"1. COOLDOWN\n>= 20 bar dari trade terakhir?"}
+    F1 -->|YES| F2{"2. SESSION\nBukan Off Hours 04:00-06:00?"}
+    F1 -->|NO| SKIP["SKIP"]
+    F2 -->|YES| F3{"3. GOLDEN TIME\nHanya 19:00-23:00? (opsional)"}
+    F2 -->|NO| SKIP
+    F3 -->|YES| F4{"4. REGIME\nBukan CRISIS?"}
+    F3 -->|NO| SKIP
+    F4 -->|YES| F5{"5. SMC SIGNAL\nAda signal?"}
+    F4 -->|NO| SKIP
+    F5 -->|YES| F6{"6. DYNAMIC CONFIDENCE\nBukan AVOID?"}
+    F5 -->|NO| SKIP
+    F6 -->|YES| F7{"7. ML THRESHOLD\nConfidence >= 50-65%?"}
+    F6 -->|NO| SKIP
+    F7 -->|YES| F8{"8. ML AGREEMENT\nTidak strongly disagree?"}
+    F7 -->|NO| SKIP
+    F8 -->|YES| F9{"9. SIGNAL CONFIRMATION\n2x berturut?"}
+    F8 -->|NO| SKIP
+    F9 -->|YES| F10{"10. PULLBACK FILTER\nMomentum tidak berlawanan?"}
+    F9 -->|NO| SKIP
+    F10 -->|YES| EXEC["EXECUTE SIMULATED TRADE"]
+    F10 -->|NO| SKIP
 ```
 
 ---
@@ -341,27 +338,18 @@ backtests/results/
 
 ## Data Flow
 
-```
-MT5 Connected
-    |
-    v
-Fetch 50.000 bar M15 XAUUSD
-    |
-    v
-FeatureEngineer.calculate_all()    → 40+ fitur
-SMCAnalyzer.calculate_all()        → Struktur pasar
-RegimeDetector.predict()           → Regime label
-    |
-    v
-Filter: Jan 2025 - Now
-    |
-    v
-Loop setiap bar:
-    ├── Entry check (10 filter)
-    ├── Simulate exit (5 kondisi)
-    ├── Record trade result
-    └── Update statistics
-    |
-    v
-Print laporan + Save CSV
+```mermaid
+flowchart TD
+    A["MT5 Connected"] --> B["Fetch 50.000 bar M15 XAUUSD"]
+    B --> C["FeatureEngineer.calculate_all() → 40+ fitur\nSMCAnalyzer.calculate_all() → Struktur pasar\nRegimeDetector.predict() → Regime label"]
+    C --> D["Filter: Jan 2025 - Now"]
+    D --> E["Loop setiap bar"]
+    E --> E1["Entry check (14 filter)"]
+    E --> E2["Simulate exit (5 kondisi)"]
+    E --> E3["Record trade result"]
+    E --> E4["Update statistics"]
+    E1 --> F["Print laporan + Save CSV"]
+    E2 --> F
+    E3 --> F
+    E4 --> F
 ```

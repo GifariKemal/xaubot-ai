@@ -1,0 +1,358 @@
+================================================================================
+XAUBOT AI — SMC + Stoch + Sell + Broker SL Only Exit Backtest Log
+================================================================================
+Generated: 2026-02-07 13:03:00
+Period: 2025-08-01 to 2026-02-07
+Strategy: SMC-Only v4 + Stochastic (K=14) + Sell Filter (ML >= 55%) + Broker SL Only Exit
+
+--- FILTER STATS ---
+  Stochastic Blocked:       1243
+    BUY (K>75):           733
+    SELL (K<25):           510
+  Sell Filter Blocked:      1110
+    ML disagree:            1110
+    Low ML conf:            0
+  Combined blocked:         2353
+
+--- PERFORMANCE SUMMARY ---
+  Total Trades:    294
+  Wins:            185
+  Losses:          109
+  Win Rate:        62.9%
+  Total Profit:    $3,109.56
+  Total Loss:      $2,601.98
+  Net PnL:         $507.59
+  Profit Factor:   1.20
+  Max Drawdown:    4.1% ($214.76)
+  Avg Win:         $16.81
+  Avg Loss:        $23.87
+  Expectancy:      $1.73
+  Sharpe Ratio:    1.03
+  Avoided (AVOID): 0
+  Recovery Trades: 22
+  Daily Stops:     0
+
+--- EXIT REASON BREAKDOWN ---
+  trailing_sl         :  118 ( 40.1%)
+  max_loss            :   94 ( 32.0%)
+  take_profit         :   48 ( 16.3%)
+  timeout             :   23 (  7.8%)
+  weekend_close       :   11 (  3.7%)
+
+--- DIRECTION BREAKDOWN ---
+  BUY: 247 trades, 65.6% WR, $462.43
+  SELL: 47 trades, 48.9% WR, $45.16
+
+--- SESSION BREAKDOWN ---
+  London-NY Overlap (Golden)    :  68 trades,  64.7% WR, $  234.21
+  Sydney-Tokyo                  : 117 trades,  63.2% WR, $  225.82
+  Tokyo-London Overlap          :  14 trades,  71.4% WR, $   81.36
+  London Early                  :  39 trades,  59.0% WR, $  -10.37
+  NY Session                    :  56 trades,  60.7% WR, $  -23.43
+
+--- SMC COMPONENT ANALYSIS ---
+  BOS   :  49 trades,  55.1% WR, $ -140.43
+  CHoCH :  80 trades,  58.8% WR, $  111.31
+  FVG   : 282 trades,  62.1% WR, $  293.59
+  OB    : 216 trades,  58.8% WR, $  182.47
+
+--- TRADE LOG ---
+   #       Entry Time  Dir      Entry       Exit   P/L($) Result        Exit Reason  StochK              Session
+--------------------------------------------------------------------------------------------------------------------------------------------
+   1 2025-08-01 02:15 SELL    3292.18    3283.04     9.14    WIN        take_profit    48.3         Sydney-Tokyo
+   2 2025-08-01 07:15  BUY    3292.64    3309.27    16.63    WIN        take_profit    71.7         Sydney-Tokyo
+   3 2025-08-01 19:00  BUY    3345.47    3350.73     5.26    WIN      weekend_close    51.5           NY Session
+   4 2025-08-04 01:00  BUY    3360.28    3357.89    -2.39   LOSS            timeout    63.6         Sydney-Tokyo
+   5 2025-08-04 17:00  BUY    3377.35    3373.18    -8.34   LOSS            timeout    72.4           NY Session
+   6 2025-08-05 17:00  BUY    3372.62    3382.43     9.81    WIN        trailing_sl    74.4           NY Session
+   7 2025-08-06 01:15  BUY    3378.89    3384.73     5.84    WIN        take_profit    24.9         Sydney-Tokyo
+   8 2025-08-06 19:00  BUY    3375.34    3378.65     6.62    WIN            timeout    72.8           NY Session
+   9 2025-08-07 11:00  BUY    3381.36    3395.93    29.13    WIN        take_profit    37.9         London Early
+  10 2025-08-08 02:00  BUY    3399.55    3387.09   -12.46   LOSS           max_loss    56.7         Sydney-Tokyo
+  11 2025-08-08 09:00 SELL    3394.52    3401.48   -13.92   LOSS           max_loss    69.8         London Early
+  12 2025-08-12 11:45 SELL    3347.89    3332.75    15.14    WIN        take_profit    36.8         London Early
+  13 2025-08-13 01:30  BUY    3350.17    3344.98    -5.19   LOSS           max_loss    58.9         Sydney-Tokyo
+  14 2025-08-13 10:30  BUY    3356.73    3355.75    -1.96   LOSS            timeout    73.1         London Early
+  15 2025-08-14 04:00  BUY    3368.77    3350.07   -18.70   LOSS           max_loss    69.1         Sydney-Tokyo
+  16 2025-08-15 08:15  BUY    3343.23    3336.29    -6.94   LOSS            timeout    55.4 Tokyo-London Overlap
+  17 2025-08-18 06:45  BUY    3346.89    3350.36     3.47    WIN        trailing_sl    63.2         Sydney-Tokyo
+  18 2025-08-19 02:30 SELL    3332.66    3328.63     4.03    WIN        take_profit    55.4         Sydney-Tokyo
+  19 2025-08-19 06:45  BUY    3337.64    3329.32    -8.32   LOSS           max_loss    68.7         Sydney-Tokyo
+  20 2025-08-20 08:15  BUY    3318.41    3328.98    10.57    WIN        take_profit    72.5 Tokyo-London Overlap
+  21 2025-08-20 18:00  BUY    3342.67    3339.68    -2.99   LOSS            timeout    65.2           NY Session
+  22 2025-08-21 14:00 SELL    3329.37    3342.03   -25.32   LOSS           max_loss    25.0 London-NY Overlap (Golden)
+  23 2025-08-21 18:00  BUY    3338.67    3331.68    -6.99   LOSS           max_loss    41.2           NY Session
+  24 2025-08-22 23:00  BUY    3371.04    3371.67     0.63    WIN      weekend_close    35.0         Sydney-Tokyo
+  25 2025-08-25 08:00 SELL    3365.16    3368.53    -3.37   LOSS           max_loss    65.9 Tokyo-London Overlap
+  26 2025-08-25 15:15  BUY    3368.72    3361.86   -13.72   LOSS           max_loss    71.8 London-NY Overlap (Golden)
+  27 2025-08-26 04:30  BUY    3376.05    3377.40     1.35    WIN            timeout    71.1         Sydney-Tokyo
+  28 2025-08-26 19:15  BUY    3384.50    3375.69   -17.62   LOSS            timeout    74.7           NY Session
+  29 2025-08-27 12:30  BUY    3381.66    3373.70   -15.92   LOSS           max_loss    68.5 London-NY Overlap (Golden)
+  30 2025-08-27 17:00  BUY    3379.42    3388.00     8.58    WIN        take_profit    51.8           NY Session
+  31 2025-08-27 23:15  BUY    3395.70    3391.99    -3.71   LOSS           max_loss    67.1         Sydney-Tokyo
+  32 2025-08-28 08:45 SELL    3389.11    3392.48    -3.37   LOSS           max_loss    59.6 Tokyo-London Overlap
+  33 2025-08-28 13:15  BUY    3396.63    3410.25    13.62    WIN        take_profit    38.6 London-NY Overlap (Golden)
+  34 2025-08-28 23:15  BUY    3417.14    3408.88    -8.26   LOSS            timeout    30.8         Sydney-Tokyo
+  35 2025-08-29 20:45  BUY    3443.56    3443.87     0.31    WIN      weekend_close    61.8           NY Session
+  36 2025-09-01 01:00  BUY    3446.04    3440.10    -5.94   LOSS           max_loss    39.8         Sydney-Tokyo
+  37 2025-09-01 10:30  BUY    3471.28    3476.32    10.08    WIN            timeout    16.2         London Early
+  38 2025-09-02 04:45  BUY    3497.66    3474.20   -23.46   LOSS           max_loss    67.9         Sydney-Tokyo
+  39 2025-09-02 23:30  BUY    3534.87    3537.12     2.25    WIN            timeout    66.8         Sydney-Tokyo
+  40 2025-09-03 16:30  BUY    3551.63    3555.95     8.64    WIN        trailing_sl    66.7 London-NY Overlap (Golden)
+  41 2025-09-04 01:30  BUY    3562.34    3532.26   -30.08   LOSS           max_loss    19.2         Sydney-Tokyo
+  42 2025-09-04 12:15  BUY    3539.22    3545.53    12.62    WIN        trailing_sl    70.6 London-NY Overlap (Golden)
+  43 2025-09-04 20:15  BUY    3549.28    3551.13     1.85    WIN            timeout    67.7           NY Session
+  44 2025-09-05 12:15  BUY    3548.30    3556.47     8.17    WIN        take_profit    27.6 London-NY Overlap (Golden)
+  45 2025-09-05 18:00  BUY    3584.15    3592.40     8.25    WIN        trailing_sl    72.7           NY Session
+  46 2025-09-08 14:00  BUY    3615.97    3623.94    15.94    WIN        trailing_sl    60.5 London-NY Overlap (Golden)
+  47 2025-09-08 19:30  BUY    3639.25    3646.58     7.33    WIN        trailing_sl    73.1           NY Session
+  48 2025-09-09 09:00  BUY    3643.33    3654.87    23.08    WIN        take_profit    25.8         London Early
+  49 2025-09-09 17:00  BUY    3651.58    3639.99   -23.18   LOSS           max_loss    29.4           NY Session
+  50 2025-09-10 09:15  BUY    3643.75    3648.15     8.80    WIN        trailing_sl    74.1         London Early
+  51 2025-09-10 17:30  BUY    3648.69    3640.31   -16.76   LOSS           max_loss    50.3           NY Session
+  52 2025-09-10 20:45  BUY    3647.27    3638.52    -8.75   LOSS           max_loss    52.2           NY Session
+  53 2025-09-11 03:45  BUY    3643.86    3637.82    -6.04   LOSS           max_loss    65.9         Sydney-Tokyo
+  54 2025-09-11 11:00 SELL    3629.31    3616.50    12.81    WIN        take_profit    43.5         London Early
+  55 2025-09-11 15:45  BUY    3628.39    3632.92     4.53    WIN        trailing_sl    50.0 London-NY Overlap (Golden)
+  56 2025-09-11 23:00  BUY    3635.70    3644.83     9.13    WIN        take_profit    74.4         Sydney-Tokyo
+  57 2025-09-12 12:30  BUY    3644.50    3648.75     4.25    WIN      weekend_close    42.5 London-NY Overlap (Golden)
+  58 2025-09-15 01:00  BUY    3643.67    3639.83    -3.84   LOSS           max_loss    27.0         Sydney-Tokyo
+  59 2025-09-15 08:30  BUY    3643.91    3655.67    11.76    WIN        trailing_sl    58.1 Tokyo-London Overlap
+  60 2025-09-15 23:15  BUY    3680.52    3688.76     8.24    WIN        take_profit    68.9         Sydney-Tokyo
+  61 2025-09-16 06:30  BUY    3681.34    3689.20     7.86    WIN        take_profit    45.5         Sydney-Tokyo
+  62 2025-09-16 13:30  BUY    3694.34    3686.04    -8.30   LOSS           max_loss    65.0 London-NY Overlap (Golden)
+  63 2025-09-16 23:45  BUY    3690.14    3678.80   -11.34   LOSS           max_loss    51.8         Sydney-Tokyo
+  64 2025-09-17 13:30 SELL    3666.34    3672.31    -5.97   LOSS           max_loss    52.7 London-NY Overlap (Golden)
+  65 2025-09-17 19:45  BUY    3684.65    3659.97   -24.68   LOSS           max_loss    69.4           NY Session
+  66 2025-09-18 14:00  BUY    3667.60    3633.68   -33.92   LOSS           max_loss    72.8 London-NY Overlap (Golden)
+  67 2025-09-19 04:30  BUY    3645.99    3640.41    -5.58   LOSS           max_loss    66.5         Sydney-Tokyo
+  68 2025-09-19 08:30  BUY    3655.73    3673.07    17.34    WIN            timeout    69.8 Tokyo-London Overlap
+  69 2025-09-22 02:00  BUY    3686.73    3695.81     9.08    WIN        take_profit    53.6         Sydney-Tokyo
+  70 2025-09-22 07:45  BUY    3692.01    3702.08    10.07    WIN        take_profit    56.1         Sydney-Tokyo
+  71 2025-09-22 16:00  BUY    3722.42    3740.62    18.20    WIN        trailing_sl    64.3 London-NY Overlap (Golden)
+  72 2025-09-23 04:15  BUY    3749.67    3738.03   -11.64   LOSS           max_loss    58.7         Sydney-Tokyo
+  73 2025-09-23 08:15  BUY    3749.87    3769.94    20.07    WIN        take_profit    71.1 Tokyo-London Overlap
+  74 2025-09-23 14:00  BUY    3780.20    3759.33   -20.87   LOSS            timeout    72.8 London-NY Overlap (Golden)
+  75 2025-09-24 09:30  BUY    3771.82    3750.48   -42.68   LOSS           max_loss    74.8         London Early
+  76 2025-09-25 04:00  BUY    3741.16    3750.37     9.21    WIN        trailing_sl    39.8         Sydney-Tokyo
+  77 2025-09-26 10:30 SELL    3747.94    3755.13   -14.38   LOSS           max_loss    59.7         London Early
+  78 2025-09-26 19:00  BUY    3775.00    3778.76     3.76    WIN      weekend_close    73.7           NY Session
+  79 2025-09-29 02:30 SELL    3769.90    3776.95    -7.05   LOSS           max_loss    68.8         Sydney-Tokyo
+  80 2025-09-29 08:30  BUY    3803.57    3811.99     8.42    WIN        trailing_sl    68.9 Tokyo-London Overlap
+  81 2025-09-29 13:15  BUY    3815.62    3821.83    12.42    WIN        trailing_sl    73.3 London-NY Overlap (Golden)
+  82 2025-09-29 18:00  BUY    3823.97    3846.27    44.61    WIN        take_profit    63.3           NY Session
+  83 2025-09-30 19:00 SELL    3843.04    3857.05   -28.02   LOSS           max_loss    74.5           NY Session
+  84 2025-10-01 03:45  BUY    3860.44    3891.73    31.29    WIN        take_profit    55.9         Sydney-Tokyo
+  85 2025-10-01 18:45 SELL    3868.33    3862.93    10.80    WIN        trailing_sl    49.8           NY Session
+  86 2025-10-02 09:30  BUY    3870.53    3861.73   -17.60   LOSS           max_loss    71.4         London Early
+  87 2025-10-02 15:15  BUY    3882.61    3886.55     3.94    WIN        trailing_sl    50.5 London-NY Overlap (Golden)
+  88 2025-10-03 01:15 SELL    3854.22    3862.26    -8.04   LOSS           max_loss    68.5         Sydney-Tokyo
+  89 2025-10-03 12:00  BUY    3860.56    3873.94    26.76    WIN        trailing_sl    66.5 London-NY Overlap (Golden)
+  90 2025-10-03 19:15  BUY    3882.61    3888.17    11.12    WIN      weekend_close    64.9           NY Session
+  91 2025-10-06 02:30  BUY    3910.85    3932.88    22.03    WIN        trailing_sl    74.5         Sydney-Tokyo
+  92 2025-10-06 11:30  BUY    3938.09    3950.61    25.04    WIN        trailing_sl    58.2         London Early
+  93 2025-10-06 23:15  BUY    3959.47    3965.97     6.50    WIN        trailing_sl    61.3         Sydney-Tokyo
+  94 2025-10-07 04:00  BUY    3961.58    3976.61    15.03    WIN        take_profit    27.1         Sydney-Tokyo
+  95 2025-10-07 15:15  BUY    3965.61    3976.28    21.34    WIN        trailing_sl    69.6 London-NY Overlap (Golden)
+  96 2025-10-07 19:30 SELL    3976.97    3990.82   -27.70   LOSS           max_loss    52.5           NY Session
+  97 2025-10-08 04:30  BUY    3993.69    4026.26    32.57    WIN        trailing_sl    63.4         Sydney-Tokyo
+  98 2025-10-08 13:15  BUY    4040.21    4050.91    10.70    WIN        trailing_sl    52.5 London-NY Overlap (Golden)
+  99 2025-10-09 09:30  BUY    4030.06    4037.16    14.20    WIN        trailing_sl    42.9         London Early
+ 100 2025-10-09 16:45  BUY    4017.13    4004.69   -24.88   LOSS           max_loss     0.0 London-NY Overlap (Golden)
+ 101 2025-10-09 23:45 SELL    3975.78    3991.17   -15.39   LOSS           max_loss    83.4         Sydney-Tokyo
+ 102 2025-10-10 05:30  BUY    3982.60    3958.23   -24.37   LOSS           max_loss    52.3         Sydney-Tokyo
+ 103 2025-10-10 09:30 SELL    3972.45    3954.48    17.97    WIN        take_profit    83.2         London Early
+ 104 2025-10-10 13:45  BUY    3993.57    4009.68    16.11    WIN        trailing_sl    70.8 London-NY Overlap (Golden)
+ 105 2025-10-10 23:00  BUY    4005.47    4012.60     7.13    WIN      weekend_close    65.8         Sydney-Tokyo
+ 106 2025-10-13 03:00  BUY    4031.73    4049.94    18.21    WIN        trailing_sl    49.6         Sydney-Tokyo
+ 107 2025-10-13 06:45  BUY    4051.88    4068.34    16.46    WIN        trailing_sl    68.8         Sydney-Tokyo
+ 108 2025-10-13 13:00  BUY    4071.23    4074.78     3.55    WIN        trailing_sl    36.8 London-NY Overlap (Golden)
+ 109 2025-10-13 20:00  BUY    4106.53    4121.20    14.67    WIN        trailing_sl    66.4           NY Session
+ 110 2025-10-14 08:30  BUY    4119.66    4102.36   -17.30   LOSS           max_loss     1.5 Tokyo-London Overlap
+ 111 2025-10-14 14:45 SELL    4130.20    4106.65    47.10    WIN        take_profit    36.9 London-NY Overlap (Golden)
+ 112 2025-10-15 01:15  BUY    4151.95    4158.13     6.18    WIN        trailing_sl    60.9         Sydney-Tokyo
+ 113 2025-10-15 05:30  BUY    4171.41    4179.75     8.34    WIN        trailing_sl    54.0         Sydney-Tokyo
+ 114 2025-10-15 11:45  BUY    4208.04    4173.03   -35.01   LOSS           max_loss    70.5         London Early
+ 115 2025-10-15 14:45  BUY    4198.61    4203.89     5.28    WIN        trailing_sl    65.0 London-NY Overlap (Golden)
+ 116 2025-10-16 03:45  BUY    4210.36    4227.93    17.57    WIN        take_profit    39.8         Sydney-Tokyo
+ 117 2025-10-16 07:30  BUY    4234.13    4204.68   -29.45   LOSS           max_loss    66.8         Sydney-Tokyo
+ 118 2025-10-16 12:15  BUY    4223.00    4239.62    16.62    WIN        trailing_sl    60.4 London-NY Overlap (Golden)
+ 119 2025-10-17 01:45  BUY    4346.60    4356.63    10.03    WIN        trailing_sl    66.1         Sydney-Tokyo
+ 120 2025-10-17 05:30  BUY    4339.32    4363.81    24.49    WIN        trailing_sl    60.4         Sydney-Tokyo
+ 121 2025-10-17 10:00  BUY    4355.24    4333.64   -21.60   LOSS           max_loss    36.3         London Early
+ 122 2025-10-20 01:00  BUY    4259.10    4253.76    -5.34   LOSS            timeout    74.4         Sydney-Tokyo
+ 123 2025-10-20 16:45  BUY    4300.92    4319.06    18.14    WIN        trailing_sl    65.6 London-NY Overlap (Golden)
+ 124 2025-10-20 20:30  BUY    4345.30    4370.76    25.46    WIN        trailing_sl    74.0           NY Session
+ 125 2025-10-21 02:30  BUY    4361.04    4345.62   -15.42   LOSS           max_loss    42.4         Sydney-Tokyo
+ 126 2025-10-22 01:00  BUY    4118.12    4095.09   -23.03   LOSS           max_loss    55.4         Sydney-Tokyo
+ 127 2025-10-22 05:30 SELL    4112.22    4146.58   -34.36   LOSS           max_loss    87.5         Sydney-Tokyo
+ 128 2025-10-22 10:45  BUY    4132.70    4106.93   -25.77   LOSS           max_loss    33.5         London Early
+ 129 2025-10-22 23:15  BUY    4091.80    4094.80     3.00    WIN        trailing_sl    68.9         Sydney-Tokyo
+ 130 2025-10-23 04:00  BUY    4077.42    4088.17    10.75    WIN        trailing_sl    23.0         Sydney-Tokyo
+ 131 2025-10-23 09:30  BUY    4122.38    4139.74    34.72    WIN        trailing_sl    73.8         London Early
+ 132 2025-10-23 20:15  BUY    4129.38    4135.58     6.20    WIN        trailing_sl    15.4           NY Session
+ 133 2025-10-24 04:30  BUY    4125.70    4105.80   -19.90   LOSS           max_loss    51.7         Sydney-Tokyo
+ 134 2025-10-24 20:00  BUY    4126.10    4079.77   -92.66   LOSS            timeout    69.3           NY Session
+ 135 2025-10-28 04:00  BUY    4005.08    3972.66   -32.42   LOSS           max_loss    69.2         Sydney-Tokyo
+ 136 2025-10-28 15:30  BUY    3922.54    3942.68    20.14    WIN        trailing_sl    67.1 London-NY Overlap (Golden)
+ 137 2025-10-28 19:45  BUY    3962.21    3946.94   -15.27   LOSS           max_loss    74.2           NY Session
+ 138 2025-10-29 03:30  BUY    3967.32    4018.95    51.63    WIN        trailing_sl    73.0         Sydney-Tokyo
+ 139 2025-10-29 16:00  BUY    4016.79    3950.91   -65.88   LOSS           max_loss    52.3 London-NY Overlap (Golden)
+ 140 2025-10-30 07:00  BUY    3962.73    3969.88     7.15    WIN        trailing_sl    70.9         Sydney-Tokyo
+ 141 2025-10-30 12:15  BUY    3986.92    4003.86    33.88    WIN        trailing_sl    55.9 London-NY Overlap (Golden)
+ 142 2025-10-31 01:15  BUY    4028.01    4013.02   -14.99   LOSS           max_loss    41.5         Sydney-Tokyo
+ 143 2025-10-31 14:45  BUY    4022.81    4001.54   -42.54   LOSS           max_loss    63.6 London-NY Overlap (Golden)
+ 144 2025-11-03 06:45  BUY    4003.55    4018.07    14.52    WIN        trailing_sl    53.9         Sydney-Tokyo
+ 145 2025-11-03 17:30 SELL    4021.13    3999.66    42.94    WIN        take_profit    67.5           NY Session
+ 146 2025-11-03 23:30 SELL    4001.07    3995.01     6.06    WIN        trailing_sl    29.9         Sydney-Tokyo
+ 147 2025-11-04 11:00  BUY    3991.57    3966.56   -50.02   LOSS           max_loss    73.6         London Early
+ 148 2025-11-05 08:00  BUY    3964.56    3974.99    10.43    WIN        trailing_sl    58.5 Tokyo-London Overlap
+ 149 2025-11-05 19:15  BUY    3982.30    3987.07     9.54    WIN            timeout    69.5           NY Session
+ 150 2025-11-06 14:00  BUY    4012.61    4004.31   -16.60   LOSS           max_loss    54.9 London-NY Overlap (Golden)
+ 151 2025-11-07 04:30  BUY    3992.67    4003.65    10.98    WIN        trailing_sl    53.8         Sydney-Tokyo
+ 152 2025-11-07 14:45  BUY    3995.77    3985.25   -10.52   LOSS           max_loss    21.0 London-NY Overlap (Golden)
+ 153 2025-11-07 19:00  BUY    3999.70    4002.99     6.58    WIN      weekend_close    36.3           NY Session
+ 154 2025-11-10 07:00  BUY    4050.19    4075.16    24.97    WIN        trailing_sl    66.0         Sydney-Tokyo
+ 155 2025-11-10 13:30  BUY    4082.48    4099.04    33.12    WIN        take_profit    74.7 London-NY Overlap (Golden)
+ 156 2025-11-10 17:15  BUY    4089.15    4109.34    20.19    WIN        take_profit    47.2           NY Session
+ 157 2025-11-11 04:15  BUY    4134.14    4139.65     5.51    WIN        trailing_sl    73.7         Sydney-Tokyo
+ 158 2025-11-12 03:15  BUY    4130.73    4106.65   -24.08   LOSS           max_loss    26.5         Sydney-Tokyo
+ 159 2025-11-12 08:30  BUY    4116.75    4124.16     7.41    WIN        trailing_sl    72.5 Tokyo-London Overlap
+ 160 2025-11-12 14:45  BUY    4130.02    4148.29    36.54    WIN        take_profit    56.8 London-NY Overlap (Golden)
+ 161 2025-11-12 23:00  BUY    4192.70    4198.72     6.02    WIN        trailing_sl    10.8         Sydney-Tokyo
+ 162 2025-11-13 06:30  BUY    4207.59    4230.31    22.72    WIN        trailing_sl    70.4         Sydney-Tokyo
+ 163 2025-11-13 13:45  BUY    4230.55    4235.50     9.90    WIN        trailing_sl    54.7 London-NY Overlap (Golden)
+ 164 2025-11-13 19:15 SELL    4202.48    4175.29    27.19    WIN        take_profit    37.9           NY Session
+ 165 2025-11-14 06:00  BUY    4199.77    4173.52   -26.25   LOSS           max_loss    69.8         Sydney-Tokyo
+ 166 2025-11-17 11:15 SELL    4083.41    4064.37    38.07    WIN        take_profit    70.1         London Early
+ 167 2025-11-18 09:00 SELL    4008.52    4025.13   -16.61   LOSS           max_loss    27.3         London Early
+ 168 2025-11-18 14:00  BUY    4039.88    4067.58    27.70    WIN        trailing_sl    48.6 London-NY Overlap (Golden)
+ 169 2025-11-18 19:15  BUY    4061.44    4065.94     9.00    WIN        trailing_sl    50.9           NY Session
+ 170 2025-11-18 23:15  BUY    4065.70    4069.60     3.90    WIN        trailing_sl    13.7         Sydney-Tokyo
+ 171 2025-11-19 09:45  BUY    4086.72    4110.26    23.54    WIN        trailing_sl    55.1         London Early
+ 172 2025-11-19 17:30  BUY    4109.71    4094.26   -30.90   LOSS           max_loss    28.1           NY Session
+ 173 2025-11-20 03:00  BUY    4097.50    4065.58   -31.92   LOSS           max_loss    71.8         Sydney-Tokyo
+ 174 2025-11-20 12:15 SELL    4061.51    4077.59   -16.08   LOSS           max_loss    60.3 London-NY Overlap (Golden)
+ 175 2025-11-20 16:45  BUY    4093.22    4066.82   -26.40   LOSS           max_loss    73.8 London-NY Overlap (Golden)
+ 176 2025-11-21 04:15  BUY    4073.43    4043.58   -29.85   LOSS           max_loss    46.0         Sydney-Tokyo
+ 177 2025-11-21 16:15  BUY    4066.60    4092.84    26.24    WIN        trailing_sl    67.5 London-NY Overlap (Golden)
+ 178 2025-11-24 07:15 SELL    4046.92    4061.08   -14.16   LOSS           max_loss    32.9         Sydney-Tokyo
+ 179 2025-11-24 16:00  BUY    4079.71    4090.77    22.12    WIN        trailing_sl    73.5 London-NY Overlap (Golden)
+ 180 2025-11-25 01:00  BUY    4128.74    4136.37     7.63    WIN        trailing_sl    62.6         Sydney-Tokyo
+ 181 2025-11-25 05:00  BUY    4145.62    4122.36   -23.26   LOSS           max_loss    69.9         Sydney-Tokyo
+ 182 2025-11-25 16:30  BUY    4119.67    4123.44     7.54    WIN        trailing_sl    10.0 London-NY Overlap (Golden)
+ 183 2025-11-25 20:15  BUY    4142.51    4158.83    32.64    WIN        trailing_sl    59.6           NY Session
+ 184 2025-11-26 14:15  BUY    4161.71    4152.22   -18.99   LOSS           max_loss    33.1 London-NY Overlap (Golden)
+ 185 2025-11-27 18:30 SELL    4155.12    4161.77   -13.30   LOSS           max_loss    46.5           NY Session
+ 186 2025-11-28 05:30  BUY    4183.16    4192.22     9.06    WIN        trailing_sl    63.0         Sydney-Tokyo
+ 187 2025-12-01 01:00  BUY    4216.86    4224.67     7.81    WIN        trailing_sl    63.0         Sydney-Tokyo
+ 188 2025-12-01 05:30  BUY    4238.14    4243.74     5.60    WIN        trailing_sl    52.6         Sydney-Tokyo
+ 189 2025-12-01 13:15  BUY    4254.33    4224.95   -58.76   LOSS            timeout    66.8 London-NY Overlap (Golden)
+ 190 2025-12-02 09:15 SELL    4217.51    4202.85    29.33    WIN        take_profit    62.2         London Early
+ 191 2025-12-02 16:30  BUY    4217.88    4181.19   -73.38   LOSS           max_loss    71.1 London-NY Overlap (Golden)
+ 192 2025-12-03 03:00  BUY    4215.65    4219.47     3.82    WIN        trailing_sl    71.6         Sydney-Tokyo
+ 193 2025-12-03 11:45 SELL    4201.94    4209.96   -16.04   LOSS           max_loss    38.1         London Early
+ 194 2025-12-03 16:45  BUY    4211.83    4220.26    16.86    WIN        trailing_sl    24.0 London-NY Overlap (Golden)
+ 195 2025-12-04 03:45  BUY    4208.99    4200.21    -8.78   LOSS           max_loss    46.3         Sydney-Tokyo
+ 196 2025-12-04 12:45  BUY    4197.26    4201.05     7.58    WIN        trailing_sl    72.7 London-NY Overlap (Golden)
+ 197 2025-12-04 19:00  BUY    4211.15    4225.36    28.42    WIN            timeout    73.2           NY Session
+ 198 2025-12-05 10:30  BUY    4223.11    4230.21     7.10    WIN        trailing_sl    54.1         London Early
+ 199 2025-12-08 04:00 SELL    4200.16    4211.71   -11.55   LOSS           max_loss    34.9         Sydney-Tokyo
+ 200 2025-12-08 09:00  BUY    4214.52    4204.42   -20.20   LOSS           max_loss    71.0         London Early
+ 201 2025-12-08 13:45  BUY    4208.47    4200.41    -8.06   LOSS           max_loss    61.5 London-NY Overlap (Golden)
+ 202 2025-12-08 19:45 SELL    4194.73    4177.10    17.63    WIN        take_profit    53.7           NY Session
+ 203 2025-12-09 11:45  BUY    4202.66    4211.35    17.38    WIN        trailing_sl    72.5         London Early
+ 204 2025-12-09 23:00  BUY    4211.15    4201.16    -9.99   LOSS           max_loss    67.9         Sydney-Tokyo
+ 205 2025-12-10 17:15 SELL    4196.45    4206.88   -10.43   LOSS           max_loss    41.8           NY Session
+ 206 2025-12-10 23:30 SELL    4227.96    4243.56   -15.60   LOSS           max_loss    81.5         Sydney-Tokyo
+ 207 2025-12-11 16:45  BUY    4230.08    4267.55    37.47    WIN        take_profit    63.6 London-NY Overlap (Golden)
+ 208 2025-12-11 23:00  BUY    4272.87    4289.47    16.60    WIN        take_profit    43.3         Sydney-Tokyo
+ 209 2025-12-12 14:30  BUY    4328.16    4332.76     4.60    WIN        trailing_sl    65.8 London-NY Overlap (Golden)
+ 210 2025-12-15 06:45  BUY    4325.80    4338.59    12.79    WIN        take_profit    73.4         Sydney-Tokyo
+ 211 2025-12-15 12:00  BUY    4343.34    4333.52   -19.64   LOSS           max_loss    58.7 London-NY Overlap (Golden)
+ 212 2025-12-16 17:30  BUY    4322.12    4329.49     7.37    WIN            timeout    72.9           NY Session
+ 213 2025-12-17 09:00  BUY    4324.80    4310.95   -13.85   LOSS           max_loss    20.0         London Early
+ 214 2025-12-17 12:30  BUY    4314.88    4329.33    28.90    WIN        take_profit    44.6 London-NY Overlap (Golden)
+ 215 2025-12-17 17:45  BUY    4329.96    4336.31     6.35    WIN        trailing_sl    44.4           NY Session
+ 216 2025-12-18 01:00  BUY    4335.66    4326.29    -9.37   LOSS           max_loss    39.8         Sydney-Tokyo
+ 217 2025-12-18 05:45 SELL    4332.94    4321.71    11.23    WIN        take_profit    54.3         Sydney-Tokyo
+ 218 2025-12-18 16:45  BUY    4328.32    4349.08    41.52    WIN        take_profit    57.8 London-NY Overlap (Golden)
+ 219 2025-12-18 20:30  BUY    4333.57    4315.63   -35.89   LOSS           max_loss    22.5           NY Session
+ 220 2025-12-19 15:30  BUY    4329.34    4320.54   -17.60   LOSS           max_loss    60.1 London-NY Overlap (Golden)
+ 221 2025-12-22 07:30  BUY    4401.43    4412.12    10.69    WIN        trailing_sl    74.4         Sydney-Tokyo
+ 222 2025-12-22 11:30  BUY    4412.36    4418.29    11.86    WIN        trailing_sl    61.7         London Early
+ 223 2025-12-22 20:15  BUY    4434.24    4467.80    33.56    WIN        take_profit    74.3           NY Session
+ 224 2025-12-23 05:00  BUY    4486.00    4448.42   -37.58   LOSS            timeout    72.9         Sydney-Tokyo
+ 225 2025-12-23 23:00  BUY    4491.13    4510.51    19.38    WIN        trailing_sl    71.1         Sydney-Tokyo
+ 226 2025-12-24 15:30 SELL    4484.93    4468.48    32.91    WIN        take_profit    47.3 London-NY Overlap (Golden)
+ 227 2025-12-26 03:15  BUY    4509.79    4513.57     3.78    WIN        trailing_sl    60.7         Sydney-Tokyo
+ 228 2025-12-26 16:30  BUY    4520.76    4547.51    53.49    WIN        take_profit    59.2 London-NY Overlap (Golden)
+ 229 2025-12-26 20:30  BUY    4529.63    4525.22    -8.82   LOSS      weekend_close    49.4           NY Session
+ 230 2025-12-29 11:30 SELL    4475.51    4465.21    10.30    WIN        trailing_sl    49.4         London Early
+ 231 2025-12-29 20:00 SELL    4329.23    4353.61   -48.77   LOSS           max_loss    32.4           NY Session
+ 232 2025-12-30 08:15  BUY    4366.33    4369.78     3.45    WIN        trailing_sl    42.5 Tokyo-London Overlap
+ 233 2025-12-30 15:15  BUY    4393.33    4350.00   -86.66   LOSS           max_loss    70.5 London-NY Overlap (Golden)
+ 234 2025-12-31 05:00 SELL    4359.17    4332.78    26.39    WIN        take_profit    66.0         Sydney-Tokyo
+ 235 2025-12-31 11:45  BUY    4325.61    4339.09    26.96    WIN        trailing_sl    65.7         London Early
+ 236 2025-12-31 19:45  BUY    4321.77    4349.96    28.19    WIN        take_profit    12.8           NY Session
+ 237 2026-01-02 04:15  BUY    4347.63    4373.53    25.90    WIN        trailing_sl    74.9         Sydney-Tokyo
+ 238 2026-01-02 10:45  BUY    4386.90    4392.80    11.80    WIN        trailing_sl    58.5         London Early
+ 239 2026-01-05 03:15  BUY    4395.83    4403.44     7.61    WIN        trailing_sl    73.2         Sydney-Tokyo
+ 240 2026-01-05 19:00  BUY    4442.28    4453.12    21.68    WIN        trailing_sl    70.1           NY Session
+ 241 2026-01-06 07:30  BUY    4462.97    4480.31    17.34    WIN        trailing_sl    56.9         Sydney-Tokyo
+ 242 2026-01-06 23:00  BUY    4491.75    4477.35   -14.40   LOSS           max_loss    74.2         Sydney-Tokyo
+ 243 2026-01-07 06:30 SELL    4464.94    4459.13     5.81    WIN        trailing_sl    25.7         Sydney-Tokyo
+ 244 2026-01-07 19:30  BUY    4456.87    4423.44   -66.86   LOSS           max_loss    74.7           NY Session
+ 245 2026-01-08 18:00  BUY    4447.18    4456.33    18.30    WIN        trailing_sl    73.8           NY Session
+ 246 2026-01-09 03:30  BUY    4462.42    4465.91     3.49    WIN        trailing_sl    30.8         Sydney-Tokyo
+ 247 2026-01-09 07:45  BUY    4467.75    4480.78    13.03    WIN        take_profit    56.1         Sydney-Tokyo
+ 248 2026-01-09 19:30  BUY    4501.88    4496.69    -5.19   LOSS      weekend_close    59.7           NY Session
+ 249 2026-01-12 03:30  BUY    4573.31    4580.63     7.32    WIN        trailing_sl    70.9         Sydney-Tokyo
+ 250 2026-01-12 13:00  BUY    4590.84    4608.72    17.88    WIN        trailing_sl    57.8 London-NY Overlap (Golden)
+ 251 2026-01-12 18:45  BUY    4616.84    4584.90   -63.88   LOSS           max_loss    70.8           NY Session
+ 252 2026-01-13 17:15  BUY    4608.57    4611.97     6.80    WIN        trailing_sl    54.3           NY Session
+ 253 2026-01-14 07:45  BUY    4619.87    4626.19     6.32    WIN        trailing_sl    25.2         Sydney-Tokyo
+ 254 2026-01-14 11:45  BUY    4630.29    4619.53   -10.76   LOSS           max_loss    47.9         London Early
+ 255 2026-01-15 10:30 SELL    4606.28    4619.00   -25.43   LOSS           max_loss    77.9         London Early
+ 256 2026-01-15 15:00  BUY    4611.61    4597.66   -13.95   LOSS           max_loss    25.0 London-NY Overlap (Golden)
+ 257 2026-01-15 19:30 SELL    4614.31    4595.27    19.04    WIN        take_profit    64.1           NY Session
+ 258 2026-01-19 03:00  BUY    4662.97    4671.05     8.08    WIN        trailing_sl    75.0         Sydney-Tokyo
+ 259 2026-01-19 11:30  BUY    4669.41    4670.00     0.59    WIN            timeout    44.8         London Early
+ 260 2026-01-20 13:00  BUY    4726.14    4743.41    17.27    WIN        trailing_sl    50.3 London-NY Overlap (Golden)
+ 261 2026-01-21 01:00  BUY    4757.83    4773.59    15.76    WIN        take_profit    55.4         Sydney-Tokyo
+ 262 2026-01-21 08:45  BUY    4847.34    4859.81    12.47    WIN        trailing_sl    27.5 Tokyo-London Overlap
+ 263 2026-01-21 13:00  BUY    4865.07    4870.09     5.02    WIN        trailing_sl    59.1 London-NY Overlap (Golden)
+ 264 2026-01-22 02:00 SELL    4789.90    4824.84   -34.94   LOSS            timeout    40.5         Sydney-Tokyo
+ 265 2026-01-22 16:45  BUY    4835.05    4866.48    62.85    WIN        take_profit    65.9 London-NY Overlap (Golden)
+ 266 2026-01-23 01:00  BUY    4943.05    4951.68     8.63    WIN        trailing_sl    69.0         Sydney-Tokyo
+ 267 2026-01-23 05:00  BUY    4954.66    4936.59   -18.07   LOSS           max_loss    59.1         Sydney-Tokyo
+ 268 2026-01-23 13:30 SELL    4923.35    4938.66   -30.62   LOSS           max_loss    54.5 London-NY Overlap (Golden)
+ 269 2026-01-23 23:00  BUY    4981.37    4982.17     0.80    WIN      weekend_close    73.6         Sydney-Tokyo
+ 270 2026-01-26 05:45  BUY    5076.71    5084.80     8.09    WIN        trailing_sl    74.5         Sydney-Tokyo
+ 271 2026-01-26 11:15  BUY    5096.80    5052.17   -89.26   LOSS           max_loss    69.6         London Early
+ 272 2026-01-27 07:00  BUY    5063.54    5085.90    22.36    WIN        trailing_sl    46.3         Sydney-Tokyo
+ 273 2026-01-27 12:30  BUY    5084.64    5068.68   -31.93   LOSS           max_loss    41.0 London-NY Overlap (Golden)
+ 274 2026-01-27 18:45  BUY    5087.35    5148.36   122.01    WIN        take_profit    72.2           NY Session
+ 275 2026-01-28 02:30  BUY    5168.14    5183.75    15.61    WIN        trailing_sl    62.2         Sydney-Tokyo
+ 276 2026-01-28 10:30  BUY    5289.97    5295.44     5.47    WIN        trailing_sl    64.5         London Early
+ 277 2026-01-29 01:45  BUY    5512.77    5532.85    20.08    WIN        trailing_sl    73.1         Sydney-Tokyo
+ 278 2026-01-29 07:30  BUY    5549.27    5577.28    28.01    WIN        trailing_sl    73.3         Sydney-Tokyo
+ 279 2026-01-29 15:30 SELL    5525.98    5517.29    17.38    WIN        trailing_sl    76.6 London-NY Overlap (Golden)
+ 280 2026-01-29 23:30  BUY    5383.06    5414.86    31.80    WIN        trailing_sl    70.1         Sydney-Tokyo
+ 281 2026-01-30 03:45  BUY    5300.31    5234.37   -65.94   LOSS           max_loss     5.9         Sydney-Tokyo
+ 282 2026-01-30 15:00 SELL    5075.04    5033.54    41.50    WIN        trailing_sl    65.3 London-NY Overlap (Golden)
+ 283 2026-02-02 03:30 SELL    4714.35    4699.38    14.97    WIN        trailing_sl    42.6         Sydney-Tokyo
+ 284 2026-02-02 15:30  BUY    4685.53    4719.33    33.80    WIN        trailing_sl    18.5 London-NY Overlap (Golden)
+ 285 2026-02-03 02:45  BUY    4779.77    4846.13    66.36    WIN        trailing_sl    73.0         Sydney-Tokyo
+ 286 2026-02-03 06:15  BUY    4805.87    4813.58     7.71    WIN        trailing_sl    54.9         Sydney-Tokyo
+ 287 2026-02-03 10:45  BUY    4912.19    4915.70     3.51    WIN        trailing_sl    73.1         London Early
+ 288 2026-02-03 14:45  BUY    4913.52    4921.81    16.58    WIN        trailing_sl    57.2 London-NY Overlap (Golden)
+ 289 2026-02-03 17:45  BUY    4935.17    4965.91    61.48    WIN        trailing_sl    72.4           NY Session
+ 290 2026-02-04 01:15  BUY    4924.04    4941.42    17.38    WIN        trailing_sl    47.5         Sydney-Tokyo
+ 291 2026-02-04 08:00  BUY    5059.20    5069.61    10.41    WIN        trailing_sl    43.7 Tokyo-London Overlap
+ 292 2026-02-05 03:15  BUY    4951.62    4972.68    21.06    WIN        trailing_sl    18.1         Sydney-Tokyo
+ 293 2026-02-05 11:30 SELL    4889.68    4861.84    27.84    WIN        trailing_sl    40.1         London Early
+ 294 2026-02-05 19:00  BUY    4875.41    4800.43  -149.96   LOSS           max_loss    70.8           NY Session
+
+================================================================================
+END OF REPORT

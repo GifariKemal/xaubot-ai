@@ -1,0 +1,10 @@
+#23 Confidence Weight Rebalance Results
+Generated: 2026-02-07 22:09:09.940414
+
+  A: boost_fvg_ob: 690 trades, 72.0% WR, $1,339.85, filtered: 0, vs base: $-110.01
+  B: fvg_dominant: 690 trades, 72.0% WR, $1,337.55, filtered: 0, vs base: $-112.31
+  C: ob_dominant: 689 trades, 72.3% WR, $1,391.17, filtered: 0, vs base: $-58.69
+  D: require_fvg|ob: 682 trades, 72.9% WR, $1,252.86, filtered: 0, vs base: $-197.00
+  E: min_conf_0.55: 654 trades, 71.1% WR, $1,030.46, filtered: 222, vs base: $-419.40
+
+Best: C: ob_dominant

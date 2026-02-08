@@ -168,7 +168,7 @@ RiskEngine (modul ini)
 
 SmartRiskManager (05-Risk-Management.md)
 ├── 4 trading modes (NORMAL/RECOVERY/PROTECTED/STOPPED)
-├── Smart exit logic (10 kondisi)
+├── Smart exit logic (12 kondisi)
 ├── Position monitoring per-detik
 └── Higher-level risk decisions
 ```

@@ -1,0 +1,48 @@
+#34 Time-of-Hour + Day-of-Week Filter Results
+Generated: 2026-02-08 12:43:24.700789
+Base: #31B (625 trades, 81.8% WR, $2,807)
+
+=== HOURLY ANALYSIS (WIB) ===
+   0:00 WIB    43 trades   79.1% WR  $  314.04  avg $  7.30
+   1:00 WIB    24 trades   66.7% WR  $   99.33  avg $  4.14
+   2:00 WIB    24 trades   66.7% WR  $    5.95  avg $  0.25
+   3:00 WIB    36 trades   80.6% WR  $  105.87  avg $  2.94
+   6:00 WIB    57 trades   82.5% WR  $  233.24  avg $  4.09
+   7:00 WIB     5 trades   80.0% WR  $    6.30  avg $  1.26
+   8:00 WIB    32 trades   93.8% WR  $  212.87  avg $  6.65
+   9:00 WIB    10 trades   90.0% WR  $    0.41  avg $  0.04
+  10:00 WIB    38 trades   81.6% WR  $   47.81  avg $  1.26
+  11:00 WIB    41 trades   82.9% WR  $  151.85  avg $  3.70
+  12:00 WIB    14 trades   71.4% WR  $   18.61  avg $  1.33
+  13:00 WIB    27 trades   92.6% WR  $  183.41  avg $  6.79
+  14:00 WIB    36 trades   88.9% WR  $  185.44  avg $  5.15
+  16:00 WIB    40 trades   82.5% WR  $  185.71  avg $  4.64
+  17:00 WIB    34 trades   79.4% WR  $  136.43  avg $  4.01
+  18:00 WIB    21 trades   81.0% WR  $  108.09  avg $  5.15
+  19:00 WIB    25 trades   84.0% WR  $   74.15  avg $  2.97
+  20:00 WIB    24 trades   79.2% WR  $    6.01  avg $  0.25
+  21:00 WIB    34 trades   73.5% WR  $   -5.24  avg $ -0.15
+  22:00 WIB    23 trades   82.6% WR  $  239.57  avg $ 10.42
+  23:00 WIB    37 trades   89.2% WR  $  496.72  avg $ 13.42
+
+Worst 2 hours: [9, 21]
+Worst 3 hours: [2, 9, 21]
+
+=== DAY-OF-WEEK ANALYSIS ===
+  Mon   100 trades   89.0% WR  $  533.04  avg $  5.33
+  Tue   134 trades   87.3% WR  $  687.49  avg $  5.13
+  Wed   122 trades   85.2% WR  $  680.84  avg $  5.58
+  Thu   113 trades   75.2% WR  $  233.76  avg $  2.07
+  Fri   119 trades   76.5% WR  $  472.11  avg $  3.97
+  Sat    37 trades   67.6% WR  $  199.33  avg $  5.39
+
+Worst day: ['Sat']
+
+=== FILTERED RESULTS ===
+  A: Skip worst 2 hours: 614 trades, 82.6% WR, $3,162.64, DD: 2.4%, Sharpe: 4.41, PF: 2.43, Blocked: 399, vs #31B: $+356.08
+  B: Skip worst 3 hours: 606 trades, 83.0% WR, $3,138.19, DD: 1.8%, Sharpe: 4.41, PF: 2.43, Blocked: 596, vs #31B: $+331.63
+  C: Skip worst day: 590 trades, 82.2% WR, $2,597.56, DD: 2.8%, Sharpe: 3.99, PF: 2.19, Blocked: 377, vs #31B: $-209.00
+  D: Worst 2h + worst day: 581 trades, 82.8% WR, $2,909.00, DD: 2.4%, Sharpe: 4.39, PF: 2.39, Blocked: 767, vs #31B: $+102.44
+  E: Worst 3h + worst day: 575 trades, 82.8% WR, $2,813.87, DD: 1.9%, Sharpe: 4.25, PF: 2.32, Blocked: 939, vs #31B: $+7.31
+
+Best: A: Skip worst 2 hours
