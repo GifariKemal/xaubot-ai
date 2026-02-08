@@ -11,3 +11,5 @@ export { EquityChart } from "./equity-chart";
 export { Header } from "./header";
 export { Sparkline } from "./sparkline";
 export { SettingsCard } from "./settings-card";
+export { BotStatusCard } from "./bot-status-card";
+export { EntryFilterCard } from "./entry-filter-card";

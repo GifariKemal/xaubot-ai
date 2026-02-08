@@ -170,6 +170,8 @@ class TradingBot:
         # State tracking
         self._running = False
         self._loop_count = 0
+        self._h1_bias_cache = "NEUTRAL"
+        self._h1_bias_loop = 0
         self._last_signal: Optional[SMCSignal] = None
         self._last_retrain_check: Optional[datetime] = None
         self._last_trade_time: Optional[datetime] = None
@@ -189,6 +191,13 @@ class TradingBot:
         self._is_sydney_session: bool = False  # Sydney session flag (needs higher confidence)
         self._last_candle_time: Optional[datetime] = None  # Track last processed candle
         self._position_check_interval: int = 10  # Check positions every N seconds between candles
+
+        # Entry filter tracking for dashboard
+        self._last_filter_results: list = []
+
+        # H1 EMA cache for dashboard
+        self._h1_ema20_value: float = 0.0
+        self._h1_current_price: float = 0.0
 
         # Dashboard status bridge (written to JSON for Docker API)
         self._dash_price_history: deque = deque(maxlen=120)
@@ -392,6 +401,40 @@ class TradingBot:
                 "dynamicThreshold": getattr(self, "_last_dynamic_threshold", self.config.ml.confidence_threshold),
                 "marketQuality": getattr(self, "_last_market_quality", "unknown"),
                 "marketScore": getattr(self, "_last_market_score", 0),
+
+                # === NEW: Entry Filter Pipeline ===
+                "entryFilters": getattr(self, "_last_filter_results", []),
+
+                # === NEW: Risk Mode ===
+                "riskMode": self._get_risk_mode_status(),
+
+                # === NEW: Cooldown ===
+                "cooldown": self._get_cooldown_status(),
+
+                # === NEW: Time Filter ===
+                "timeFilter": self._get_time_filter_status(),
+
+                # === NEW: Session extras ===
+                "sessionMultiplier": getattr(self, "_current_session_multiplier", 1.0),
+
+                # === NEW: Position Details ===
+                "positionDetails": self._get_position_details(),
+
+                # === NEW: Auto Trainer ===
+                "autoTrainer": self._get_auto_trainer_status(),
+
+                # === NEW: Performance ===
+                "performance": self._get_performance_status(),
+
+                # === NEW: Market Close ===
+                "marketClose": self._get_market_close_status(),
+
+                # === NEW: H1 Bias Details ===
+                "h1BiasDetails": {
+                    "bias": getattr(self, "_h1_bias_cache", "NEUTRAL"),
+                    "ema20": getattr(self, "_h1_ema20_value", 0.0),
+                    "price": getattr(self, "_h1_current_price", 0.0),
+                },
             }
 
             # Atomic write (write to temp then rename)
@@ -401,6 +444,144 @@ class TradingBot:
 
         except Exception as e:
             logger.debug(f"Dashboard status write error: {e}")
+
+    def _get_risk_mode_status(self) -> dict:
+        """Get risk mode info for dashboard."""
+        try:
+            rec = self.smart_risk.get_trading_recommendation()
+            return {
+                "mode": rec.get("mode", "normal"),
+                "reason": rec.get("reason", ""),
+                "recommendedLot": rec.get("recommended_lot", 0.01),
+                "maxAllowedLot": rec.get("max_lot", 0.03),
+                "totalLoss": rec.get("total_loss", 0.0),
+                "maxTotalLoss": self.smart_risk.max_total_loss_usd,
+                "remainingDailyRisk": rec.get("remaining_daily_risk", 0.0),
+            }
+        except Exception:
+            return {"mode": "unknown", "reason": "", "recommendedLot": 0.01, "maxAllowedLot": 0.03, "totalLoss": 0.0, "maxTotalLoss": 0.0, "remainingDailyRisk": 0.0}
+
+    def _get_cooldown_status(self) -> dict:
+        """Get trade cooldown info for dashboard."""
+        try:
+            if self._last_trade_time:
+                elapsed = (datetime.now() - self._last_trade_time).total_seconds()
+                remaining = max(0, self._trade_cooldown_seconds - elapsed)
+                return {
+                    "active": remaining > 0,
+                    "secondsRemaining": round(remaining),
+                    "totalSeconds": self._trade_cooldown_seconds,
+                }
+            return {"active": False, "secondsRemaining": 0, "totalSeconds": self._trade_cooldown_seconds}
+        except Exception:
+            return {"active": False, "secondsRemaining": 0, "totalSeconds": 150}
+
+    def _get_time_filter_status(self) -> dict:
+        """Get time filter (#34A) status for dashboard."""
+        try:
+            wib_hour = datetime.now(ZoneInfo("Asia/Jakarta")).hour
+            blocked_hours = [9, 21]
+            return {
+                "wibHour": wib_hour,
+                "isBlocked": wib_hour in blocked_hours,
+                "blockedHours": blocked_hours,
+            }
+        except Exception:
+            return {"wibHour": 0, "isBlocked": False, "blockedHours": [9, 21]}
+
+    def _get_position_details(self) -> list:
+        """Get detailed position info from SmartRiskManager guards."""
+        details = []
+        try:
+            for ticket, guard in self.smart_risk._position_guards.items():
+                trade_hours = (datetime.now(ZoneInfo("Asia/Jakarta")) - guard.entry_time).total_seconds() / 3600
+                drawdown_pct = 0.0
+                if guard.peak_profit > 0:
+                    drawdown_pct = ((guard.peak_profit - guard.current_profit) / guard.peak_profit) * 100
+
+                details.append({
+                    "ticket": ticket,
+                    "peakProfit": guard.peak_profit,
+                    "drawdownFromPeak": round(drawdown_pct, 1),
+                    "momentum": round(guard.momentum_score, 1),
+                    "tpProbability": round(guard.get_tp_probability(), 1),
+                    "reversalWarnings": guard.reversal_warnings,
+                    "stalls": guard.stall_count,
+                    "tradeHours": round(trade_hours, 1),
+                })
+        except Exception:
+            pass
+        return details
+
+    def _get_auto_trainer_status(self) -> dict:
+        """Get auto trainer status for dashboard."""
+        try:
+            hours_since = 0.0
+            if self.auto_trainer._last_retrain_time:
+                hours_since = (datetime.now(ZoneInfo("Asia/Jakarta")) - self.auto_trainer._last_retrain_time).total_seconds() / 3600
+
+            return {
+                "lastRetrain": self.auto_trainer._last_retrain_time.strftime("%Y-%m-%d %H:%M") if self.auto_trainer._last_retrain_time else None,
+                "currentAuc": self.auto_trainer._current_auc,
+                "minAucThreshold": self.auto_trainer.min_auc_threshold,
+                "hoursSinceRetrain": round(hours_since, 1),
+                "nextRetrainHour": self.auto_trainer.daily_retrain_hour,
+                "modelsFitted": self.ml_model.fitted and self.regime_detector.fitted,
+            }
+        except Exception:
+            return {"lastRetrain": None, "currentAuc": None, "minAucThreshold": 0.65, "hoursSinceRetrain": 0, "nextRetrainHour": 5, "modelsFitted": False}
+
+    def _get_performance_status(self) -> dict:
+        """Get bot performance stats for dashboard."""
+        try:
+            uptime_hours = (datetime.now() - self._start_time).total_seconds() / 3600
+            avg_ms = 0.0
+            if self._execution_times:
+                recent = self._execution_times[-20:]
+                avg_ms = (sum(recent) / len(recent)) * 1000
+
+            return {
+                "loopCount": self._loop_count,
+                "avgExecutionMs": round(avg_ms, 1),
+                "uptimeHours": round(uptime_hours, 1),
+                "totalSessionTrades": self._total_session_trades,
+                "totalSessionProfit": round(self._total_session_profit, 2),
+            }
+        except Exception:
+            return {"loopCount": 0, "avgExecutionMs": 0, "uptimeHours": 0, "totalSessionTrades": 0, "totalSessionProfit": 0}
+
+    def _get_market_close_status(self) -> dict:
+        """Get market close timing info for dashboard."""
+        try:
+            now = datetime.now(ZoneInfo("Asia/Jakarta"))
+            # Daily close: ~05:00 WIB (rollover)
+            daily_close_hour = 5
+            if now.hour >= daily_close_hour:
+                hours_to_daily = (24 - now.hour + daily_close_hour) + (0 - now.minute) / 60
+            else:
+                hours_to_daily = (daily_close_hour - now.hour) + (0 - now.minute) / 60
+
+            # Weekend close: Friday ~04:00 WIB (Saturday)
+            weekday = now.weekday()  # 0=Mon
+            if weekday < 4:  # Mon-Thu
+                days_to_fri = 4 - weekday
+                hours_to_weekend = days_to_fri * 24 + (daily_close_hour - now.hour)
+            elif weekday == 4:  # Friday
+                hours_to_weekend = max(0, (24 + daily_close_hour - now.hour))
+            else:  # Sat-Sun
+                hours_to_weekend = 0
+
+            # Market open: Mon-Fri 06:00-05:00 WIB (next day)
+            market_open = weekday < 5 and (now.hour >= 6 or now.hour < 4)
+
+            return {
+                "hoursToDailyClose": round(max(0, hours_to_daily), 1),
+                "hoursToWeekendClose": round(max(0, hours_to_weekend), 1),
+                "nearWeekend": weekday == 4 and now.hour >= 20,
+                "marketOpen": market_open,
+            }
+        except Exception:
+            return {"hoursToDailyClose": 0, "hoursToWeekendClose": 0, "nearWeekend": False, "marketOpen": False}
 
     async def start(self):
         """Start the trading bot."""
@@ -571,6 +752,8 @@ class TradingBot:
             # Cache result
             self._h1_bias_cache = bias
             self._h1_bias_loop = self._loop_count
+            self._h1_ema20_value = float(ema)
+            self._h1_current_price = float(current_price)
 
             if self._loop_count % 4 == 0:
                 logger.info(f"H1 Bias: {bias} (price={current_price:.2f}, EMA20={ema:.2f})")
@@ -741,6 +924,9 @@ class TradingBot:
     
     async def _trading_iteration(self):
         """Single trading iteration."""
+        # Reset filter tracking for dashboard
+        self._last_filter_results = []
+
         # 1. Fetch fresh data
         df = self.mt5.get_market_data(
             symbol=self.config.symbol,
@@ -777,6 +963,7 @@ class TradingBot:
         
         # 5. Check flash crash
         is_flash, move_pct = self.flash_crash.detect(df.tail(5))
+        self._last_filter_results.append({"name": "Flash Crash Guard", "passed": not is_flash, "detail": f"{move_pct:.2f}% move" if is_flash else "OK"})
         if is_flash:
             logger.warning(f"Flash crash detected: {move_pct:.2f}% move")
             try:
@@ -857,16 +1044,20 @@ class TradingBot:
         )
         
         # 7. Check regime allows trading
-        if regime_state and regime_state.recommendation == "SLEEP":
+        regime_sleep = regime_state and regime_state.recommendation == "SLEEP"
+        self._last_filter_results.append({"name": "Regime Filter", "passed": not regime_sleep, "detail": regime_state.regime.value if regime_state else "N/A"})
+        if regime_sleep:
             logger.debug(f"Regime SLEEP: {regime_state.regime.value}")
             return
 
+        self._last_filter_results.append({"name": "Risk Check", "passed": risk_metrics.can_trade, "detail": risk_metrics.reason if not risk_metrics.can_trade else "OK"})
         if not risk_metrics.can_trade:
             logger.debug(f"Risk blocked: {risk_metrics.reason}")
             return
 
         # 7.5 Check trading session (WIB timezone)
         session_ok, session_reason, session_multiplier = self.session_filter.can_trade()
+        self._last_filter_results.append({"name": "Session Filter", "passed": session_ok, "detail": session_reason})
         if not session_ok:
             if self._loop_count % 300 == 0:  # Log every 5 minutes
                 logger.info(f"Session filter: {session_reason}")
@@ -913,40 +1104,59 @@ class TradingBot:
         if self._loop_count > 0 and self._loop_count % 30 == 0:
             await self._send_market_update(df, regime_state, ml_prediction)
 
+        # Track SMC signal for filter pipeline
+        self._last_filter_results.append({"name": "SMC Signal", "passed": smc_signal is not None, "detail": f"{smc_signal.signal_type} ({smc_signal.confidence:.0%})" if smc_signal else "No signal"})
+
         # 10. Combine signals
         final_signal = self._combine_signals(smc_signal, ml_prediction, regime_state)
+        self._last_filter_results.append({"name": "Signal Combination", "passed": final_signal is not None, "detail": f"{final_signal.signal_type} ({final_signal.confidence:.0%})" if final_signal else "Filtered out"})
 
         if final_signal is None:
             return
 
         # 10.1 H1 Multi-Timeframe Filter (#31B: Price vs EMA20 — backtest +$343)
         # BUY only when H1 is BULLISH, SELL only when H1 is BEARISH
+        h1_passed = True
+        h1_detail = f"H1={h1_bias}"
         if h1_bias != "NEUTRAL":
             if (final_signal.signal_type == "BUY" and h1_bias != "BULLISH") or \
                (final_signal.signal_type == "SELL" and h1_bias != "BEARISH"):
+                h1_passed = False
+                h1_detail = f"{final_signal.signal_type} vs H1={h1_bias}"
+                self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
                 logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1={h1_bias})")
                 return
             logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
         else:
-            # H1 NEUTRAL = block both directions (strict mode from backtest)
+            h1_passed = False
+            h1_detail = f"{final_signal.signal_type} blocked (NEUTRAL)"
+            self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
             logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1=NEUTRAL)")
             return
+        self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"Aligned {h1_bias}"})
 
         # 10.2 Time-of-Hour Filter (#34A: skip WIB hours 9 and 21 — backtest +$356)
         # Hour 9 WIB (02:00 UTC) = end of NY session, low liquidity
         # Hour 21 WIB (14:00 UTC) = London-NY transition, whipsaw prone
-        from zoneinfo import ZoneInfo
         wib_hour = datetime.now(ZoneInfo("Asia/Jakarta")).hour
-        if wib_hour in (9, 21):
+        time_blocked = wib_hour in (9, 21)
+        self._last_filter_results.append({"name": "Time Filter (#34A)", "passed": not time_blocked, "detail": f"WIB {wib_hour}" + (" BLOCKED" if time_blocked else "")})
+        if time_blocked:
             logger.info(f"Time Filter: {final_signal.signal_type} blocked (WIB hour {wib_hour} is skip hour)")
             return
 
         # 10.5 Check trade cooldown
+        cooldown_blocked = False
+        cooldown_remaining = 0
         if self._last_trade_time:
             time_since_last = (datetime.now() - self._last_trade_time).total_seconds()
-            if time_since_last < self._trade_cooldown_seconds:
-                logger.info(f"Trade cooldown: {self._trade_cooldown_seconds - time_since_last:.0f}s remaining")
-                return
+            cooldown_remaining = self._trade_cooldown_seconds - time_since_last
+            if cooldown_remaining > 0:
+                cooldown_blocked = True
+        self._last_filter_results.append({"name": "Trade Cooldown", "passed": not cooldown_blocked, "detail": f"{cooldown_remaining:.0f}s left" if cooldown_blocked else "OK"})
+        if cooldown_blocked:
+            logger.info(f"Trade cooldown: {cooldown_remaining:.0f}s remaining")
+            return
 
         # 10.6 PULLBACK FILTER - DISABLED (SMC-only mode)
         # SMC structure already validates entry zones
@@ -954,6 +1164,7 @@ class TradingBot:
         # 11. SMART RISK CHECK - Ultra safe mode
         self.smart_risk.check_new_day()
         risk_rec = self.smart_risk.get_trading_recommendation()
+        self._last_filter_results.append({"name": "Smart Risk Gate", "passed": risk_rec["can_trade"], "detail": risk_rec.get("reason", risk_rec["mode"])})
 
         if not risk_rec["can_trade"]:
             logger.warning(f"Smart Risk: Trading blocked - {risk_rec['reason']}")
@@ -1005,6 +1216,7 @@ class TradingBot:
 
         # 13. Check position limit (max 2 concurrent positions)
         can_open, limit_reason = self.smart_risk.can_open_position()
+        self._last_filter_results.append({"name": "Position Limit", "passed": can_open, "detail": limit_reason if not can_open else "OK"})
         if not can_open:
             logger.warning(f"Position limit: {limit_reason} - skipping trade")
             return

@@ -54,6 +54,16 @@ DEFAULT_STATUS = {
     "regime": {"name": "", "volatility": 0.0, "confidence": 0.0},
     "positions": [],
     "logs": [],
+    "entryFilters": [],
+    "riskMode": {"mode": "unknown", "reason": "", "recommendedLot": 0, "maxAllowedLot": 0, "totalLoss": 0, "maxTotalLoss": 0, "remainingDailyRisk": 0},
+    "cooldown": {"active": False, "secondsRemaining": 0, "totalSeconds": 150},
+    "timeFilter": {"wibHour": 0, "isBlocked": False, "blockedHours": [9, 21]},
+    "sessionMultiplier": 1.0,
+    "positionDetails": [],
+    "autoTrainer": {"lastRetrain": None, "currentAuc": None, "minAucThreshold": 0.65, "hoursSinceRetrain": 0, "nextRetrainHour": 5, "modelsFitted": False},
+    "performance": {"loopCount": 0, "avgExecutionMs": 0, "uptimeHours": 0, "totalSessionTrades": 0, "totalSessionProfit": 0},
+    "marketClose": {"hoursToDailyClose": 0, "hoursToWeekendClose": 0, "nearWeekend": False, "marketOpen": False},
+    "h1BiasDetails": {"bias": "NEUTRAL", "ema20": 0, "price": 0},
 }
 
 

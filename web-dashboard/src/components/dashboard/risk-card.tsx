@@ -1,17 +1,30 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, AlertTriangle } from "lucide-react";
 import { cn, formatUSD } from "@/lib/utils";
+import type { RiskMode } from "@/types/trading";
 
 interface RiskCardProps {
   dailyLoss: number;
   dailyProfit: number;
   consecutiveLosses: number;
   riskPercent: number;
+  riskMode?: RiskMode;
 }
 
-export function RiskCard({ dailyLoss, dailyProfit, consecutiveLosses, riskPercent }: RiskCardProps) {
+function getRiskModeVariant(mode: string): "success" | "warning" | "danger" | "secondary" {
+  switch (mode) {
+    case "normal": return "success";
+    case "recovery": return "warning";
+    case "protected": return "danger";
+    case "stopped": return "danger";
+    default: return "secondary";
+  }
+}
+
+export function RiskCard({ dailyLoss, dailyProfit, consecutiveLosses, riskPercent, riskMode }: RiskCardProps) {
   const isCritical = riskPercent >= 100;
   const isHigh = riskPercent >= 80;
   const isMedium = riskPercent >= 50;
@@ -28,6 +41,8 @@ export function RiskCard({ dailyLoss, dailyProfit, consecutiveLosses, riskPercen
     return "bg-success";
   };
 
+  const mode = riskMode?.mode || "unknown";
+
   return (
     <Card className={cn(
       "glass",
@@ -41,8 +56,15 @@ export function RiskCard({ dailyLoss, dailyProfit, consecutiveLosses, riskPercen
         )}>
           <ShieldAlert className="h-3.5 w-3.5" />
           Risk
+          {/* Risk Mode Badge */}
+          <Badge
+            variant={getRiskModeVariant(mode)}
+            className={cn("ml-auto text-[9px] h-4 px-1 uppercase", mode === "stopped" && "animate-pulse")}
+          >
+            {mode}
+          </Badge>
           {isCritical && (
-            <span className="ml-auto flex items-center gap-1 text-[10px] bg-danger text-white px-1.5 py-0.5 rounded-full animate-pulse">
+            <span className="flex items-center gap-1 text-[10px] bg-danger text-white px-1.5 py-0.5 rounded-full animate-pulse">
               <AlertTriangle className="h-2.5 w-2.5" />
               BREACHED
             </span>
@@ -81,7 +103,37 @@ export function RiskCard({ dailyLoss, dailyProfit, consecutiveLosses, riskPercen
               style={{ width: `${Math.min(riskPercent, 100)}%` }}
             />
           </div>
+          {/* Remaining daily risk */}
+          {riskMode && riskMode.remainingDailyRisk > 0 && (
+            <div className="flex justify-between items-center mt-0.5">
+              <span className="text-[9px] text-muted-foreground/60">Remaining</span>
+              <span className="text-[9px] font-number text-muted-foreground/60">
+                {formatUSD(riskMode.remainingDailyRisk)}
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* Total Loss Progress */}
+        {riskMode && riskMode.maxTotalLoss > 0 && (
+          <div className="pt-0.5">
+            <div className="flex justify-between items-center mb-0.5">
+              <span className="text-[10px] text-muted-foreground">Total Loss</span>
+              <span className="text-[10px] font-number text-muted-foreground">
+                {formatUSD(riskMode.totalLoss)} / {formatUSD(riskMode.maxTotalLoss)}
+              </span>
+            </div>
+            <div className="h-1 w-full bg-surface-light rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  (riskMode.totalLoss / riskMode.maxTotalLoss) >= 0.8 ? "bg-danger" : "bg-warning/60"
+                )}
+                style={{ width: `${riskMode.maxTotalLoss > 0 ? Math.min((riskMode.totalLoss / riskMode.maxTotalLoss) * 100, 100) : 0}%` }}
+              />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

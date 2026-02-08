@@ -12,7 +12,8 @@ import {
   PositionsCard,
   LogCard,
   PriceChart,
-  SettingsCard,
+  BotStatusCard,
+  EntryFilterCard,
 } from "@/components/dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -121,6 +122,8 @@ export default function Dashboard() {
               session={data.session}
               isGoldenTime={data.isGoldenTime}
               canTrade={data.canTrade}
+              sessionMultiplier={data.sessionMultiplier}
+              timeFilter={data.timeFilter}
             />
           </div>
           <div className="min-w-0 overflow-hidden">
@@ -129,11 +132,12 @@ export default function Dashboard() {
               dailyProfit={data.dailyProfit}
               consecutiveLosses={data.consecutiveLosses}
               riskPercent={data.riskPercent}
+              riskMode={data.riskMode}
             />
           </div>
         </div>
 
-        {/* ── Row 2: Signals ── */}
+        {/* ── Row 2: Signals + Bot Status ── */}
         <div
           className="grid gap-1.5 overflow-hidden"
           style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
@@ -171,11 +175,13 @@ export default function Dashboard() {
             />
           </div>
           <div className="min-w-0 overflow-hidden">
-            {data.settings ? (
-              <SettingsCard settings={data.settings} />
-            ) : (
-              <div className="glass rounded-lg h-full" />
-            )}
+            <BotStatusCard
+              riskMode={data.riskMode}
+              cooldown={data.cooldown}
+              autoTrainer={data.autoTrainer}
+              performance={data.performance}
+              marketClose={data.marketClose}
+            />
           </div>
         </div>
 
@@ -188,8 +194,14 @@ export default function Dashboard() {
             <PriceChart data={data.priceHistory} />
           </div>
           <div className="min-w-0 min-h-0 overflow-hidden flex flex-col gap-1.5">
+            <div className="min-h-0" style={{ flex: '0 0 auto', maxHeight: '40%' }}>
+              <EntryFilterCard filters={data.entryFilters || []} />
+            </div>
             <div className="flex-1 min-h-0">
-              <PositionsCard positions={data.positions} />
+              <PositionsCard
+                positions={data.positions}
+                positionDetails={data.positionDetails}
+              />
             </div>
             <div className="flex-1 min-h-0">
               <LogCard logs={data.logs} />

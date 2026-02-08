@@ -1,5 +1,74 @@
 // Trading data types
 
+export interface EntryFilter {
+  name: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface RiskMode {
+  mode: string;
+  reason: string;
+  recommendedLot: number;
+  maxAllowedLot: number;
+  totalLoss: number;
+  maxTotalLoss: number;
+  remainingDailyRisk: number;
+}
+
+export interface CooldownStatus {
+  active: boolean;
+  secondsRemaining: number;
+  totalSeconds: number;
+}
+
+export interface TimeFilter {
+  wibHour: number;
+  isBlocked: boolean;
+  blockedHours: number[];
+}
+
+export interface PositionDetail {
+  ticket: number;
+  peakProfit: number;
+  drawdownFromPeak: number;
+  momentum: number;
+  tpProbability: number;
+  reversalWarnings: number;
+  stalls: number;
+  tradeHours: number;
+}
+
+export interface AutoTrainerStatus {
+  lastRetrain: string | null;
+  currentAuc: number | null;
+  minAucThreshold: number;
+  hoursSinceRetrain: number;
+  nextRetrainHour: number;
+  modelsFitted: boolean;
+}
+
+export interface PerformanceStatus {
+  loopCount: number;
+  avgExecutionMs: number;
+  uptimeHours: number;
+  totalSessionTrades: number;
+  totalSessionProfit: number;
+}
+
+export interface MarketCloseStatus {
+  hoursToDailyClose: number;
+  hoursToWeekendClose: number;
+  nearWeekend: boolean;
+  marketOpen: boolean;
+}
+
+export interface H1BiasDetails {
+  bias: string;
+  ema20: number;
+  price: number;
+}
+
 export interface TradingStatus {
   timestamp: string;
   connected: boolean;
@@ -63,6 +132,18 @@ export interface TradingStatus {
   dynamicThreshold?: number;
   marketQuality?: string;
   marketScore?: number;
+
+  // === NEW: Extended monitoring ===
+  entryFilters?: EntryFilter[];
+  riskMode?: RiskMode;
+  cooldown?: CooldownStatus;
+  timeFilter?: TimeFilter;
+  sessionMultiplier?: number;
+  positionDetails?: PositionDetail[];
+  autoTrainer?: AutoTrainerStatus;
+  performance?: PerformanceStatus;
+  marketClose?: MarketCloseStatus;
+  h1BiasDetails?: H1BiasDetails;
 }
 
 export interface BotSettings {
