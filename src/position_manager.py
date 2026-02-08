@@ -340,9 +340,18 @@ class SmartPositionManager:
             if atr_val is not None and atr_val > 0:
                 current_atr = atr_val
 
+        # #33B: Get last candle range for impulse detection
+        last_candle_range = None
+        if len(df_market) >= 1:
+            last_row = df_market.tail(1)
+            last_high = last_row["high"].item()
+            last_low = last_row["low"].item()
+            if last_high is not None and last_low is not None:
+                last_candle_range = last_high - last_low
+
         for row in positions.iter_rows(named=True):
             action = self._analyze_single_position(
-                row, market_analysis, current_price, current_atr
+                row, market_analysis, current_price, current_atr, last_candle_range
             )
             if action:
                 actions.append(action)
@@ -437,6 +446,7 @@ class SmartPositionManager:
         market: Dict,
         current_price: float,
         current_atr: float = None,
+        last_candle_range: float = None,
     ) -> Optional[PositionAction]:
         """Analyze a single position and decide action."""
         ticket = pos["ticket"]
@@ -575,8 +585,17 @@ class SmartPositionManager:
                 )
 
         # 6. Trailing stop (after trail_start pips)
+        # #33B: Impulse detection — tighten trail when candle range > 1.5x ATR
         if pip_profit >= trail_start:
-            trail_distance = trail_step * 0.1  # Convert to price
+            is_impulse = False
+            if last_candle_range is not None and current_atr is not None and current_atr > 0:
+                if last_candle_range > current_atr * 1.5:
+                    is_impulse = True
+
+            active_trail_step = trail_step
+            if is_impulse:
+                active_trail_step = (current_atr * 1.5) / 0.1  # 1.5x ATR in pips
+            trail_distance = active_trail_step * 0.1  # Convert to price
 
             if is_buy:
                 new_trail_sl = current_price - trail_distance

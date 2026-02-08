@@ -932,6 +932,15 @@ class TradingBot:
             logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1=NEUTRAL)")
             return
 
+        # 10.2 Time-of-Hour Filter (#34A: skip WIB hours 9 and 21 — backtest +$356)
+        # Hour 9 WIB (02:00 UTC) = end of NY session, low liquidity
+        # Hour 21 WIB (14:00 UTC) = London-NY transition, whipsaw prone
+        from zoneinfo import ZoneInfo
+        wib_hour = datetime.now(ZoneInfo("Asia/Jakarta")).hour
+        if wib_hour in (9, 21):
+            logger.info(f"Time Filter: {final_signal.signal_type} blocked (WIB hour {wib_hour} is skip hour)")
+            return
+
         # 10.5 Check trade cooldown
         if self._last_trade_time:
             time_since_last = (datetime.now() - self._last_trade_time).total_seconds()
