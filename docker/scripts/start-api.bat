@@ -7,7 +7,7 @@ echo Starting Trading API
 echo ========================================
 echo.
 
-cd "%~dp0"
+cd /d "%~dp0..\.."
 
 REM Check if virtual environment exists
 if not exist "venv" (

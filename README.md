@@ -103,7 +103,10 @@ xaubot-ai/
 │   ├── arsitektur-ai/        #   Architecture docs (23 components)
 │   └── research/             #   Research & analysis
 ├── web-dashboard/            # Next.js monitoring dashboard
-└── docker/                   # Docker configuration
+├── docker/                   # Docker configuration & scripts
+│   ├── scripts/              #   Helper scripts (.bat/.sh)
+│   └── docs/                 #   Docker documentation
+└── archive/                  # Deprecated files (gitignored)
 ```
 
 ## Backtest Results (Jan 2025 - Feb 2026)
@@ -129,14 +132,14 @@ git clone https://github.com/GifariKemal/xaubot-ai.git
 cd xaubot-ai
 
 # 2. Configure environment
-cp .env.docker.example .env
+cp docker/.env.docker.example .env
 # Edit .env with your MT5 credentials
 
 # 3. Start all services (Windows)
-docker-start.bat
+docker\scripts\docker-start.bat
 
 # 3. Start all services (Linux/Mac)
-./docker-start.sh
+./docker/scripts/docker-start.sh
 ```
 
 **Services will be available at:**
@@ -145,7 +148,7 @@ docker-start.bat
 - 📚 API Docs: http://localhost:8000/docs
 - 🗄️ Database: localhost:5432
 
-**Full Docker documentation:** See [DOCKER.md](DOCKER.md)
+**Full Docker documentation:** See [docker/docs/DOCKER.md](docker/docs/DOCKER.md)
 
 ---
 

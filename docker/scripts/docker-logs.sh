@@ -2,6 +2,7 @@
 # XAUBot AI - Docker Logs Viewer
 
 set -e
+cd "$(dirname "$0")/../.."
 
 SERVICE="$1"
 LINES="${2:-100}"

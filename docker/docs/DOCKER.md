@@ -51,7 +51,7 @@ The Docker setup includes 4 services:
 cd "Smart Automatic Trading BOT + AI"
 
 # Copy environment template
-cp .env.docker.example .env
+cp docker/.env.docker.example .env
 ```
 
 ### 2. Configure Environment

@@ -1,5 +1,6 @@
 @echo off
 REM Add Dashboard & API to existing Docker setup
+cd /d "%~dp0..\.."
 
 echo.
 echo ========================================
@@ -11,7 +12,7 @@ REM Check if .env exists
 if not exist .env (
     echo WARNING: .env file not found!
     echo Creating .env from template...
-    copy .env.docker.example .env
+    copy docker\.env.docker.example .env
     echo.
     echo Please edit .env with your MT5 credentials:
     echo    - MT5_LOGIN

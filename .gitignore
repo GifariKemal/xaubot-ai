@@ -82,5 +82,10 @@ docker/data/
 # Archive
 archive/
 
-# Junk
+# Runtime files
+bot.pid
+bot_output.log
 nul
+
+# Screenshots
+*.png

@@ -1,5 +1,6 @@
 @echo off
 REM Check status of all trading bot services
+cd /d "%~dp0..\.."
 
 echo.
 echo ========================================

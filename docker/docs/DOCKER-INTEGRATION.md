@@ -25,7 +25,7 @@ Layanan baru yang ditambahkan:
 
 ```cmd
 # Tambahkan dashboard ke setup yang sudah ada
-docker-add-dashboard.bat
+docker\scripts\docker-add-dashboard.bat
 ```
 
 Script ini akan:
@@ -57,7 +57,7 @@ Setelah services running:
 ### Check Status
 ```cmd
 # Lihat status semua services
-docker-status.bat
+docker\scripts\docker-status.bat
 
 # Atau manual
 docker-compose ps
@@ -90,7 +90,7 @@ docker-compose restart
 ### Remove Dashboard (Keep Database)
 ```cmd
 # Hapus dashboard tapi tetap keep database
-docker-remove-dashboard.bat
+docker\scripts\docker-remove-dashboard.bat
 
 # Atau manual
 docker-compose stop trading-api dashboard
@@ -230,12 +230,16 @@ xaubot-ai/
 ├── Dockerfile                   # API image (NEW)
 ├── .env                        # Environment config
 ├── .dockerignore               # Build exclusions
-├── docker-add-dashboard.bat    # Add dashboard script (NEW)
-├── docker-remove-dashboard.bat # Remove dashboard script (NEW)
-├── docker-status.bat           # Status check script (NEW)
 ├── docker/
-│   └── init-db/
-│       └── 01-schema.sql       # Database schema (EXISTING)
+│   ├── .env.docker.example     # Environment template
+│   ├── requirements-docker.txt # Docker-specific deps
+│   ├── init-db/
+│   │   └── 01-schema.sql      # Database schema (EXISTING)
+│   ├── scripts/               # Helper scripts
+│   │   ├── docker-add-dashboard.bat
+│   │   ├── docker-remove-dashboard.bat
+│   │   └── docker-status.bat
+│   └── docs/                  # Docker documentation
 └── web-dashboard/
     ├── Dockerfile              # Dashboard image (NEW)
     └── .dockerignore          # Build exclusions

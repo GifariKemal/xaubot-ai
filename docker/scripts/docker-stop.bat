@@ -1,5 +1,6 @@
 @echo off
 REM XAUBot AI - Docker Stop Script (Windows)
+cd /d "%~dp0..\.."
 
 echo.
 echo Stopping XAUBot AI Docker Services...
@@ -39,6 +40,6 @@ echo Containers stopped
 
 :end
 echo.
-echo To restart: docker-start.bat
+echo To restart: docker\scripts\docker-start.bat
 echo.
 pause

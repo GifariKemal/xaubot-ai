@@ -10,6 +10,9 @@ XAUBot AI is an automated XAUUSD (Gold) trading bot that combines Machine Learni
 .
 ├── main_live.py              # Main async trading orchestrator
 ├── train_models.py           # Model training script
+├── Dockerfile                # Docker image (must be at root)
+├── docker-compose.yml        # Docker orchestration (must be at root)
+├── .dockerignore             # Docker build exclusions (must be at root)
 ├── src/                      # Core modules
 │   ├── config.py             # Trading configuration & capital modes
 │   ├── mt5_connector.py      # MetaTrader 5 connection layer
@@ -49,6 +52,12 @@ XAUBot AI is an automated XAUUSD (Gold) trading bot that combines Machine Learni
 │   └── research/             # Research & analysis files
 ├── web-dashboard/            # Next.js monitoring dashboard
 ├── docker/                   # Docker configuration
+│   ├── .env.docker.example   # Docker environment template
+│   ├── requirements-docker.txt # Docker-specific Python deps
+│   ├── init-db/              # Database init scripts
+│   ├── scripts/              # Docker helper scripts (.bat/.sh)
+│   └── docs/                 # Docker documentation
+├── archive/                  # Deprecated files (gitignored)
 └── logs/                     # Runtime logs
 ```
 

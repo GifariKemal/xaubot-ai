@@ -32,7 +32,7 @@
 - Clear documentation for each setting
 - Default values for non-sensitive configs
 
-**Location:** `.env.docker.example`
+**Location:** `docker/.env.docker.example`
 
 ### 5. **Created Docker Ignore Files**
 - Excludes unnecessary files from images
@@ -46,14 +46,14 @@
 ### 6. **Created Helper Scripts**
 
 #### Windows Batch Scripts:
-- `docker-start.bat` - Start all services
-- `docker-stop.bat` - Stop services with options
-- `docker-logs.bat` - View service logs
+- `docker\scripts\docker-start.bat` - Start all services
+- `docker\scripts\docker-stop.bat` - Stop services with options
+- `docker\scripts\docker-logs.bat` - View service logs
 
 #### Linux/Mac Shell Scripts:
-- `docker-start.sh` - Start all services
-- `docker-stop.sh` - Stop services with options
-- `docker-logs.sh` - View service logs
+- `docker/scripts/docker-start.sh` - Start all services
+- `docker/scripts/docker-stop.sh` - Stop services with options
+- `docker/scripts/docker-logs.sh` - View service logs
 
 ### 7. **Updated Next.js Configuration**
 - Enabled standalone output for Docker
@@ -122,7 +122,7 @@
 cd "Smart Automatic Trading BOT + AI"
 
 # Create environment file
-copy .env.docker.example .env
+copy docker\.env.docker.example .env
 
 # Edit .env with your MT5 credentials
 notepad .env
@@ -141,10 +141,10 @@ MT5_PATH=/path/to/mt5/terminal
 **Option A: Using helper script (Recommended)**
 ```cmd
 REM Start core services
-docker-start.bat
+docker\scripts\docker-start.bat
 
 REM Or start with pgAdmin
-docker-start.bat --admin
+docker\scripts\docker-start.bat --admin
 ```
 
 **Option B: Manual docker-compose**
@@ -182,12 +182,12 @@ You'll see:
 ### View Logs
 ```cmd
 REM All services
-docker-logs.bat
+docker\scripts\docker-logs.bat
 
 REM Specific service
-docker-logs.bat trading-api
-docker-logs.bat dashboard
-docker-logs.bat postgres
+docker\scripts\docker-logs.bat trading-api
+docker\scripts\docker-logs.bat dashboard
+docker\scripts\docker-logs.bat postgres
 ```
 
 ### Check Status
@@ -208,13 +208,13 @@ docker-compose restart dashboard
 ### Stop Services
 ```cmd
 REM Stop (keeps data)
-docker-stop.bat
+docker\scripts\docker-stop.bat
 
 REM Stop and remove containers (keeps data)
-docker-stop.bat --remove
+docker\scripts\docker-stop.bat --remove
 
 REM Stop and remove everything including data (⚠️ DANGER!)
-docker-stop.bat --clean
+docker\scripts\docker-stop.bat --clean
 ```
 
 ### Update Code and Rebuild
@@ -263,7 +263,7 @@ curl http://localhost:8000/api/health
 
 **View API logs:**
 ```cmd
-docker-logs.bat trading-api
+docker\scripts\docker-logs.bat trading-api
 ```
 
 ### Port Already in Use
@@ -292,7 +292,7 @@ docker-compose up -d
 2. Ensure MT5 terminal is accessible
 3. View API logs for connection errors:
    ```cmd
-   docker-logs.bat trading-api
+   docker\scripts\docker-logs.bat trading-api
    ```
 
 ### Database Connection Issues
@@ -309,7 +309,7 @@ docker exec -it trading_bot_db pg_isready -U trading_bot
 
 **View database logs:**
 ```cmd
-docker-logs.bat postgres
+docker\scripts\docker-logs.bat postgres
 ```
 
 ## 📊 Monitoring
@@ -353,15 +353,27 @@ xaubot-ai/
 ├── Dockerfile                    # Python API Docker image
 ├── docker-compose.yml            # Service orchestration
 ├── .env                         # Environment variables (DO NOT COMMIT)
-├── .env.docker.example          # Environment template
 ├── .dockerignore               # Files to exclude from build
-├── docker-start.bat            # Windows start script
-├── docker-stop.bat             # Windows stop script
-├── docker-logs.bat             # Windows logs script
-├── docker-start.sh             # Linux/Mac start script
-├── docker-stop.sh              # Linux/Mac stop script
-├── docker-logs.sh              # Linux/Mac logs script
-├── DOCKER.md                   # Full Docker documentation
+├── docker/
+│   ├── .env.docker.example     # Environment template
+│   ├── requirements-docker.txt # Docker-specific Python deps
+│   ├── init-db/01-schema.sql   # Database schema
+│   ├── scripts/                # Helper scripts
+│   │   ├── docker-start.bat/.sh
+│   │   ├── docker-stop.bat/.sh
+│   │   ├── docker-logs.bat/.sh
+│   │   ├── docker-status.bat
+│   │   ├── docker-add-dashboard.bat
+│   │   ├── docker-remove-dashboard.bat
+│   │   ├── start-all.bat
+│   │   ├── start-api.bat
+│   │   └── start-dashboard.bat
+│   └── docs/                   # Docker documentation
+│       ├── DOCKER.md
+│       ├── DOCKER-INTEGRATION.md
+│       ├── DOCKER-SETUP-SUMMARY.md
+│       ├── QUICK-START.md
+│       └── SIMPLE-START.md
 └── web-dashboard/
     ├── Dockerfile              # Next.js dashboard image
     ├── .dockerignore          # Dashboard build exclusions
@@ -390,7 +402,7 @@ xaubot-ai/
 
 If you encounter issues:
 
-1. Check the logs: `docker-logs.bat`
+1. Check the logs: `docker\scripts\docker-logs.bat`
 2. Verify services: `docker-compose ps`
 3. Review troubleshooting section in [DOCKER.md](DOCKER.md)
 4. Check service health: `curl http://localhost:8000/api/health`

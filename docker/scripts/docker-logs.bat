@@ -1,5 +1,6 @@
 @echo off
 REM XAUBot AI - Docker Logs Viewer (Windows)
+cd /d "%~dp0..\.."
 
 set SERVICE=%1
 set LINES=%2

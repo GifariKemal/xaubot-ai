@@ -1,5 +1,6 @@
 @echo off
 REM Remove Dashboard & API while keeping database
+cd /d "%~dp0..\.."
 
 echo.
 echo ========================================
@@ -29,6 +30,6 @@ echo.
 echo Database is still running:
 docker ps --filter "name=trading_bot_db" --format "table {{.Names}}\t{{.Status}}"
 echo.
-echo To add dashboard back: docker-add-dashboard.bat
+echo To add dashboard back: docker\scripts\docker-add-dashboard.bat
 echo.
 pause

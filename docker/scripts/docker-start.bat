@@ -1,5 +1,6 @@
 @echo off
 REM XAUBot AI - Docker Start Script (Windows)
+cd /d "%~dp0..\.."
 
 echo.
 echo Starting XAUBot AI Docker Services...
@@ -9,7 +10,7 @@ REM Check if .env exists
 if not exist .env (
     echo WARNING: .env file not found!
     echo Creating .env from template...
-    copy .env.docker.example .env
+    copy docker\.env.docker.example .env
     echo.
     echo .env created. Please edit it with your MT5 credentials:
     echo    - MT5_LOGIN
@@ -86,6 +87,6 @@ echo    View API logs:   docker-compose logs -f trading-api
 echo    Stop services:   docker-compose down
 echo    Restart:         docker-compose restart
 echo.
-echo Full documentation: DOCKER.md
+echo Full documentation: docker\docs\DOCKER.md
 echo.
 pause

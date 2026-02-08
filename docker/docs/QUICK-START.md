@@ -14,7 +14,7 @@
 cd "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI"
 
 REM Copy environment template kalau belum ada
-copy .env.docker.example .env
+copy docker\.env.docker.example .env
 
 REM Edit dengan MT5 credentials Anda
 notepad .env
@@ -148,7 +148,7 @@ Docker Compose Project: "smart-automatic-trading-bot-ai"
 
 ## ✅ Checklist
 
-- [ ] Copy `.env.docker.example` ke `.env`
+- [ ] Copy `docker/.env.docker.example` ke `.env`
 - [ ] Edit `.env` dengan MT5 credentials
 - [ ] Run: `docker-compose build trading-api dashboard`
 - [ ] Run: `docker-compose up -d trading-api dashboard`

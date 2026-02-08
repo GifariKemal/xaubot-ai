@@ -7,7 +7,7 @@ echo XAUBot AI - Starting All Services
 echo ========================================
 echo.
 
-cd "%~dp0"
+cd /d "%~dp0..\.."
 
 REM Check database
 echo [1/3] Checking database...
@@ -23,14 +23,14 @@ if errorlevel 1 (
 
 echo.
 echo [2/3] Starting API...
-start "Trading API" cmd /k start-api.bat
+start "Trading API" cmd /k docker\scripts\start-api.bat
 
 echo Waiting for API to start...
 timeout /t 5 /nobreak >nul
 
 echo.
 echo [3/3] Starting Dashboard...
-start "Web Dashboard" cmd /k start-dashboard.bat
+start "Web Dashboard" cmd /k docker\scripts\start-dashboard.bat
 
 echo.
 echo ========================================

@@ -3,7 +3,7 @@
 ## 🎯 Cara Tercepat (1 Command)
 
 ```cmd
-start-all.bat
+docker\scripts\start-all.bat
 ```
 
 Script ini akan:
@@ -17,19 +17,19 @@ Dua window akan terbuka otomatis!
 
 ### Option 1: Start Semua Sekaligus
 ```cmd
-start-all.bat
+docker\scripts\start-all.bat
 ```
 
 ### Option 2: Start Satu-satu
 
 **Terminal 1: API**
 ```cmd
-start-api.bat
+docker\scripts\start-api.bat
 ```
 
 **Terminal 2: Dashboard**
 ```cmd
-start-dashboard.bat
+docker\scripts\start-dashboard.bat
 ```
 
 ## ✅ Pre-requisites
@@ -155,16 +155,16 @@ Dashboard akan menampilkan:
    Lihat output di command windows untuk debug
 
 4. **Quick Restart:**
-   Close windows dan run `start-all.bat` lagi
+   Close windows dan run `docker\scripts\start-all.bat` lagi
 
 ## 📝 Files
 
 ```
-start-all.bat         # Start API + Dashboard
-start-api.bat         # Start API only
-start-dashboard.bat   # Start Dashboard only
+docker\scripts\start-all.bat         # Start API + Dashboard
+docker\scripts\start-api.bat         # Start API only
+docker\scripts\start-dashboard.bat   # Start Dashboard only
 ```
 
 ---
 
-**Super Simple!** Tinggal double-click `start-all.bat` 🎉
+**Super Simple!** Tinggal double-click `docker\scripts\start-all.bat` 🎉

@@ -2,6 +2,7 @@
 # XAUBot AI - Docker Start Script
 
 set -e
+cd "$(dirname "$0")/../.."
 
 echo "🚀 Starting XAUBot AI Docker Services..."
 echo ""
@@ -10,7 +11,7 @@ echo ""
 if [ ! -f .env ]; then
     echo "⚠️  .env file not found!"
     echo "📝 Creating .env from template..."
-    cp .env.docker.example .env
+    cp docker/.env.docker.example .env
     echo "✅ .env created. Please edit it with your MT5 credentials:"
     echo "   - MT5_LOGIN"
     echo "   - MT5_PASSWORD"
@@ -83,5 +84,5 @@ echo "   View API logs:   docker-compose logs -f trading-api"
 echo "   Stop services:   docker-compose down"
 echo "   Restart:         docker-compose restart"
 echo ""
-echo "📖 Full documentation: DOCKER.md"
+echo "📖 Full documentation: docker/docs/DOCKER.md"
 echo ""

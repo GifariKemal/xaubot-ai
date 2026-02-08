@@ -2,6 +2,7 @@
 # XAUBot AI - Docker Stop Script
 
 set -e
+cd "$(dirname "$0")/../.."
 
 echo "🛑 Stopping XAUBot AI Docker Services..."
 echo ""
@@ -27,5 +28,5 @@ else
 fi
 
 echo ""
-echo "📋 To restart: ./docker-start.sh"
+echo "📋 To restart: ./docker/scripts/docker-start.sh"
 echo ""

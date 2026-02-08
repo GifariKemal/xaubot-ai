@@ -7,7 +7,7 @@ echo Starting Web Dashboard
 echo ========================================
 echo.
 
-cd "%~dp0web-dashboard"
+cd /d "%~dp0..\..\web-dashboard"
 
 REM Check if node_modules exists
 if not exist "node_modules" (
