@@ -4,8 +4,8 @@ Telegram Notifier Module
 Smart Telegram integration for AI Trading Bot.
 
 Features:
-- Trade notifications with detailed P/L
-- Market condition updates (educational)
+- Trade notifications with ALL features as text array
+- Market condition updates with full context
 - ML prediction insights
 - Volatility alerts
 - Daily summary with charts
@@ -113,6 +113,10 @@ class TelegramNotifier:
         self._charts_dir = Path("data/charts")
         self._charts_dir.mkdir(parents=True, exist_ok=True)
 
+        # Command polling
+        self._last_update_id: int = 0
+        self._command_handlers: Dict[str, Any] = {}
+
         logger.info(f"Telegram notifier initialized (enabled={enabled})")
 
     async def _get_session(self):
@@ -160,6 +164,90 @@ class TelegramNotifier:
         except Exception as e:
             logger.error(f"Telegram error: {e}")
             return False
+
+    # ========== COMMAND SYSTEM ==========
+
+    def register_command(self, command: str, handler):
+        """Register a command handler. Handler is an async callable returning str."""
+        self._command_handlers[command.lstrip("/")] = handler
+
+    async def poll_commands(self) -> int:
+        """
+        Poll Telegram for new commands and dispatch handlers.
+        Returns number of commands processed.
+        """
+        if not self.enabled:
+            return 0
+
+        try:
+            session = await self._get_session()
+            url = f"{self._api_url}/getUpdates"
+            params = {"offset": self._last_update_id + 1, "timeout": 0, "limit": 10}
+
+            async with session.get(url, params=params, timeout=5) as resp:
+                if resp.status != 200:
+                    return 0
+                data = await resp.json()
+
+            if not data.get("ok") or not data.get("result"):
+                return 0
+
+            processed = 0
+            for update in data["result"]:
+                self._last_update_id = update["update_id"]
+
+                msg = update.get("message", {})
+                text = msg.get("text", "")
+                chat_id = str(msg.get("chat", {}).get("id", ""))
+
+                # Only respond to our chat
+                if chat_id != self.chat_id:
+                    continue
+
+                if not text.startswith("/"):
+                    continue
+
+                # Parse command (e.g., "/status" or "/status@botname")
+                cmd = text.split()[0].split("@")[0].lstrip("/").lower()
+
+                if cmd in self._command_handlers:
+                    try:
+                        response = await self._command_handlers[cmd]()
+                        if response:
+                            await self.send_message(response)
+                        processed += 1
+                    except Exception as e:
+                        logger.warning(f"Command /{cmd} error: {e}")
+                        await self.send_message(f"⚠️ Error: <code>{e}</code>")
+                elif cmd == "help":
+                    await self._send_help()
+                    processed += 1
+                else:
+                    await self.send_message(f"❓ Unknown: <code>/{cmd}</code>\nKetik /help untuk daftar command.")
+                    processed += 1
+
+            return processed
+
+        except asyncio.TimeoutError:
+            return 0
+        except Exception as e:
+            logger.debug(f"Command poll error: {e}")
+            return 0
+
+    async def _send_help(self):
+        """Send help message with all available commands."""
+        cmd_list = sorted(self._command_handlers.keys())
+        help_items = []
+        for cmd in cmd_list:
+            doc = getattr(self._command_handlers[cmd], "_cmd_desc", "")
+            help_items.append(f"/{cmd} — {doc}" if doc else f"/{cmd}")
+
+        msg = f"""📋 <b>COMMANDS</b>
+
+{self._build_section("Available", help_items)}
+
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+        await self.send_message(msg.strip())
 
     async def send_photo(
         self,
@@ -234,10 +322,23 @@ class TelegramNotifier:
             logger.error(f"Telegram doc error: {e}")
             return False
 
+    # ========== HELPER: Build text array ==========
+
+    @staticmethod
+    def _build_section(title: str, items: List[str]) -> str:
+        """Build a section with tree-style connectors."""
+        if not items:
+            return ""
+        lines = [f"<b>{title}</b>"]
+        for i, item in enumerate(items):
+            prefix = "└" if i == len(items) - 1 else "├"
+            lines.append(f"{prefix} {item}")
+        return "\n".join(lines)
+
     # ========== FORMATTED MESSAGES ==========
 
-    def _format_trade_open(self, trade: TradeInfo) -> str:
-        """Format trade open notification - Compact Mobile Style."""
+    def _format_trade_open(self, trade: TradeInfo, ctx: dict) -> str:
+        """Format trade open notification with ALL features as text array."""
         emoji = "🟢" if trade.order_type == "BUY" else "🔴"
         direction = "LONG" if trade.order_type == "BUY" else "SHORT"
 
@@ -253,20 +354,98 @@ class TelegramNotifier:
         potential_loss = abs(trade.entry_price - trade.stop_loss) * trade.lot_size * 100 if trade.stop_loss > 0 else 0
         potential_profit = abs(trade.take_profit - trade.entry_price) * trade.lot_size * 100
 
-        msg = f"""{emoji} <b>{direction}</b> #{trade.ticket}
-├ <b>{trade.symbol}</b>
-├ Entry: <code>{trade.entry_price:.2f}</code>
-├ Lot: <code>{trade.lot_size}</code>
-├ SL: <code>{sl_display}</code> (-${potential_loss:.0f})
-├ TP: <code>{trade.take_profit:.2f}</code> (+${potential_profit:.0f})
-├ R:R: <code>1:{rr_ratio:.1f}</code>
-├ AI: <code>{trade.ml_confidence:.0%}</code> | {trade.regime}
-└ <i>{trade.signal_reason[:50]}</i>
-⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
-        return msg
+        # === Section 1: Trade ===
+        trade_items = [
+            f"<b>{trade.symbol}</b>",
+            f"Entry: <code>{trade.entry_price:.2f}</code>",
+            f"Lot: <code>{trade.lot_size}</code>",
+            f"SL: <code>{sl_display}</code> (-${potential_loss:.0f})",
+            f"TP: <code>{trade.take_profit:.2f}</code> (+${potential_profit:.0f})",
+            f"R:R: <code>1:{rr_ratio:.1f}</code>",
+        ]
 
-    def _format_trade_close(self, trade: TradeInfo) -> str:
-        """Format trade close notification - Compact Mobile Style."""
+        # === Section 2: AI / ML ===
+        ml_conf = trade.ml_confidence
+        threshold = ctx.get("dynamic_threshold", 0.5)
+        quality = ctx.get("market_quality", "unknown")
+        score = ctx.get("market_score", 0)
+        ai_items = [
+            f"ML: <code>{ml_conf:.0%}</code> / thresh <code>{threshold:.0%}</code>",
+            f"Quality: <code>{quality.upper()}</code> (score:{score})",
+        ]
+
+        # === Section 3: SMC ===
+        smc_signal = ctx.get("smc_signal", "")
+        smc_conf = ctx.get("smc_confidence", 0)
+        smc_fvg = ctx.get("smc_fvg", False)
+        smc_ob = ctx.get("smc_ob", False)
+        smc_bos = ctx.get("smc_bos", False)
+        smc_choch = ctx.get("smc_choch", False)
+
+        patterns = []
+        if smc_fvg: patterns.append("FVG")
+        if smc_ob: patterns.append("OB")
+        if smc_bos: patterns.append("BOS")
+        if smc_choch: patterns.append("CHoCH")
+
+        smc_items = [
+            f"Signal: <code>{smc_signal or 'NONE'}</code> ({smc_conf:.0%})",
+            f"Patterns: <code>{', '.join(patterns) if patterns else 'None'}</code>",
+        ]
+
+        # === Section 4: Market ===
+        session = ctx.get("session", "Unknown")
+        h1_bias = ctx.get("h1_bias", "NEUTRAL")
+        regime = trade.regime or "unknown"
+        vol = trade.volatility or "unknown"
+        market_items = [
+            f"Session: <code>{session}</code>",
+            f"Regime: <code>{regime}</code> | Vol: <code>{vol}</code>",
+            f"H1 Bias: <code>{h1_bias}</code>",
+        ]
+
+        # === Section 5: Risk ===
+        risk_mode = ctx.get("risk_mode", "normal")
+        daily_loss = ctx.get("daily_loss", 0)
+        consec = ctx.get("consecutive_losses", 0)
+        risk_items = [
+            f"Mode: <code>{risk_mode.upper()}</code>",
+            f"Daily Loss: <code>${daily_loss:.2f}</code> | Streak: <code>{consec}L</code>",
+        ]
+
+        # === Section 6: Entry Filters ===
+        filters = ctx.get("entry_filters", [])
+        filter_items = []
+        for f in filters:
+            passed = f.get("passed", True)
+            name = f.get("name", "")
+            detail = f.get("detail", "")
+            icon = "✅" if passed else "❌"
+            filter_items.append(f"{icon} {name}: {detail}")
+
+        # === Build message ===
+        sections = [
+            self._build_section("Trade", trade_items),
+            self._build_section("AI Signal", ai_items),
+            self._build_section("SMC", smc_items),
+            self._build_section("Market", market_items),
+            self._build_section("Risk", risk_items),
+        ]
+        if filter_items:
+            sections.append(self._build_section("Entry Filters", filter_items))
+
+        body = "\n\n".join(s for s in sections if s)
+
+        msg = f"""{emoji} <b>{direction}</b> #{trade.ticket}
+
+{body}
+
+<i>{trade.signal_reason[:80]}</i>
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+        return msg.strip()
+
+    def _format_trade_close(self, trade: TradeInfo, ctx: dict) -> str:
+        """Format trade close notification with ALL status as text array."""
         # Determine profit/loss styling
         if trade.profit > 0:
             emoji = "✅"
@@ -294,21 +473,66 @@ class TelegramNotifier:
         else:
             result = "BE"
 
-        msg = f"""{emoji} <b>{result}</b> #{trade.ticket}
-├ <b>{trade.symbol}</b> {trade.order_type}
-├ Entry: <code>{trade.entry_price:.2f}</code>
-├ Exit: <code>{trade.close_price:.2f}</code>
-├ Lot: <code>{trade.lot_size}</code>
-├ <b>P/L: {profit_str}</b> ({pct_str})
-├ Pips: <code>{trade.profit_pips:+.1f}</code>
-├ Duration: <code>{duration_str}</code>
-├ Bal Before: <code>${trade.balance_before:,.2f}</code>
-└ Bal After: <code>${trade.balance_after:,.2f}</code>
-⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
-        return msg
+        # Balance change
+        bal_change = trade.balance_after - trade.balance_before
+        bal_change_str = f"+${bal_change:.2f}" if bal_change >= 0 else f"-${abs(bal_change):.2f}"
 
-    def _format_market_update(self, condition: MarketCondition) -> str:
-        """Format market condition update - Compact Mobile Style."""
+        # Win rate
+        win_rate = ctx.get("win_rate", 0)
+        session_trades = ctx.get("session_trades", 0)
+        session_wins = ctx.get("session_wins", 0)
+
+        # === Section 1: Trade Result ===
+        trade_items = [
+            f"<b>{trade.symbol}</b> {trade.order_type}",
+            f"Entry: <code>{trade.entry_price:.2f}</code> → Exit: <code>{trade.close_price:.2f}</code>",
+            f"Lot: <code>{trade.lot_size}</code> | Pips: <code>{trade.profit_pips:+.1f}</code>",
+            f"<b>P/L: {profit_str}</b> ({pct_str})",
+            f"Duration: <code>{duration_str}</code>",
+        ]
+
+        # === Section 2: Exit ===
+        exit_reason = ctx.get("exit_reason", "unknown")
+        exit_items = [
+            f"Reason: <code>{exit_reason}</code>",
+            f"Regime: <code>{trade.regime or 'unknown'}</code> | Vol: <code>{trade.volatility or 'unknown'}</code>",
+            f"Session: <code>{ctx.get('session', 'Unknown')}</code>",
+        ]
+
+        # === Section 3: Balance ===
+        balance_items = [
+            f"Before: <code>${trade.balance_before:,.2f}</code>",
+            f"After: <code>${trade.balance_after:,.2f}</code> (<b>{bal_change_str}</b>)",
+        ]
+
+        # === Section 4: Session Stats ===
+        session_profit = ctx.get("session_profit", 0)
+        session_pnl_str = f"+${session_profit:.2f}" if session_profit >= 0 else f"-${abs(session_profit):.2f}"
+        consec = ctx.get("consecutive_losses", 0)
+
+        stats_items = [
+            f"Trades: <code>{session_wins}W</code> / <code>{session_trades}T</code>",
+            f"Win Rate: <code>{win_rate:.1f}%</code>",
+            f"Session P/L: <b>{session_pnl_str}</b>",
+            f"Streak: <code>{consec}L</code> | Mode: <code>{ctx.get('risk_mode', 'normal').upper()}</code>",
+        ]
+
+        # === Build message ===
+        msg = f"""{emoji} <b>{result}</b> #{trade.ticket}
+
+{self._build_section("Trade", trade_items)}
+
+{self._build_section("Exit", exit_items)}
+
+{self._build_section("Balance", balance_items)}
+
+{self._build_section("Session Stats", stats_items)}
+
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+        return msg.strip()
+
+    def _format_market_update(self, condition: MarketCondition, ctx: dict) -> str:
+        """Format market condition update with full context as text array."""
         # Signal emoji
         if condition.ml_signal == "BUY":
             signal_emoji = "🟢"
@@ -317,16 +541,63 @@ class TelegramNotifier:
         else:
             signal_emoji = "⚪"
 
-        status = "✅" if condition.can_trade else "⛔"
+        status = "✅ READY" if condition.can_trade else "⛔ WAIT"
 
-        msg = f"""📊 <b>{condition.symbol}</b> ${condition.price:.2f}
-├ {signal_emoji} {condition.ml_signal} {condition.ml_confidence:.0%}
-├ {condition.trend_direction}
-├ {condition.regime}
-├ {condition.session}
-└ {status}
-⏰ {datetime.now(WIB).strftime('%H:%M')}"""
-        return msg
+        # Extra context
+        h1_bias = ctx.get("h1_bias", "NEUTRAL")
+        threshold = ctx.get("dynamic_threshold", 0.5)
+        quality = ctx.get("market_quality", "unknown")
+        score = ctx.get("market_score", 0)
+        smc_signal = ctx.get("smc_signal", "")
+        smc_conf = ctx.get("smc_confidence", 0)
+
+        # === Section 1: Price ===
+        price_items = [
+            f"<b>{condition.symbol}</b> <code>${condition.price:.2f}</code>",
+            f"ATR: <code>{condition.atr:.2f}</code> | Spread: <code>{condition.spread:.1f}</code>",
+        ]
+
+        # === Section 2: AI Signal ===
+        signal_items = [
+            f"{signal_emoji} ML: <code>{condition.ml_signal}</code> {condition.ml_confidence:.0%} / thresh {threshold:.0%}",
+            f"SMC: <code>{smc_signal or 'NONE'}</code> ({smc_conf:.0%})",
+            f"Quality: <code>{quality.upper()}</code> (score:{score})",
+            f"Trend: <code>{condition.trend_direction}</code> | H1: <code>{h1_bias}</code>",
+        ]
+
+        # === Section 3: Market ===
+        market_items = [
+            f"Regime: <code>{condition.regime}</code> | Vol: <code>{condition.volatility}</code>",
+            f"Session: <code>{condition.session}</code>",
+            f"Status: {status}",
+        ]
+
+        # === Section 4: Risk ===
+        risk_mode = ctx.get("risk_mode", "normal")
+        daily_loss = ctx.get("daily_loss", 0)
+        consec = ctx.get("consecutive_losses", 0)
+        session_trades = ctx.get("session_trades", 0)
+        session_profit = ctx.get("session_profit", 0)
+        sp_str = f"+${session_profit:.2f}" if session_profit >= 0 else f"-${abs(session_profit):.2f}"
+
+        risk_items = [
+            f"Mode: <code>{risk_mode.upper()}</code> | Streak: <code>{consec}L</code>",
+            f"Daily Loss: <code>${daily_loss:.2f}</code>",
+            f"Session: <code>{session_trades}</code> trades, <b>{sp_str}</b>",
+        ]
+
+        msg = f"""📊 <b>MARKET UPDATE</b>
+
+{self._build_section("Price", price_items)}
+
+{self._build_section("AI Signal", signal_items)}
+
+{self._build_section("Market", market_items)}
+
+{self._build_section("Risk", risk_items)}
+
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+        return msg.strip()
 
     def _format_daily_summary(
         self,
@@ -335,7 +606,7 @@ class TelegramNotifier:
         end_balance: float,
         market_condition: Optional[MarketCondition] = None,
     ) -> str:
-        """Format daily trading summary - Mobile Responsive with Code."""
+        """Format daily trading summary with ALL stats as text array."""
         # Calculate stats
         total_trades = len(trades)
         winning_trades = sum(1 for t in trades if t.profit > 0)
@@ -359,49 +630,56 @@ class TelegramNotifier:
 
         if total_profit > 0:
             day_emoji = "🎉"
-            day_result = "PROFIT"
         elif total_profit < 0:
             day_emoji = "📉"
-            day_result = "LOSS"
         else:
             day_emoji = "➖"
-            day_result = "BE"
 
         profit_str = f"+${total_profit:.2f}" if total_profit >= 0 else f"-${abs(total_profit):.2f}"
         pct_str = f"+{day_pct:.2f}%" if day_pct >= 0 else f"{day_pct:.2f}%"
 
-        # Build trade history (last 5)
-        trade_lines = []
-        for i, t in enumerate(trades[-5:]):
+        # === Section 1: Result ===
+        result_items = [
+            f"<b>P/L: {profit_str}</b> ({pct_str})",
+            f"Gross Win: <code>+${gross_profit:.2f}</code>",
+            f"Gross Loss: <code>-${gross_loss:.2f}</code>",
+            f"Bal Start: <code>${start_balance:,.2f}</code>",
+            f"Bal End: <code>${end_balance:,.2f}</code>",
+        ]
+
+        # === Section 2: Stats ===
+        stats_items = [
+            f"Total: <code>{total_trades}</code> trades",
+            f"Wins: <code>{winning_trades}</code> | Losses: <code>{losing_trades}</code>",
+            f"Win Rate: <code>{win_rate:.1f}%</code>",
+            f"Profit Factor: <code>{pf_str}</code>",
+            f"Avg/Trade: <code>${avg_profit:.2f}</code>",
+        ]
+
+        # === Section 3: Recent Trades ===
+        recent = trades[-5:]
+        trade_items = []
+        for t in recent:
             sign = "+" if t.profit >= 0 else "-"
             amt = abs(t.profit)
             result_emoji = "✅" if t.profit > 0 else "❌" if t.profit < 0 else "➖"
-            prefix = "└" if i == len(trades[-5:]) - 1 else "├"
-            trade_lines.append(f"{prefix} {result_emoji} {t.order_type}: {sign}${amt:.2f}")
-        trade_str = "\n".join(trade_lines) if trade_lines else "└ No trades"
+            trade_items.append(f"{result_emoji} {t.order_type}: {sign}${amt:.2f}")
+        if not trade_items:
+            trade_items = ["No trades"]
 
         msg = f"""{day_emoji} <b>DAILY REPORT</b> {datetime.now(WIB).strftime('%Y-%m-%d')}
 
-<b>Result</b>
-├ P/L: <b>{profit_str}</b> ({pct_str})
-├ Gross Win: <code>+${gross_profit:.2f}</code>
-├ Gross Loss: <code>-${gross_loss:.2f}</code>
-├ Bal Start: <code>${start_balance:,.2f}</code>
-└ Bal End: <code>${end_balance:,.2f}</code>
+{self._build_section("Result", result_items)}
 
-<b>Stats</b>
-├ Total: <code>{total_trades}</code> trades
-├ Wins: <code>{winning_trades}</code> | Losses: <code>{losing_trades}</code>
-├ Win Rate: <code>{win_rate:.1f}%</code>
-├ Profit Factor: <code>{pf_str}</code>
-└ Avg/Trade: <code>${avg_profit:.2f}</code>
+{self._build_section("Stats", stats_items)}
 
-<b>Recent Trades</b>
-{trade_str}"""
-        return msg
+{self._build_section("Recent Trades", trade_items)}
+
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+        return msg.strip()
 
     def _format_alert(self, alert_type: str, message: str) -> str:
-        """Format alert message - Compact Mobile Style."""
+        """Format alert message as text array."""
         alert_emojis = {
             "flash_crash": "🚨",
             "high_volatility": "⚡",
@@ -413,10 +691,14 @@ class TelegramNotifier:
         emoji = alert_emojis.get(alert_type, "⚠️")
         title = alert_type.upper().replace('_', ' ')
 
+        alert_items = [message]
+
         msg = f"""{emoji} <b>{title}</b>
-└ {message}
-⏰ {datetime.now(WIB).strftime('%H:%M')}"""
-        return msg
+
+{self._build_section("Detail", alert_items)}
+
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+        return msg.strip()
 
     def _format_system_status(
         self,
@@ -427,16 +709,22 @@ class TelegramNotifier:
         ml_status: str,
         uptime_hours: float,
     ) -> str:
-        """Format system status message - Compact Mobile Style."""
+        """Format system status message as text array."""
+        status_items = [
+            f"Bal: <code>${balance:,.0f}</code>",
+            f"Eq: <code>${equity:,.0f}</code>",
+            f"Pos: <code>{open_positions}</code>",
+            f"Session: <code>{session}</code>",
+            f"ML: <code>{ml_status}</code>",
+            f"Uptime: <code>{uptime_hours:.1f}h</code>",
+        ]
+
         msg = f"""🤖 <b>STATUS</b> 🟢
-├ Bal: ${balance:,.0f}
-├ Eq: ${equity:,.0f}
-├ Pos: {open_positions}
-├ {session}
-├ ML: {ml_status}
-└ Up: {uptime_hours:.1f}h
-⏰ {datetime.now(WIB).strftime('%H:%M')}"""
-        return msg
+
+{self._build_section("System", status_items)}
+
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+        return msg.strip()
 
     # ========== HIGH-LEVEL NOTIFICATION METHODS ==========
 
@@ -453,8 +741,10 @@ class TelegramNotifier:
         signal_reason: str,
         regime: str,
         volatility: str,
+        # ALL extra context as dict
+        context: dict = None,
     ):
-        """Send trade open notification."""
+        """Send trade open notification with ALL features."""
         trade = TradeInfo(
             ticket=ticket,
             symbol=symbol,
@@ -469,7 +759,7 @@ class TelegramNotifier:
             volatility=volatility,
         )
 
-        msg = self._format_trade_open(trade)
+        msg = self._format_trade_open(trade, context or {})
         await self.send_message(msg)
         logger.info(f"Telegram: Trade open notification sent for #{ticket}")
 
@@ -489,8 +779,10 @@ class TelegramNotifier:
         ml_confidence: float = 0,
         regime: str = "",
         volatility: str = "",
+        # ALL extra context as dict
+        context: dict = None,
     ):
-        """Send trade close notification with detailed P/L."""
+        """Send trade close notification with ALL status."""
         trade = TradeInfo(
             ticket=ticket,
             symbol=symbol,
@@ -511,7 +803,7 @@ class TelegramNotifier:
         # Track for daily summary
         self._daily_trades.append(trade)
 
-        msg = self._format_trade_close(trade)
+        msg = self._format_trade_close(trade, context or {})
         await self.send_message(msg)
         logger.info(f"Telegram: Trade close notification sent for #{ticket}")
 
@@ -528,8 +820,10 @@ class TelegramNotifier:
         can_trade: bool,
         atr: float = 0,
         spread: float = 0,
+        # ALL extra context as dict
+        context: dict = None,
     ):
-        """Send market condition update."""
+        """Send market condition update with full context."""
         condition = MarketCondition(
             symbol=symbol,
             price=price,
@@ -544,7 +838,7 @@ class TelegramNotifier:
             spread=spread,
         )
 
-        msg = self._format_market_update(condition)
+        msg = self._format_market_update(condition, context or {})
         await self.send_message(msg, disable_notification=True)
         logger.info("Telegram: Market update sent")
 
@@ -745,27 +1039,68 @@ Day Change:    {((end_balance-start_balance)/start_balance*100):+.2f}%
         mode: str,
         ml_model_status: str,
         news_status: str = "SAFE",
+        # ALL extra context as dict
+        context: dict = None,
     ):
-        """Send bot startup notification - Compact Mobile Style."""
+        """Send bot startup notification with ALL features as text array."""
+        ctx = context or {}
+
+        config_items = [
+            f"Symbol: <code>{symbol}</code>",
+            f"Mode: <code>{mode}</code>",
+            f"Capital: <code>${capital:,.2f}</code>",
+            f"Balance: <code>${balance:,.2f}</code>",
+            f"ML: <code>{ml_model_status}</code>",
+        ]
+
+        risk_items = [
+            f"Risk/Trade: <code>{ctx.get('risk_per_trade', 1)}%</code>",
+            f"Max Daily Loss: <code>{ctx.get('max_daily_loss', 5)}%</code>",
+            f"Max Total Loss: <code>{ctx.get('max_total_loss', 10)}%</code>",
+            f"SL: <code>Smart (ATR-based + Broker safety net)</code>",
+            f"Max Lot: <code>{ctx.get('max_lot', 0.02)}</code>",
+            f"Max Positions: <code>{ctx.get('max_positions', 2)}</code>",
+            f"Cooldown: <code>{ctx.get('cooldown_seconds', 150)}s</code>",
+        ]
+
+        # Risk state (loaded from file)
+        daily_loss = ctx.get("daily_loss", 0)
+        total_loss = ctx.get("total_loss", 0)
+        consec = ctx.get("consecutive_losses", 0)
+        risk_mode = ctx.get("risk_mode", "normal")
+
+        state_items = [
+            f"Mode: <code>{risk_mode.upper()}</code>",
+            f"Daily Loss: <code>${daily_loss:.2f}</code>",
+            f"Total Loss: <code>${total_loss:.2f}</code>",
+            f"Streak: <code>{consec}L</code>",
+        ]
+
+        session = ctx.get("session", "Unknown")
+        can_trade = ctx.get("can_trade", False)
+        vol = ctx.get("volatility", "unknown")
+        session_icon = "✅" if can_trade else "⛔"
+
+        session_items = [
+            f"{session_icon} {session}",
+            f"Volatility: <code>{vol}</code>",
+        ]
+
         news_emoji = "✅" if news_status == "SAFE" else "⚠️"
+
         msg = f"""🚀 <b>BOT STARTED</b>
 
-<b>Config</b>
-├ Symbol: <code>{symbol}</code>
-├ Mode: <code>{mode}</code>
-├ Capital: <code>${capital:,.2f}</code>
-├ Balance: <code>${balance:,.2f}</code>
-└ ML: <code>{ml_model_status}</code>
+{self._build_section("Config", config_items)}
 
-<b>Risk Settings</b>
-├ Risk/Trade: <code>1%</code>
-├ Max Daily Loss: <code>5%</code>
-├ Max Total Loss: <code>10%</code>
-└ SL: <code>Smart (No Hard)</code>
+{self._build_section("Risk Settings", risk_items)}
 
-{news_emoji} News: {news_status}
+{self._build_section("Risk State", state_items)}
+
+{self._build_section("Session", session_items)}
+
+{news_emoji} News: <code>{news_status}</code>
 ⏰ {datetime.now(WIB).strftime('%Y-%m-%d %H:%M')} WIB"""
-        await self.send_message(msg)
+        await self.send_message(msg.strip())
         logger.info("Telegram: Startup message sent")
 
     async def send_news_alert(
@@ -784,13 +1119,19 @@ Day Change:    {((end_balance-start_balance)/start_balance*100):+.2f}%
         }
         emoji = emoji_map.get(condition, "📰")
 
-        msg = f"""{emoji} <b>NEWS</b> {condition}
-├ {event_name[:30]}
-├ {reason[:35]}
-└ Buffer: {buffer_minutes}m
-⏰ {datetime.now(WIB).strftime('%H:%M')}"""
+        news_items = [
+            f"Event: <code>{event_name[:40]}</code>",
+            f"Reason: <code>{reason[:50]}</code>",
+            f"Buffer: <code>{buffer_minutes}m</code>",
+        ]
 
-        await self.send_message(msg)
+        msg = f"""{emoji} <b>NEWS</b> {condition}
+
+{self._build_section("Detail", news_items)}
+
+⏰ {datetime.now(WIB).strftime('%H:%M')} WIB"""
+
+        await self.send_message(msg.strip())
         logger.info(f"Telegram: News alert sent - {event_name}")
 
     async def send_hourly_analysis(
@@ -801,7 +1142,7 @@ Day Change:    {((end_balance-start_balance)/start_balance*100):+.2f}%
         floating_pnl: float,
         # Position info
         open_positions: int,
-        position_details: list,  # List of dicts with ticket, direction, profit, momentum, tp_prob
+        position_details: list,
         # Market info
         symbol: str,
         current_price: float,
@@ -826,103 +1167,118 @@ Day Change:    {((end_balance-start_balance)/start_balance*100):+.2f}%
         # News info (optional)
         news_status: str = "SAFE",
         news_reason: str = "No high-impact news",
+        # ALL extra context as dict
+        context: dict = None,
     ):
-        """
-        Send comprehensive hourly analysis report.
-        Interval: Every 1 hour
-        """
+        """Send comprehensive hourly analysis report with ALL features."""
         now = datetime.now(WIB)
+        ctx = context or {}
 
         # Floating P/L emoji
-        float_emoji = "+" if floating_pnl >= 0 else ""
-        daily_emoji = "+" if daily_pnl >= 0 else ""
+        float_prefix = "+" if floating_pnl >= 0 else ""
+        daily_prefix = "+" if daily_pnl >= 0 else ""
 
         # Risk mode indicator
-        risk_indicators = {
-            "normal": "NORMAL",
-            "recovery": "RECOVERY",
-            "protected": "PROTECTED",
-            "stopped": "STOPPED",
-        }
-        risk_display = risk_indicators.get(risk_mode.lower(), risk_mode.upper())
+        risk_display = risk_mode.upper()
 
         # Market quality indicator
-        quality_indicators = {
-            "excellent": "EXCELLENT",
-            "good": "GOOD",
-            "moderate": "MODERATE",
-            "poor": "POOR",
-            "avoid": "AVOID",
-        }
-        quality_display = quality_indicators.get(market_quality.lower(), market_quality.upper())
-
-        # Build position details string
-        pos_lines = []
-        for pos in position_details[:5]:  # Max 5 positions
-            ticket = pos.get("ticket", 0)
-            direction = pos.get("direction", "?")
-            profit = pos.get("profit", 0)
-            momentum = pos.get("momentum", 0)
-            tp_prob = pos.get("tp_probability", 50)
-
-            profit_str = f"+${profit:.2f}" if profit >= 0 else f"-${abs(profit):.2f}"
-            mom_str = f"+{momentum:.0f}" if momentum >= 0 else f"{momentum:.0f}"
-
-            pos_lines.append(f"  #{ticket} {direction}: {profit_str} | M:{mom_str} | TP:{tp_prob:.0f}%")
-
-        positions_str = "\n".join(pos_lines) if pos_lines else "  No open positions"
-
-        # ML signal strength
-        if ml_confidence >= 0.75:
-            signal_strength = "STRONG"
-        elif ml_confidence >= 0.65:
-            signal_strength = "MODERATE"
-        else:
-            signal_strength = "WEAK"
+        quality_display = market_quality.upper()
 
         # Can trade indicator
         can_trade = ml_confidence >= dynamic_threshold and market_quality.lower() != "avoid"
         trade_status = "READY" if can_trade else "WAIT"
 
-        # Build position list with details
-        pos_lines = []
-        for i, pos in enumerate(position_details[:5]):  # Max 5
+        # === Section 1: Account ===
+        account_items = [
+            f"Bal: <code>${balance:,.2f}</code>",
+            f"Eq: <code>${equity:,.2f}</code>",
+            f"Float: <b>{float_prefix}${floating_pnl:.2f}</b>",
+            f"Day: <b>{daily_prefix}${daily_pnl:.2f}</b> ({daily_trades} trades)",
+        ]
+
+        # === Section 2: Positions ===
+        pos_items = []
+        for pos in position_details[:5]:
             t = pos.get("ticket", 0)
             d = pos.get("direction", "?")
             p = pos.get("profit", 0)
             m = pos.get("momentum", 0)
             tp_prob = pos.get("tp_probability", 50)
             ps = f"+${p:.2f}" if p >= 0 else f"-${abs(p):.2f}"
-            prefix = "└" if i == len(position_details[:5]) - 1 else "├"
-            pos_lines.append(f"{prefix} #{t} {d}: <b>{ps}</b> M:{m:+.0f}")
-        pos_str = "\n".join(pos_lines) if pos_lines else "└ No positions"
+            pos_items.append(f"#{t} {d}: <b>{ps}</b> M:{m:+.0f} TP:{tp_prob:.0f}%")
+        if not pos_items:
+            pos_items = ["No positions"]
+
+        # === Section 3: Market ===
+        h1_bias = ctx.get("h1_bias", "NEUTRAL")
+        atr = ctx.get("atr", 0)
+        spread = ctx.get("spread", 0)
+        market_items = [
+            f"{symbol} <code>${current_price:,.2f}</code>",
+            f"ATR: <code>{atr:.2f}</code> | Spread: <code>{spread:.1f}</code>",
+            f"Session: <code>{session}</code>",
+            f"Regime: <code>{regime}</code> | Vol: <code>{volatility}</code>",
+            f"H1 Bias: <code>{h1_bias}</code>",
+        ]
+
+        # === Section 4: AI Signal ===
+        smc_signal = ctx.get("smc_signal", "")
+        smc_conf = ctx.get("smc_confidence", 0)
+        ai_items = [
+            f"ML: <code>{ml_signal}</code> {ml_confidence:.0%} / thresh {dynamic_threshold:.0%}",
+            f"SMC: <code>{smc_signal or 'NONE'}</code> ({smc_conf:.0%})",
+            f"Quality: <code>{quality_display}</code> (score:{market_score}) → {trade_status}",
+        ]
+
+        # === Section 5: Risk ===
+        consec = ctx.get("consecutive_losses", 0)
+        total_loss = ctx.get("total_loss", 0)
+        risk_items = [
+            f"Mode: <code>{risk_display}</code>",
+            f"Daily Loss: <code>${abs(min(0, daily_pnl)):.2f}</code> / <code>${max_daily_loss:.2f}</code>",
+            f"Total Loss: <code>${total_loss:.2f}</code> | Streak: <code>{consec}L</code>",
+        ]
+
+        # === Section 6: Entry Filters ===
+        filters = ctx.get("entry_filters", [])
+        filter_items = []
+        for f in filters:
+            passed = f.get("passed", True)
+            name = f.get("name", "")
+            detail = f.get("detail", "")
+            icon = "✅" if passed else "❌"
+            filter_items.append(f"{icon} {name}: {detail}")
+
+        # === Section 7: Bot ===
+        bot_items = [
+            f"Uptime: <code>{uptime_hours:.1f}h</code> | Loops: <code>{total_loops}</code>",
+            f"Avg Exec: <code>{avg_execution_ms:.0f}ms</code>",
+        ]
+
+        news_emoji = "✅" if news_status == "SAFE" else "⚠️"
+
+        # Build sections list (skip empty)
+        sections = [
+            self._build_section("Account", account_items),
+            self._build_section(f"Positions ({open_positions})", pos_items),
+            self._build_section("Market", market_items),
+            self._build_section("AI Signal", ai_items),
+            self._build_section("Risk", risk_items),
+        ]
+        if filter_items:
+            sections.append(self._build_section("Entry Filters", filter_items))
+        sections.append(self._build_section("Bot", bot_items))
+
+        body = "\n\n".join(s for s in sections if s)
 
         msg = f"""📊 <b>HOURLY</b> {now.strftime('%H:%M')} WIB
 
-<b>Account</b>
-├ Bal: <code>${balance:,.2f}</code>
-├ Eq: <code>${equity:,.2f}</code>
-├ Float: <b>{float_emoji}${floating_pnl:.2f}</b>
-└ Day: <b>{daily_emoji}${daily_pnl:.2f}</b> ({daily_trades} trades)
+{body}
 
-<b>Positions ({open_positions})</b>
-{pos_str}
+{news_emoji} News: <code>{news_status}</code>
+⏰ {now.strftime('%Y-%m-%d %H:%M')} WIB"""
 
-<b>Market</b>
-├ {symbol} <code>${current_price:,.2f}</code>
-├ {session}
-└ {regime} | {volatility}
-
-<b>AI Signal</b>
-├ {ml_signal} <code>{ml_confidence:.0%}</code> / thresh <code>{dynamic_threshold:.0%}</code>
-└ Quality: {quality_display} (score:{market_score}) → {trade_status}
-
-<b>Risk</b> {risk_display}
-└ Daily Loss: <code>${abs(min(0, daily_pnl)):.2f}</code> / <code>${max_daily_loss:.2f}</code>
-
-{"✅" if news_status == "SAFE" else "⚠️"} News: {news_status}"""
-
-        await self.send_message(msg, disable_notification=True)
+        await self.send_message(msg.strip(), disable_notification=True)
         logger.info("Telegram: Hourly analysis report sent")
 
     async def send_shutdown_message(
@@ -931,21 +1287,42 @@ Day Change:    {((end_balance-start_balance)/start_balance*100):+.2f}%
         total_trades: int,
         total_profit: float,
         uptime_hours: float,
+        # ALL extra context as dict
+        context: dict = None,
     ):
-        """Send bot shutdown notification - Compact Mobile Style."""
+        """Send bot shutdown notification with ALL status."""
+        ctx = context or {}
         profit_str = f"+${total_profit:.2f}" if total_profit >= 0 else f"-${abs(total_profit):.2f}"
         emoji = "✅" if total_profit >= 0 else "❌"
 
+        session_items = [
+            f"Balance: <code>${balance:,.2f}</code>",
+            f"Total Trades: <code>{total_trades}</code>",
+            f"{emoji} P/L: <b>{profit_str}</b>",
+            f"Uptime: <code>{uptime_hours:.1f}h</code>",
+        ]
+
+        risk_mode = ctx.get("risk_mode", "normal")
+        daily_loss = ctx.get("daily_loss", 0)
+        daily_profit = ctx.get("daily_profit", 0)
+        total_loss = ctx.get("total_loss", 0)
+        consec = ctx.get("consecutive_losses", 0)
+        session = ctx.get("session", "Unknown")
+        risk_items = [
+            f"Mode: <code>{risk_mode.upper()}</code> | Streak: <code>{consec}L</code>",
+            f"Daily: <code>+${daily_profit:.2f}</code> / <code>-${daily_loss:.2f}</code>",
+            f"Total Loss: <code>${total_loss:.2f}</code>",
+            f"Session: <code>{session}</code>",
+        ]
+
         msg = f"""🔴 <b>BOT STOPPED</b>
 
-<b>Session Summary</b>
-├ Balance: <code>${balance:,.2f}</code>
-├ Total Trades: <code>{total_trades}</code>
-├ {emoji} P/L: <b>{profit_str}</b>
-└ Uptime: <code>{uptime_hours:.1f}h</code>
+{self._build_section("Session Summary", session_items)}
+
+{self._build_section("Risk State", risk_items)}
 
 ⏰ {datetime.now(WIB).strftime('%Y-%m-%d %H:%M')} WIB"""
-        await self.send_message(msg)
+        await self.send_message(msg.strip())
         logger.info("Telegram: Shutdown message sent")
 
 
@@ -981,40 +1358,136 @@ if __name__ == "__main__":
             capital=5000,
             balance=6160,
             mode="small",
-            ml_model_status="Loaded (37 features)",
+            ml_model_status="Loaded (76 features)",
+            context={
+                "risk_per_trade": 1,
+                "max_daily_loss": 5,
+                "max_total_loss": 10,
+                "max_lot": 0.02,
+                "max_positions": 2,
+                "cooldown_seconds": 150,
+                "daily_loss": 0,
+                "total_loss": 0,
+                "consecutive_losses": 0,
+                "risk_mode": "normal",
+                "session": "London-NY Overlap",
+                "can_trade": True,
+                "volatility": "medium",
+            },
         )
 
-        # Test trade close notification
+        # Test trade open
+        await notifier.notify_trade_open(
+            ticket=12345678,
+            symbol="XAUUSD",
+            order_type="BUY",
+            lot_size=0.02,
+            entry_price=2850.00,
+            stop_loss=2840.00,
+            take_profit=2870.00,
+            ml_confidence=0.71,
+            signal_reason="Bullish BOS + FVG confirmed by ML",
+            regime="medium_volatility",
+            volatility="medium",
+            context={
+                "dynamic_threshold": 0.55,
+                "market_quality": "good",
+                "market_score": 72,
+                "smc_signal": "BUY",
+                "smc_confidence": 0.75,
+                "smc_fvg": True,
+                "smc_ob": True,
+                "smc_bos": True,
+                "smc_choch": False,
+                "session": "London-NY Overlap",
+                "h1_bias": "BULLISH",
+                "risk_mode": "normal",
+                "daily_loss": 0,
+                "consecutive_losses": 0,
+                "entry_filters": [
+                    {"name": "Flash Crash", "passed": True, "detail": "OK"},
+                    {"name": "Regime Filter", "passed": True, "detail": "medium_volatility"},
+                    {"name": "Risk Check", "passed": True, "detail": "OK"},
+                    {"name": "Session Filter", "passed": True, "detail": "London-NY Overlap"},
+                    {"name": "ML Confidence", "passed": True, "detail": "71% >= 55%"},
+                    {"name": "Cooldown", "passed": True, "detail": "OK"},
+                ],
+            },
+        )
+
+        # Test trade close
         await notifier.notify_trade_close(
             ticket=12345678,
             symbol="XAUUSD",
             order_type="BUY",
-            lot_size=0.2,
-            entry_price=4950.00,
-            close_price=4965.00,
+            lot_size=0.02,
+            entry_price=2850.00,
+            close_price=2865.00,
             profit=30.00,
             profit_pips=150,
             balance_before=6130.00,
             balance_after=6160.00,
-            duration_seconds=125,
+            duration_seconds=2700,
             ml_confidence=0.71,
             regime="medium_volatility",
-            volatility="high",
+            volatility="medium",
+            context={
+                "exit_reason": "take_profit",
+                "risk_mode": "normal",
+                "daily_loss": 0,
+                "daily_profit": 30.00,
+                "consecutive_losses": 0,
+                "total_loss": 0,
+                "session_trades": 3,
+                "session_wins": 2,
+                "session_profit": 30.00,
+                "win_rate": 66.7,
+                "session": "London-NY Overlap",
+            },
         )
 
         # Test market update
         await notifier.notify_market_update(
             symbol="XAUUSD",
-            price=4965.00,
+            price=2855.50,
             regime="medium_volatility",
-            volatility="high",
+            volatility="medium",
             ml_signal="BUY",
-            ml_confidence=0.71,
+            ml_confidence=0.68,
             trend_direction="UPTREND",
             session="London-NY Overlap",
             can_trade=True,
-            atr=15.5,
-            spread=2.1,
+            atr=12.5,
+            spread=3.2,
+            context={
+                "h1_bias": "BULLISH",
+                "dynamic_threshold": 0.55,
+                "market_quality": "good",
+                "market_score": 72,
+                "smc_signal": "BUY",
+                "smc_confidence": 0.75,
+                "risk_mode": "normal",
+                "daily_loss": 0,
+                "consecutive_losses": 0,
+                "session_trades": 1,
+                "session_profit": 30.00,
+            },
+        )
+
+        # Test shutdown
+        await notifier.send_shutdown_message(
+            balance=6160.00,
+            total_trades=3,
+            total_profit=45.00,
+            uptime_hours=8.5,
+            context={
+                "risk_mode": "normal",
+                "daily_loss": 0,
+                "daily_profit": 45.00,
+                "total_loss": 0,
+                "consecutive_losses": 0,
+                "session": "NY Close",
+            },
         )
 
         await notifier.close()

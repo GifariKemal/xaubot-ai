@@ -61,6 +61,7 @@ from src.position_manager import SmartPositionManager
 from src.session_filter import SessionFilter, create_wib_session_filter
 from src.auto_trainer import AutoTrainer, create_auto_trainer
 from src.telegram_notifier import TelegramNotifier, create_telegram_notifier
+from src.telegram_notifications import TelegramNotifications
 from src.smart_risk_manager import SmartRiskManager, create_smart_risk_manager
 from src.dynamic_confidence import DynamicConfidenceManager, create_dynamic_confidence
 # from src.news_agent import NewsAgent, create_news_agent, MarketCondition  # DISABLED
@@ -164,6 +165,9 @@ class TradingBot:
         # Initialize Telegram Notifier - smart notifications
         self.telegram = create_telegram_notifier()
 
+        # Initialize Telegram Notifications helper (extracts notification logic)
+        self.notifications = TelegramNotifications(self)
+
         # News Agent DISABLED - backtest proved it costs $178 profit
         # ML model already handles volatility well
         self.news_agent = None
@@ -187,6 +191,7 @@ class TradingBot:
         self._daily_start_balance: float = 0
         self._total_session_profit: float = 0
         self._total_session_trades: int = 0
+        self._total_session_wins: int = 0
         self._last_market_update_time: Optional[datetime] = None
         self._last_hourly_report_time: Optional[datetime] = None
         self._open_trade_info: Dict = {}  # Track trade info for close notification
@@ -599,10 +604,12 @@ class TradingBot:
                 "avgExecutionMs": round(avg_ms, 1),
                 "uptimeHours": round(uptime_hours, 1),
                 "totalSessionTrades": self._total_session_trades,
+                "totalSessionWins": self._total_session_wins,
                 "totalSessionProfit": round(self._total_session_profit, 2),
+                "winRate": round(self._total_session_wins / self._total_session_trades * 100, 1) if self._total_session_trades > 0 else 0,
             }
         except Exception:
-            return {"loopCount": 0, "avgExecutionMs": 0, "uptimeHours": 0, "totalSessionTrades": 0, "totalSessionProfit": 0}
+            return {"loopCount": 0, "avgExecutionMs": 0, "uptimeHours": 0, "totalSessionTrades": 0, "totalSessionWins": 0, "totalSessionProfit": 0, "winRate": 0}
 
     def _get_market_close_status(self) -> dict:
         """Get market close timing info for dashboard."""
@@ -676,20 +683,15 @@ class TradingBot:
             self.telegram.set_daily_start_balance(balance)
 
             # Send Telegram startup notification
-            ml_status = f"Loaded ({len(self.ml_model.feature_names)} features)" if self.ml_model.fitted else "Not loaded"
-            await self.telegram.send_startup_message(
-                symbol=self.config.symbol,
-                capital=self.config.capital,
-                balance=balance,
-                mode=self.config.capital_mode.value,
-                ml_model_status=ml_status,
-                news_status="DISABLED",
-            )
+            await self.notifications.send_startup()
 
         except Exception as e:
             logger.error(f"Failed to connect to MT5: {e}")
             if not self.simulation:
                 return
+
+        # Register Telegram commands
+        self._register_telegram_commands()
 
         # Start main loop
         self._running = True
@@ -702,21 +704,12 @@ class TradingBot:
         logger.info("Stopping trading bot...")
         self._running = False
 
-        # Calculate uptime
-        uptime_hours = (datetime.now() - self._start_time).total_seconds() / 3600
-
         # Send Telegram shutdown notification
+        await self.notifications.send_shutdown()
         try:
-            balance = self.mt5.account_balance or self.config.capital
-            await self.telegram.send_shutdown_message(
-                balance=balance,
-                total_trades=self._total_session_trades,
-                total_profit=self._total_session_profit,
-                uptime_hours=uptime_hours,
-            )
             await self.telegram.close()
         except Exception as e:
-            logger.error(f"Failed to send shutdown notification: {e}")
+            logger.error(f"Failed to close telegram session: {e}")
 
         self.mt5.disconnect()
         self._log_summary()
@@ -823,6 +816,11 @@ class TradingBot:
             logger.debug(f"H1 bias error: {e}")
             return "NEUTRAL"
 
+    def _register_telegram_commands(self):
+        """Register Telegram command handlers from separate module."""
+        from src.telegram_commands import register_commands
+        register_commands(self)
+
     async def _main_loop(self):
         """Main trading loop - CANDLE-BASED (not time-based)."""
         last_position_check = time.time()
@@ -893,6 +891,12 @@ class TradingBot:
             # Write dashboard status file (for Docker API)
             self._write_dashboard_status()
 
+            # Poll Telegram commands (non-blocking, every loop)
+            try:
+                await self.telegram.poll_commands()
+            except Exception:
+                pass
+
             # Wait before next check (5 seconds between candle checks)
             await asyncio.sleep(5)
 
@@ -920,13 +924,7 @@ class TradingBot:
                         await self._emergency_close_all()
                     except Exception as e:
                         logger.critical(f"CRITICAL: Emergency close failed: {e}")
-                        try:
-                            await self.telegram.send_message(
-                                f"CRITICAL: Flash crash {move_pct:.2f}% but emergency close FAILED!\n"
-                                f"Error: {e}\nMANUAL INTERVENTION REQUIRED!"
-                            )
-                        except:
-                            pass
+                        await self.notifications.send_flash_crash_critical(move_pct, e)
                     return
 
             # --- POSITION MANAGEMENT (uses cached data — Fix 4) ---
@@ -1034,18 +1032,9 @@ class TradingBot:
                 await self._emergency_close_all()
             except Exception as e:
                 logger.critical(f"CRITICAL: Emergency close failed completely: {e}")
-                # Try to send alert even if close failed
-                try:
-                    await self.telegram.send_message(
-                        f"🚨🚨 CRITICAL ERROR 🚨🚨\n\n"
-                        f"Flash crash detected but emergency close FAILED!\n"
-                        f"Error: {e}\n\n"
-                        f"MANUAL INTERVENTION REQUIRED!"
-                    )
-                except:
-                    pass
+                await self.notifications.send_flash_crash_critical(move_pct, e)
             return
-        
+
         # 6. Check if trading is allowed
         account_balance = self.mt5.account_balance or self.config.capital
         account_equity = self.mt5.account_equity or self.config.capital
@@ -1092,7 +1081,7 @@ class TradingBot:
 
         # Send hourly analysis report to Telegram (every 1 hour)
         # Placed here to ensure it's sent regardless of trading conditions
-        await self._send_hourly_analysis_if_due(
+        await self.notifications.send_hourly_analysis_if_due(
             df=df,
             regime_state=regime_state,
             ml_prediction=ml_prediction,
@@ -1164,9 +1153,9 @@ class TradingBot:
             h1_tag = f" | H1: {h1_bias}" if h1_bias != "NEUTRAL" else ""
             logger.info(f"Price: {price:.2f} | Regime: {regime_state.regime.value if regime_state else 'N/A'} | SMC: {smc_signal.signal_type if smc_signal else 'NONE'} | ML: {ml_prediction.signal}({ml_prediction.confidence:.0%}){h1_tag}")
 
-        # Send market update to Telegram (every 30 minutes) - only after first loop
-        if self._loop_count > 0 and self._loop_count % 30 == 0:
-            await self._send_market_update(df, regime_state, ml_prediction)
+        # Market update disabled from auto-send (available via command)
+        # if self._loop_count > 0 and self._loop_count % 30 == 0:
+        #     await self._send_market_update(df, regime_state, ml_prediction)
 
         # Track SMC signal for filter pipeline
         self._last_filter_results.append({"name": "SMC Signal", "passed": smc_signal is not None, "detail": f"{smc_signal.signal_type} ({smc_signal.confidence:.0%})" if smc_signal else "No signal"})
@@ -1574,33 +1563,15 @@ class TradingBot:
             session_status = self.session_filter.get_status_report()
             volatility = session_status.get("volatility", "unknown")
 
-            # Store trade info for close notification
-            self._open_trade_info[result.order_id] = {
-                "entry_price": signal.entry_price,
-                "open_time": datetime.now(),
-                "balance_before": self.mt5.account_balance,
-                "ml_confidence": signal.confidence,
-                "regime": regime,
-                "volatility": volatility,
-            }
-
-            # Send Telegram notification
-            try:
-                await self.telegram.notify_trade_open(
-                    ticket=result.order_id,
-                    symbol=self.config.symbol,
-                    order_type=signal.signal_type,
-                    lot_size=position.lot_size,
-                    entry_price=signal.entry_price,
-                    stop_loss=signal.stop_loss,
-                    take_profit=signal.take_profit,
-                    ml_confidence=signal.confidence,
-                    signal_reason=signal.reason,
-                    regime=regime,
-                    volatility=volatility,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to send trade open notification: {e}")
+            # Send Telegram notification (stores trade info + builds context internally)
+            await self.notifications.notify_trade_open(
+                result=result,
+                signal=signal,
+                position=position,
+                regime=regime,
+                volatility=volatility,
+                session_status=session_status,
+            )
         else:
             logger.error(f"Order failed: {result.comment} (code: {result.retcode})")
 
@@ -1791,23 +1762,23 @@ class TradingBot:
             except Exception as e:
                 logger.warning(f"Failed to log trade open: {e}")
 
-            # Send Telegram notification
-            try:
-                await self.telegram.notify_trade_open(
-                    ticket=result.order_id,
-                    symbol=self.config.symbol,
-                    order_type=signal.signal_type,
-                    lot_size=position.lot_size,
-                    entry_price=signal.entry_price,
-                    stop_loss=0,  # No SL
-                    take_profit=signal.take_profit,
-                    ml_confidence=signal.confidence,
-                    signal_reason=f"SAFE MODE: {signal.reason}",
-                    regime=regime,
-                    volatility=volatility,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to send trade open notification: {e}")
+            # Send Telegram notification (stores trade info + builds context internally)
+            await self.notifications.notify_trade_open(
+                result=result,
+                signal=signal,
+                position=position,
+                regime=regime,
+                volatility=volatility,
+                session_status=session_status,
+                safe_mode=True,
+                smc_fvg=smc_fvg,
+                smc_ob=smc_ob,
+                smc_bos=smc_bos,
+                smc_choch=smc_choch,
+                dynamic_threshold=dynamic_threshold,
+                market_quality=market_quality,
+                market_score=market_score,
+            )
         else:
             logger.error(f"Order failed: {result.comment} (code: {result.retcode})")
 
@@ -1845,7 +1816,7 @@ class TradingBot:
                         risk_result = self.smart_risk.record_trade_result(profit)
                         self.smart_risk.unregister_position(action.ticket)
                         self.position_manager._peak_profits.pop(action.ticket, None)
-                        await self._notify_trade_close_smart(action.ticket, profit, current_price, action.reason)
+                        await self.notifications.notify_trade_close_smart(action.ticket, profit, current_price, action.reason)
                         logger.info(f"CLOSED #{action.ticket}: {action.reason}")
                         continue  # Skip SmartRiskManager eval for this ticket
 
@@ -1928,18 +1899,18 @@ class TradingBot:
                         logger.warning(f"Failed to log trade close: {e}")
 
                     # Send notification
-                    await self._notify_trade_close_smart(ticket, profit, current_price, message)
+                    await self.notifications.notify_trade_close_smart(ticket, profit, current_price, message)
 
                     # Check for critical limit violations and send alerts
                     if risk_result.get("total_limit_hit"):
-                        await self._send_critical_limit_alert(
+                        await self.notifications.send_critical_limit_alert(
                             "TOTAL LOSS LIMIT",
                             risk_result.get("total_loss", 0),
                             self.smart_risk.max_total_loss_usd,
                             self.smart_risk.max_total_loss_percent
                         )
                     elif risk_result.get("daily_limit_hit"):
-                        await self._send_critical_limit_alert(
+                        await self.notifications.send_critical_limit_alert(
                             "DAILY LOSS LIMIT",
                             risk_result.get("daily_loss", 0),
                             self.smart_risk.max_daily_loss_usd,
@@ -1951,84 +1922,6 @@ class TradingBot:
                 # Just log status periodically
                 if self._loop_count % 60 == 0:
                     logger.info(f"Position #{ticket}: {message}")
-
-    async def _notify_trade_close_smart(self, ticket: int, profit: float, current_price: float, reason: str):
-        """Send notification for smart close."""
-        try:
-            trade_info = self._open_trade_info.pop(ticket, {})
-
-            balance_before = trade_info.get("balance_before", 0)
-            balance_after = self.mt5.account_balance or 0
-            entry_price = trade_info.get("entry_price", current_price)
-            duration = int((datetime.now() - trade_info.get("open_time", datetime.now())).total_seconds())
-
-            # Track stats
-            self._total_session_profit += profit
-            self._total_session_trades += 1
-
-            await self.telegram.notify_trade_close(
-                ticket=ticket,
-                symbol=self.config.symbol,
-                order_type=trade_info.get("direction", "BUY"),
-                lot_size=trade_info.get("lot_size", 0.01),
-                entry_price=entry_price,
-                close_price=current_price,
-                profit=profit,
-                profit_pips=(current_price - entry_price) / 0.1,
-                balance_before=balance_before,
-                balance_after=balance_after,
-                duration_seconds=duration,
-                ml_confidence=trade_info.get("ml_confidence", 0),
-                regime=trade_info.get("regime", "unknown"),
-                volatility=trade_info.get("volatility", "unknown"),
-            )
-        except Exception as e:
-            logger.warning(f"Failed to send close notification: {e}")
-
-    async def _send_critical_limit_alert(
-        self,
-        limit_type: str,
-        current_loss: float,
-        max_loss: float,
-        max_percent: float
-    ):
-        """
-        Send critical alert when loss limits are reached.
-
-        Args:
-            limit_type: "DAILY LOSS LIMIT" or "TOTAL LOSS LIMIT"
-            current_loss: Current loss amount
-            max_loss: Maximum allowed loss
-            max_percent: Maximum loss percentage
-        """
-        logger.critical("=" * 60)
-        logger.critical(f"CRITICAL: {limit_type} REACHED!")
-        logger.critical(f"Loss: ${current_loss:.2f} / ${max_loss:.2f} ({max_percent}%)")
-        logger.critical("TRADING HAS BEEN STOPPED!")
-        logger.critical("=" * 60)
-
-        try:
-            if limit_type == "TOTAL LOSS LIMIT":
-                message = (
-                    f"🚨🚨 CRITICAL: TOTAL LOSS LIMIT REACHED 🚨🚨\n\n"
-                    f"Total Loss: ${current_loss:.2f}\n"
-                    f"Limit: ${max_loss:.2f} ({max_percent}%)\n\n"
-                    f"⛔ TRADING STOPPED PERMANENTLY\n"
-                    f"Manual reset required to resume trading.\n\n"
-                    f"Please review your trading strategy."
-                )
-            else:
-                message = (
-                    f"🚨 DAILY LOSS LIMIT REACHED 🚨\n\n"
-                    f"Daily Loss: ${current_loss:.2f}\n"
-                    f"Limit: ${max_loss:.2f} ({max_percent}%)\n\n"
-                    f"⛔ TRADING STOPPED FOR TODAY\n"
-                    f"Will resume tomorrow automatically."
-                )
-
-            await self.telegram.send_message(message)
-        except Exception as e:
-            logger.error(f"Failed to send critical alert: {e}")
 
     async def _emergency_close_all(self, max_retries: int = 3):
         """
@@ -2089,262 +1982,21 @@ class TradingBot:
                 if attempt < max_retries - 1:
                     await asyncio.sleep(2)
 
-        # Send critical alert if any failed
-        if failed_tickets:
-            alert_msg = f"CRITICAL: Failed to close {len(failed_tickets)} positions: {failed_tickets}"
-            logger.error(alert_msg)
-            try:
-                await self.telegram.send_message(
-                    f"🚨 EMERGENCY CLOSE FAILED!\n\n"
-                    f"Failed tickets: {failed_tickets}\n"
-                    f"Please close manually!"
-                )
-            except:
-                pass  # Don't let telegram failure stop us
-        else:
-            try:
-                await self.telegram.send_message(
-                    f"🚨 EMERGENCY CLOSE COMPLETE\n\n"
-                    f"Closed {closed_count} positions due to flash crash detection"
-                )
-            except:
-                pass
+        # Send critical alert
+        await self.notifications.send_emergency_close_result(closed_count, failed_tickets)
     
-    async def _notify_trade_close(self, action, current_price: float):
-        """Send Telegram notification for trade close."""
-        try:
-            ticket = action.ticket
-
-            # Get trade info from our stored data
-            trade_info = self._open_trade_info.pop(ticket, {})
-            entry_price = trade_info.get("entry_price", current_price)
-            open_time = trade_info.get("open_time", datetime.now())
-            balance_before = trade_info.get("balance_before", self._daily_start_balance)
-            ml_confidence = trade_info.get("ml_confidence", 0)
-            regime = trade_info.get("regime", "unknown")
-            volatility = trade_info.get("volatility", "unknown")
-
-            # Get current balance (after close)
-            balance_after = self.mt5.account_balance or self.config.capital
-
-            # Calculate profit from action
-            profit = action.profit if hasattr(action, 'profit') else 0
-            if profit == 0:
-                # Try to calculate from price difference (rough estimate)
-                profit = balance_after - balance_before
-
-            # Calculate duration
-            duration_seconds = int((datetime.now() - open_time).total_seconds())
-
-            # Calculate pips (for XAUUSD, 1 pip = 0.1)
-            price_diff = current_price - entry_price
-            profit_pips = price_diff / 0.1 if "XAU" in self.config.symbol else price_diff / 0.0001
-
-            # Get order type from action
-            order_type = "BUY"  # Default, will be extracted from action if available
-
-            # Track session stats
-            self._total_session_profit += profit
-            self._total_session_trades += 1
-
-            await self.telegram.notify_trade_close(
-                ticket=ticket,
-                symbol=self.config.symbol,
-                order_type=order_type,
-                lot_size=0.2,  # Will be extracted from actual position if available
-                entry_price=entry_price,
-                close_price=current_price,
-                profit=profit,
-                profit_pips=profit_pips,
-                balance_before=balance_before,
-                balance_after=balance_after,
-                duration_seconds=duration_seconds,
-                ml_confidence=ml_confidence,
-                regime=regime,
-                volatility=volatility,
-            )
-        except Exception as e:
-            logger.warning(f"Failed to send trade close notification: {e}")
-
-    async def _send_market_update(self, df, regime_state, ml_prediction):
-        """Send periodic market update to Telegram."""
-        try:
-            now = datetime.now()
-
-            # Only send market update every 30 minutes
-            if self._last_market_update_time:
-                time_since = (now - self._last_market_update_time).total_seconds()
-                if time_since < 1800:  # 30 minutes
-                    return
-
-            session_status = self.session_filter.get_status_report()
-
-            # Get ATR and spread
-            atr = df["atr"].tail(1).item() if "atr" in df.columns else 0
-            tick = self.mt5.get_tick(self.config.symbol)
-            spread = (tick.ask - tick.bid) if tick else 0
-
-            # Determine trend direction
-            if "ema_9" in df.columns and "ema_21" in df.columns:
-                ema_9 = df["ema_9"].tail(1).item()
-                ema_21 = df["ema_21"].tail(1).item()
-                trend_direction = "UPTREND" if ema_9 > ema_21 else "DOWNTREND"
-            else:
-                trend_direction = "NEUTRAL"
-
-            await self.telegram.notify_market_update(
-                symbol=self.config.symbol,
-                price=df["close"].tail(1).item(),
-                regime=regime_state.regime.value if regime_state else "unknown",
-                volatility=session_status.get("volatility", "unknown"),
-                ml_signal=ml_prediction.signal,
-                ml_confidence=ml_prediction.confidence,
-                trend_direction=trend_direction,
-                session=session_status.get("current_session", "Unknown"),
-                can_trade=session_status.get("can_trade", True),
-                atr=atr,
-                spread=spread,
-            )
-
-            self._last_market_update_time = now
-            logger.info("Telegram: Market update sent")
-
-        except Exception as e:
-            logger.warning(f"Failed to send market update: {e}")
-
-    async def _send_daily_summary(self):
-        """Send daily trading summary to Telegram."""
-        try:
-            balance = self.mt5.account_balance or self.config.capital
-            await self.telegram.send_daily_summary(
-                start_balance=self._daily_start_balance,
-                end_balance=balance,
-            )
-            logger.info("Telegram: Daily summary sent")
-        except Exception as e:
-            logger.warning(f"Failed to send daily summary: {e}")
-
-    async def _send_hourly_analysis_if_due(
-        self,
-        df,
-        regime_state,
-        ml_prediction,
-        open_positions,
-        current_price: float,
-    ):
-        """
-        Send comprehensive hourly analysis report to Telegram.
-        Interval: Every 1 hour
-        """
-        now = datetime.now()
-
-        # Check if 1 hour has passed since last report
-        if self._last_hourly_report_time:
-            time_since = (now - self._last_hourly_report_time).total_seconds()
-            if time_since < 3600:  # 1 hour = 3600 seconds
-                return
-
-        try:
-            # Gather all data for report
-            balance = self.mt5.account_balance or self.config.capital
-            equity = self.mt5.account_equity or self.config.capital
-            floating_pnl = equity - balance
-
-            # Position details with Smart Risk data
-            position_details = []
-            for row in open_positions.iter_rows(named=True):
-                ticket = row["ticket"]
-                profit = row.get("profit", 0)
-                position_type = row.get("type", 0)
-                direction = "BUY" if position_type == 0 else "SELL"
-
-                # Get guard data if available
-                guard = self.smart_risk._position_guards.get(ticket)
-                momentum = guard.momentum_score if guard else 0
-                tp_prob = guard.get_tp_probability() if guard else 50
-
-                position_details.append({
-                    "ticket": ticket,
-                    "direction": direction,
-                    "profit": profit,
-                    "momentum": momentum,
-                    "tp_probability": tp_prob,
-                })
-
-            # Session info
-            session_status = self.session_filter.get_status_report()
-
-            # Dynamic confidence data
-            market_analysis = self.dynamic_confidence.analyze_market(
-                session=session_status.get("current_session", "Unknown"),
-                regime=regime_state.regime.value if regime_state else "unknown",
-                volatility=session_status.get("volatility", "medium"),
-                trend_direction=regime_state.regime.value if regime_state else "neutral",
-                has_smc_signal=False,
-                ml_signal=ml_prediction.signal,
-                ml_confidence=ml_prediction.confidence,
-            )
-
-            # Risk state
-            risk_rec = self.smart_risk.get_trading_recommendation()
-
-            # Execution stats
-            avg_exec = (sum(self._execution_times) / len(self._execution_times) * 1000) if self._execution_times else 0
-            uptime = (now - self._start_time).total_seconds() / 3600  # hours
-
-            # Send the report
-            await self.telegram.send_hourly_analysis(
-                # Account
-                balance=balance,
-                equity=equity,
-                floating_pnl=floating_pnl,
-                # Positions
-                open_positions=len(open_positions),
-                position_details=position_details,
-                # Market
-                symbol=self.config.symbol,
-                current_price=current_price,
-                session=session_status.get("current_session", "Unknown"),
-                regime=regime_state.regime.value if regime_state else "unknown",
-                volatility=session_status.get("volatility", "unknown"),
-                # AI/ML
-                ml_signal=ml_prediction.signal,
-                ml_confidence=ml_prediction.confidence,
-                dynamic_threshold=market_analysis.confidence_threshold,
-                market_quality=market_analysis.quality.value,
-                market_score=market_analysis.score,
-                # Risk
-                daily_pnl=self._total_session_profit,
-                daily_trades=self._total_session_trades,
-                risk_mode=risk_rec.get("mode", "normal"),
-                max_daily_loss=self.smart_risk.max_daily_loss_usd,
-                # Bot
-                uptime_hours=uptime,
-                total_loops=self._loop_count,
-                avg_execution_ms=avg_exec,
-                # News - disabled
-                news_status="DISABLED",
-                news_reason="News agent disabled",
-            )
-
-            self._last_hourly_report_time = now
-            logger.info("Telegram: Hourly analysis report sent")
-
-        except Exception as e:
-            logger.warning(f"Failed to send hourly analysis: {e}")
-
     def _on_new_day(self):
         """Handle new trading day."""
         logger.info("=" * 60)
         logger.info(f"NEW TRADING DAY: {date.today()}")
         logger.info("=" * 60)
 
-        # Send daily summary before resetting (run synchronously)
-        try:
-            import asyncio
-            asyncio.create_task(self._send_daily_summary())
-        except Exception as e:
-            logger.warning(f"Could not send daily summary: {e}")
+        # Daily summary disabled from auto-send (available via command)
+        # try:
+        #     import asyncio
+        #     asyncio.create_task(self._send_daily_summary())
+        # except Exception as e:
+        #     logger.warning(f"Could not send daily summary: {e}")
 
         self._current_date = date.today()
         self.risk_engine.reset_daily_stats()
