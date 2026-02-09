@@ -86,22 +86,84 @@ class MarketRegimeDetector:
         self._train_metrics: Dict = {}
         
     def prepare_features(self, df: pl.DataFrame) -> np.ndarray:
-        """Prepare features for HMM training/prediction."""
+        """
+        Prepare ENHANCED features for HMM (8 features instead of 2).
+        Prevents alternating pattern degeneracy.
+        """
+        # 1-2: Log returns + short-term volatility
         df_features = df.with_columns([
             (pl.col("close") / pl.col("close").shift(1)).log().alias("log_returns"),
-            ((pl.col("high") - pl.col("low")) / pl.col("close")).alias("normalized_range"),
         ])
-        
         df_features = df_features.with_columns([
-            pl.col("log_returns")
-                .rolling_std(window_size=20)
-                .alias("volatility"),
+            pl.col("log_returns").rolling_std(window_size=20).alias("volatility_20"),
+            pl.col("log_returns").rolling_std(window_size=100).alias("volatility_100"),
         ])
-        
-        df_features = df_features.drop_nulls(subset=["log_returns", "volatility"])
-        features = df_features.select(["log_returns", "volatility"]).to_numpy()
-        features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
-        
+
+        # 3-4: Range and ATR features
+        df_features = df_features.with_columns([
+            ((pl.col("high") - pl.col("low")) / pl.col("close")).alias("range_norm"),
+        ])
+
+        # Calculate ATR if not present
+        if "atr" not in df_features.columns:
+            df_features = df_features.with_columns([
+                pl.max_horizontal([
+                    pl.col("high") - pl.col("low"),
+                    (pl.col("high") - pl.col("close").shift(1)).abs(),
+                    (pl.col("low") - pl.col("close").shift(1)).abs()
+                ]).rolling_mean(window_size=14).alias("atr")
+            ])
+
+        df_features = df_features.with_columns([
+            (pl.col("range_norm") * pl.col("close") / pl.col("atr")).alias("range_atr_ratio"),
+        ])
+
+        # 5: Trend strength (SMA distance / ATR)
+        df_features = df_features.with_columns([
+            pl.col("close").rolling_mean(window_size=9).alias("sma_9"),
+            pl.col("close").rolling_mean(window_size=21).alias("sma_21"),
+        ])
+        df_features = df_features.with_columns([
+            ((pl.col("sma_9") - pl.col("sma_21")).abs() / pl.col("atr")).alias("trend_strength"),
+        ])
+
+        # 6: RSI deviation (simple momentum proxy)
+        df_features = df_features.with_columns([
+            (pl.col("close") - pl.col("close").shift(1)).alias("delta"),
+        ])
+        df_features = df_features.with_columns([
+            pl.when(pl.col("delta") > 0).then(pl.col("delta")).otherwise(0).rolling_mean(window_size=14).alias("gain"),
+            pl.when(pl.col("delta") < 0).then(-pl.col("delta")).otherwise(0).rolling_mean(window_size=14).alias("loss"),
+        ])
+        df_features = df_features.with_columns([
+            (100 - (100 / (1 + pl.col("gain") / pl.col("loss")))).alias("rsi_calc"),
+        ])
+        df_features = df_features.with_columns([
+            ((pl.col("rsi_calc") - 50).abs() / 50).alias("rsi_deviation"),
+        ])
+
+        # 7: Autocorrelation proxy (lag-1 returns ratio as proxy)
+        df_features = df_features.with_columns([
+            (pl.col("log_returns") * pl.col("log_returns").shift(1)).rolling_mean(window_size=20).alias("autocorr"),
+        ])
+
+        # 8: Volatility regime (ATR zscore)
+        df_features = df_features.with_columns([
+            pl.col("atr").rolling_mean(window_size=100).alias("atr_mean"),
+            pl.col("atr").rolling_std(window_size=100).alias("atr_std"),
+        ])
+        df_features = df_features.with_columns([
+            ((pl.col("atr") - pl.col("atr_mean")) / pl.col("atr_std")).alias("vol_regime"),
+        ])
+
+        # Select 8 features and clean
+        feature_cols = ["log_returns", "volatility_20", "volatility_100", "range_atr_ratio",
+                       "trend_strength", "rsi_deviation", "autocorr", "vol_regime"]
+
+        df_features = df_features.drop_nulls(subset=feature_cols)
+        features = df_features.select(feature_cols).to_numpy()
+        features = np.nan_to_num(features, nan=0.0, posinf=3.0, neginf=-3.0)
+
         return features
     
     def fit(self, df: pl.DataFrame) -> "MarketRegimeDetector":
@@ -140,6 +202,7 @@ class MarketRegimeDetector:
         if not self.fitted:
             return
         
+        # Map regimes based on volatility_20 (feature index 1)
         means = self.model.means_[:, 1]
         sorted_indices = np.argsort(means)
         
