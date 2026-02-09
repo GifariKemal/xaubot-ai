@@ -22,7 +22,6 @@ try:
 except ImportError:
     mt5 = None
 
-
 # Timezone constants
 WIB = ZoneInfo("Asia/Jakarta")  # GMT+7
 EST = ZoneInfo("America/New_York")  # Market timezone

@@ -14,6 +14,7 @@ Author: AI Assistant
 """
 
 import os
+import time
 from datetime import datetime, date, timedelta
 from typing import Optional, Dict, Tuple, List
 from dataclasses import dataclass, field
@@ -98,17 +99,33 @@ class PositionGuard:
     stall_count: int = 0  # Berapa kali harga stall/sideways
     reversal_warnings: int = 0  # Jumlah warning ML reversal
 
+    # === VELOCITY & ACCELERATION TRACKING ===
+    profit_timestamps: List[float] = field(default_factory=list)  # time.time() per entry
+    velocity: float = 0.0             # $/second (profit change rate)
+    acceleration: float = 0.0         # $/s² (velocity change rate)
+    prev_velocity: float = 0.0       # previous velocity for acceleration calc
+    stagnation_seconds: float = 0.0  # how long velocity near zero
+    last_significant_move_time: float = 0.0  # last time velocity exceeded threshold
+    last_momentum_log_time: float = 0.0  # throttle logging per ticket
+
     def update_history(self, price: float, profit: float, ml_confidence: float, max_history: int = 20):
         """Update price/profit history untuk analisis momentum."""
+        now = time.time()
         self.price_history.append(price)
         self.profit_history.append(profit)
         self.ml_confidence_history.append(ml_confidence)
+        self.profit_timestamps.append(now)
 
         # Keep only last N entries
         if len(self.price_history) > max_history:
             self.price_history = self.price_history[-max_history:]
             self.profit_history = self.profit_history[-max_history:]
             self.ml_confidence_history = self.ml_confidence_history[-max_history:]
+            self.profit_timestamps = self.profit_timestamps[-max_history:]
+
+        # Update velocity, acceleration, and stagnation
+        self._calculate_velocity_acceleration()
+        self._update_stagnation(now)
 
     def calculate_momentum(self) -> float:
         """
@@ -166,6 +183,60 @@ class PositionGuard:
 
         probability = progress_score + momentum_score + conf_score - time_penalty
         return max(0, min(100, probability))
+
+    def _calculate_velocity_acceleration(self):
+        """Calculate velocity ($/s) from last 5 samples and acceleration ($/s²) from split-half."""
+        if len(self.profit_timestamps) < 2:
+            return
+
+        # Velocity from last 5 samples (or all if < 5)
+        n = min(5, len(self.profit_timestamps))
+        recent_times = self.profit_timestamps[-n:]
+        recent_profits = self.profit_history[-n:]
+        dt = recent_times[-1] - recent_times[0]
+        if dt > 0:
+            self.prev_velocity = self.velocity
+            self.velocity = (recent_profits[-1] - recent_profits[0]) / dt
+        else:
+            self.velocity = 0.0
+
+        # Acceleration from split-half comparison (need >= 6 samples)
+        if len(self.profit_timestamps) >= 6:
+            mid = len(self.profit_timestamps) // 2
+
+            t1 = self.profit_timestamps[:mid]
+            p1 = self.profit_history[:mid]
+            dt1 = t1[-1] - t1[0]
+            v1 = (p1[-1] - p1[0]) / dt1 if dt1 > 0 else 0.0
+
+            t2 = self.profit_timestamps[mid:]
+            p2 = self.profit_history[mid:]
+            dt2 = t2[-1] - t2[0]
+            v2 = (p2[-1] - p2[0]) / dt2 if dt2 > 0 else 0.0
+
+            dt_total = self.profit_timestamps[-1] - self.profit_timestamps[0]
+            self.acceleration = (v2 - v1) / dt_total if dt_total > 0 else 0.0
+
+    def _update_stagnation(self, now: float):
+        """Track how long velocity stays near zero (< 0.05 $/s)."""
+        if abs(self.velocity) < 0.05:
+            # Stagnating — accumulate time since last update
+            if len(self.profit_timestamps) >= 2:
+                dt = self.profit_timestamps[-1] - self.profit_timestamps[-2]
+                self.stagnation_seconds += dt
+        else:
+            # Moving — reset stagnation and record significant move
+            self.stagnation_seconds = 0.0
+            self.last_significant_move_time = now
+
+    def get_velocity_summary(self) -> Dict:
+        """Return dict with velocity metrics for logging."""
+        return {
+            "velocity": round(self.velocity, 4),
+            "acceleration": round(self.acceleration, 4),
+            "stagnation_s": round(self.stagnation_seconds, 1),
+            "samples": len(self.profit_timestamps),
+        }
 
 
 class SmartRiskManager:
@@ -642,6 +713,12 @@ class SmartRiskManager:
         momentum = guard.calculate_momentum()
         tp_probability = guard.get_tp_probability()
 
+        # Pre-calculate trade age (used by multiple checks)
+        now = datetime.now(WIB)
+        current_hour = now.hour
+        trade_age_seconds = (now - guard.entry_time).total_seconds()
+        trade_age_minutes = trade_age_seconds / 60
+
         # === CHECK 1: SMART TAKE PROFIT ===
         if current_profit >= 15:  # Profit $15+
             # A. Hard TP - profit sangat bagus
@@ -660,9 +737,23 @@ class SmartRiskManager:
             if tp_probability < 25 and current_profit >= 20:
                 return True, ExitReason.TAKE_PROFIT, f"[PROB] Taking profit ${current_profit:.2f} (TP prob: {tp_probability:.0f}%)"
 
+            # F. Velocity reversal — profit >= $15 but velocity turning negative
+            if guard.velocity < -0.3 and trade_age_minutes >= 15:
+                return True, ExitReason.TAKE_PROFIT, f"[VEL-EXIT] Securing ${current_profit:.2f} (velocity: {guard.velocity:.3f} $/s, momentum: {momentum:+.0f})"
+
+            # G. Deceleration — profit >= $20, growth slowing significantly
+            if current_profit >= 20 and guard.acceleration < -0.05 and guard.velocity < 0.1:
+                return True, ExitReason.TAKE_PROFIT, f"[DECEL] Securing ${current_profit:.2f} (accel: {guard.acceleration:.4f}, vel: {guard.velocity:.3f})"
+
             # E. Masih bagus, let it run
             if momentum >= 0:
                 return False, None, f"Profit ${current_profit:.2f} [GOOD] (momentum: {momentum:+.0f}, TP prob: {tp_probability:.0f}%)"
+
+        # === CHECK 1.5: FAST REVERSAL (small profit $8-$15) ===
+        if 8 <= current_profit < 15:
+            # Higher velocity threshold for smaller profits
+            if guard.velocity < -0.5 and trade_age_minutes >= 15:
+                return True, ExitReason.TAKE_PROFIT, f"[VEL-WARN] Fast reversal ${current_profit:.2f} (velocity: {guard.velocity:.3f} $/s)"
 
         # === CHECK 2: SMART EARLY EXIT (small profit) ===
         if 5 <= current_profit < 15:
@@ -682,26 +773,30 @@ class SmartRiskManager:
         # It encourages holding losers hoping they'll recover
         # PROPER RISK MANAGEMENT: Follow SL rules, don't hope for recovery
 
-        now = datetime.now(WIB)
-        current_hour = now.hour
-
         # Early cut: If loss > 30% of max and momentum negative, cut early
         # GRACE PERIOD: Wait at least 1 M15 candle (15 min) before early cut
         # Intra-candle moves are noise — let the trade develop on its timeframe
-        trade_age_seconds = (now - guard.entry_time).total_seconds()
-        trade_age_minutes = trade_age_seconds / 60
 
         if current_profit < 0:
             loss_percent_of_max = abs(current_profit) / self.max_loss_per_trade * 100
 
             # Cut early if momentum is against us AND loss is significant
             # BUT only after grace period (15 min = 1 M15 candle)
-            if momentum < -50 and loss_percent_of_max >= 30:  # #24B: relaxed from -30 (backtest +$125)
+            momentum_trigger = momentum < -50 and loss_percent_of_max >= 30  # #24B: relaxed from -30 (backtest +$125)
+            # Velocity alternative: fast drop even if momentum score hasn't caught up
+            velocity_trigger = guard.velocity < -0.4 and loss_percent_of_max >= 20
+
+            if momentum_trigger or velocity_trigger:
                 if trade_age_minutes < 15:
-                    logger.info(f"[GRACE] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + momentum ({momentum:.0f}) — holding {trade_age_minutes:.1f}m/{15}m grace period")
+                    logger.info(f"[GRACE] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + momentum ({momentum:.0f}) vel({guard.velocity:.3f}) — holding {trade_age_minutes:.1f}m/{15}m grace period")
                 else:
-                    logger.info(f"[EARLY CUT] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + weak momentum ({momentum:.0f}) - CUTTING EARLY (age: {trade_age_minutes:.0f}m)")
-                    return True, ExitReason.TREND_REVERSAL, f"[EARLY CUT] Loss ${abs(current_profit):.2f} + momentum {momentum:.0f} - cutting to preserve daily limit"
+                    trigger_type = "momentum" if momentum_trigger else "velocity"
+                    logger.info(f"[EARLY CUT] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + weak {trigger_type} ({momentum:.0f} / vel:{guard.velocity:.3f}) - CUTTING EARLY (age: {trade_age_minutes:.0f}m)")
+                    return True, ExitReason.TREND_REVERSAL, f"[EARLY CUT] Loss ${abs(current_profit):.2f} + {trigger_type} — cutting to preserve daily limit"
+
+            # Time-aware stagnation: stagnant for 120s+ with loss > $10
+            if guard.stagnation_seconds >= 120 and abs(current_profit) > 10 and trade_age_minutes >= 15:
+                return True, ExitReason.TREND_REVERSAL, f"[STAGNANT] Loss ${abs(current_profit):.2f} stagnant {guard.stagnation_seconds:.0f}s — cutting"
 
             # NOTE: Smart Hold REMOVED - no more holding losers hoping for golden time
             # If SL is hit, close the trade immediately
@@ -746,7 +841,6 @@ class SmartRiskManager:
 
         # === CHECK 7: WEEKEND CLOSE ===
         # Market closes Saturday 05:00 WIB — only close 30 min before (Saturday 04:30 WIB)
-        now = datetime.now(WIB)
         is_friday_late = now.weekday() == 4 and now.hour >= 4 and now.minute >= 30  # Sat 04:30 WIB = Fri weekday()==4 won't work
         is_saturday_early = now.weekday() == 5 and now.hour < 5  # Saturday before 05:00 WIB
         near_weekend_close = is_saturday_early and (now.hour >= 4 and now.minute >= 30)  # Saturday 04:30+ WIB
@@ -760,8 +854,8 @@ class SmartRiskManager:
         # Don't cut winners short - check profit growth and trend
         trade_duration_hours = (now - guard.entry_time).total_seconds() / 3600
 
-        # Check if profit is growing (positive momentum = don't exit early)
-        profit_growing = momentum > 0
+        # Check if profit is growing (positive momentum AND positive velocity)
+        profit_growing = momentum > 0 and guard.velocity > 0
         ml_agrees = (
             (guard.direction == "BUY" and ml_signal == "BUY") or
             (guard.direction == "SELL" and ml_signal == "SELL")

@@ -203,7 +203,7 @@ class TradingBot:
         self._current_session_multiplier: float = 1.0  # Session lot multiplier
         self._is_sydney_session: bool = False  # Sydney session flag (needs higher confidence)
         self._last_candle_time: Optional[datetime] = None  # Track last processed candle
-        self._position_check_interval: int = 10  # Check positions every N seconds between candles
+        self._position_check_interval: int = 5  # Check positions every N seconds between candles (more data points for velocity)
 
         # Entry filter tracking for dashboard
         self._last_filter_results: list = []
@@ -1943,6 +1943,21 @@ class TradingBot:
                 ml_confidence=ml_prediction.confidence,
                 regime=regime_state.regime.value if regime_state else "normal",
             )
+
+            # Per-ticket momentum log (~every 30 seconds)
+            guard = self.smart_risk._position_guards.get(ticket)
+            if guard and len(guard.profit_timestamps) >= 2:
+                now_ts = time.time()
+                if now_ts - guard.last_momentum_log_time >= 30:
+                    guard.last_momentum_log_time = now_ts
+                    vel_summary = guard.get_velocity_summary()
+                    logger.info(
+                        f"[MOMENTUM] #{ticket} profit=${profit:+.2f} | "
+                        f"vel={vel_summary['velocity']:.4f}$/s | "
+                        f"accel={vel_summary['acceleration']:.4f} | "
+                        f"stag={vel_summary['stagnation_s']:.0f}s | "
+                        f"samples={vel_summary['samples']}"
+                    )
 
             if should_close:
                 logger.info(f"Smart Close #{ticket}: {reason.value if reason else 'unknown'} - {message}")
