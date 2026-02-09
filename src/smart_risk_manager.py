@@ -686,13 +686,22 @@ class SmartRiskManager:
         current_hour = now.hour
 
         # Early cut: If loss > 30% of max and momentum negative, cut early
+        # GRACE PERIOD: Wait at least 1 M15 candle (15 min) before early cut
+        # Intra-candle moves are noise — let the trade develop on its timeframe
+        trade_age_seconds = (now - guard.entry_time).total_seconds()
+        trade_age_minutes = trade_age_seconds / 60
+
         if current_profit < 0:
             loss_percent_of_max = abs(current_profit) / self.max_loss_per_trade * 100
 
             # Cut early if momentum is against us AND loss is significant
+            # BUT only after grace period (15 min = 1 M15 candle)
             if momentum < -50 and loss_percent_of_max >= 30:  # #24B: relaxed from -30 (backtest +$125)
-                logger.info(f"[EARLY CUT] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + weak momentum ({momentum:.0f}) - CUTTING EARLY")
-                return True, ExitReason.TREND_REVERSAL, f"[EARLY CUT] Loss ${abs(current_profit):.2f} + momentum {momentum:.0f} - cutting to preserve daily limit"
+                if trade_age_minutes < 15:
+                    logger.info(f"[GRACE] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + momentum ({momentum:.0f}) — holding {trade_age_minutes:.1f}m/{15}m grace period")
+                else:
+                    logger.info(f"[EARLY CUT] Loss ${abs(current_profit):.2f} ({loss_percent_of_max:.0f}%) + weak momentum ({momentum:.0f}) - CUTTING EARLY (age: {trade_age_minutes:.0f}m)")
+                    return True, ExitReason.TREND_REVERSAL, f"[EARLY CUT] Loss ${abs(current_profit):.2f} + momentum {momentum:.0f} - cutting to preserve daily limit"
 
             # NOTE: Smart Hold REMOVED - no more holding losers hoping for golden time
             # If SL is hit, close the trade immediately

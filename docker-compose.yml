@@ -39,8 +39,8 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
-      # Mount data/ so API can read bot_status.json written by the bot on host
-      - ./data:/app/data:ro
+      # Mount data/ for reading bot_status.json and writing filter_config.json
+      - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy

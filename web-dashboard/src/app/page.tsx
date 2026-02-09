@@ -13,12 +13,11 @@ import {
   PositionsCard,
   LogCard,
   PriceChart,
-  EquityChart,
   BotStatusCard,
   EntryFilterCard,
   PerformanceCard,
   ModelCard,
-  FiltersConfigCard,
+  AssistantCard,
 } from "@/components/dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -69,7 +68,7 @@ function ErrorDisplay({ message }: { message: string }) {
 
 export default function Dashboard() {
   const { data, loading, error, dataAge } = useTradingData();
-  const visible = useStaggerEntry(17, 40);
+  const visible = useStaggerEntry(15, 40);
 
   const now = new Date();
   const wibTime = now.toLocaleTimeString("en-US", {
@@ -204,10 +203,7 @@ export default function Dashboard() {
               <PriceChart data={data.priceHistory} />
             </div>
             <div className={cn("stagger-enter col-span-2 min-h-0", visible[10] && "visible")}>
-              <EquityChart
-                equityData={data.equityHistory}
-                balanceData={data.balanceHistory}
-              />
+              <AssistantCard data={data} />
             </div>
           </div>
 
@@ -237,15 +233,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Row 5: Filter Controls */}
-          <div className="flex-[1.4] min-h-0 grid grid-cols-2 gap-1.5">
-            <div className={cn("stagger-enter h-full", visible[15] && "visible")}>
-              <FiltersConfigCard />
-            </div>
-            <div className={cn("stagger-enter h-full", visible[16] && "visible")}>
-              {/* Placeholder for future card */}
-            </div>
-          </div>
         </main>
       </div>
     </TooltipProvider>

@@ -16,4 +16,4 @@ export { EntryFilterCard } from "./entry-filter-card";
 export { PerformanceCard } from "./performance-card";
 export { ModelCard } from "./model-card";
 export { ModelDialog } from "./model-dialog";
-export { FiltersConfigCard } from "./filters-config-card";
+export { AssistantCard } from "./assistant-card";
