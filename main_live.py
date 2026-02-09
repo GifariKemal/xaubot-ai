@@ -299,13 +299,30 @@ class TradingBot:
                 except Exception:
                     pass
 
-            # Use retrain results if available
+            # Use retrain results if available, then model's stored metrics, then auto_trainer
             if retrain_results:
                 metrics["trainAuc"] = retrain_results.get("xgb_train_auc", 0)
                 metrics["testAuc"] = retrain_results.get("xgb_test_auc", 0)
                 metrics["sampleCount"] = retrain_results.get("sample_count", 0)
+            elif hasattr(self.ml_model, '_train_metrics') and self.ml_model._train_metrics:
+                # Use metrics stored in the model pickle (loaded on startup)
+                # V1 uses train_auc/test_auc, V2 uses xgb_train_score/xgb_test_score
+                tm = self.ml_model._train_metrics
+                metrics["trainAuc"] = tm.get("train_auc", 0) or tm.get("xgb_train_score", 0)
+                metrics["testAuc"] = tm.get("test_auc", 0) or tm.get("xgb_test_score", 0)
+                metrics["sampleCount"] = tm.get("train_samples", 0) + tm.get("test_samples", 0)
             elif hasattr(self, 'auto_trainer') and hasattr(self.auto_trainer, 'last_auc'):
                 metrics["testAuc"] = self.auto_trainer.last_auc or 0
+
+            # Also use model's stored feature importance if booster extraction failed
+            if not metrics["featureImportance"] and hasattr(self.ml_model, '_feature_importance') and self.ml_model._feature_importance:
+                fi = self.ml_model._feature_importance
+                total = sum(fi.values()) if fi else 1
+                sorted_features = sorted(fi.items(), key=lambda x: x[1], reverse=True)
+                metrics["featureImportance"] = [
+                    {"name": name, "importance": round(val / total, 4)}
+                    for name, val in sorted_features[:20] if val > 0
+                ]
 
             metrics_file = Path("data/model_metrics.json")
             metrics_file.parent.mkdir(parents=True, exist_ok=True)
