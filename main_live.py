@@ -66,6 +66,7 @@ from src.smart_risk_manager import SmartRiskManager, create_smart_risk_manager
 from src.dynamic_confidence import DynamicConfidenceManager, create_dynamic_confidence
 # from src.news_agent import NewsAgent, create_news_agent, MarketCondition  # DISABLED
 from src.trade_logger import TradeLogger, get_trade_logger
+from src.filter_config import FilterConfigManager
 
 
 class TradingBot:
@@ -125,7 +126,10 @@ class TradingBot:
         
         # Initialize risk engine
         self.risk_engine = RiskEngine(self.config)
-        
+
+        # Initialize filter config manager
+        self.filter_config = FilterConfigManager("data/filter_config.json")
+
         # Initialize ML V2 Model D (76 features, AUC 0.7339)
         self.ml_model = TradingModelV2(
             confidence_threshold=self.config.ml.confidence_threshold,
@@ -816,6 +820,18 @@ class TradingBot:
             logger.debug(f"H1 bias error: {e}")
             return "NEUTRAL"
 
+    def _is_filter_enabled(self, filter_key: str) -> bool:
+        """
+        Check if a filter is enabled via filter_config.json.
+
+        Args:
+            filter_key: Filter key (e.g., "h1_bias", "ml_confidence")
+
+        Returns:
+            True if enabled, False if disabled
+        """
+        return self.filter_config.is_enabled(filter_key)
+
     def _register_telegram_commands(self):
         """Register Telegram command handlers from separate module."""
         from src.telegram_commands import register_commands
@@ -986,6 +1002,9 @@ class TradingBot:
         # Reset filter tracking for dashboard
         self._last_filter_results = []
 
+        # Reload filter config (lightweight JSON read, allows live updates from dashboard)
+        self.filter_config.load()
+
         # 1. Fetch fresh data
         df = self.mt5.get_market_data(
             symbol=self.config.symbol,
@@ -1025,8 +1044,14 @@ class TradingBot:
         
         # 5. Check flash crash
         is_flash, move_pct = self.flash_crash.detect(df.tail(5))
-        self._last_filter_results.append({"name": "Flash Crash Guard", "passed": not is_flash, "detail": f"{move_pct:.2f}% move" if is_flash else "OK"})
-        if is_flash:
+        flash_enabled = self._is_filter_enabled("flash_crash_guard")
+        flash_blocked = is_flash and flash_enabled
+        self._last_filter_results.append({
+            "name": "Flash Crash Guard",
+            "passed": not flash_blocked,
+            "detail": f"{move_pct:.2f}% move" if is_flash else "OK" + (" [DISABLED]" if not flash_enabled else "")
+        })
+        if flash_blocked:
             logger.warning(f"Flash crash detected: {move_pct:.2f}% move")
             try:
                 await self._emergency_close_all()
@@ -1098,20 +1123,38 @@ class TradingBot:
         
         # 7. Check regime allows trading
         regime_sleep = regime_state and regime_state.recommendation == "SLEEP"
-        self._last_filter_results.append({"name": "Regime Filter", "passed": not regime_sleep, "detail": regime_state.regime.value if regime_state else "N/A"})
-        if regime_sleep:
+        regime_enabled = self._is_filter_enabled("regime_filter")
+        regime_blocked = regime_sleep and regime_enabled
+        self._last_filter_results.append({
+            "name": "Regime Filter",
+            "passed": not regime_blocked,
+            "detail": (regime_state.regime.value if regime_state else "N/A") + (" [DISABLED]" if not regime_enabled else "")
+        })
+        if regime_blocked:
             logger.debug(f"Regime SLEEP: {regime_state.regime.value}")
             return
 
-        self._last_filter_results.append({"name": "Risk Check", "passed": risk_metrics.can_trade, "detail": risk_metrics.reason if not risk_metrics.can_trade else "OK"})
-        if not risk_metrics.can_trade:
+        risk_enabled = self._is_filter_enabled("risk_check")
+        risk_blocked = not risk_metrics.can_trade and risk_enabled
+        self._last_filter_results.append({
+            "name": "Risk Check",
+            "passed": not risk_blocked,
+            "detail": (risk_metrics.reason if not risk_metrics.can_trade else "OK") + (" [DISABLED]" if not risk_enabled else "")
+        })
+        if risk_blocked:
             logger.debug(f"Risk blocked: {risk_metrics.reason}")
             return
 
         # 7.5 Check trading session (WIB timezone)
         session_ok, session_reason, session_multiplier = self.session_filter.can_trade()
-        self._last_filter_results.append({"name": "Session Filter", "passed": session_ok, "detail": session_reason})
-        if not session_ok:
+        session_enabled = self._is_filter_enabled("session_filter")
+        session_blocked = not session_ok and session_enabled
+        self._last_filter_results.append({
+            "name": "Session Filter",
+            "passed": not session_blocked,
+            "detail": session_reason + (" [DISABLED]" if not session_enabled else "")
+        })
+        if session_blocked:
             if self._loop_count % 300 == 0:  # Log every 5 minutes
                 logger.info(f"Session filter: {session_reason}")
                 next_window = self.session_filter.get_next_trading_window()
@@ -1162,39 +1205,56 @@ class TradingBot:
 
         # 10. Combine signals
         final_signal = self._combine_signals(smc_signal, ml_prediction, regime_state)
-        self._last_filter_results.append({"name": "Signal Combination", "passed": final_signal is not None, "detail": f"{final_signal.signal_type} ({final_signal.confidence:.0%})" if final_signal else "Filtered out"})
+        signal_enabled = self._is_filter_enabled("signal_combination")
+        signal_blocked = final_signal is None and signal_enabled
+        self._last_filter_results.append({
+            "name": "Signal Combination",
+            "passed": not signal_blocked,
+            "detail": (f"{final_signal.signal_type} ({final_signal.confidence:.0%})" if final_signal else "Filtered out") + (" [DISABLED]" if not signal_enabled else "")
+        })
 
-        if final_signal is None:
+        if signal_blocked:
             return
 
         # 10.1 H1 Multi-Timeframe Filter (#31B: Price vs EMA20 — backtest +$343)
         # BUY only when H1 is BULLISH, SELL only when H1 is BEARISH
+        h1_enabled = self._is_filter_enabled("h1_bias")
         h1_passed = True
         h1_detail = f"H1={h1_bias}"
-        if h1_bias != "NEUTRAL":
-            if (final_signal.signal_type == "BUY" and h1_bias != "BULLISH") or \
-               (final_signal.signal_type == "SELL" and h1_bias != "BEARISH"):
+
+        if h1_enabled:
+            if h1_bias != "NEUTRAL":
+                if (final_signal.signal_type == "BUY" and h1_bias != "BULLISH") or \
+                   (final_signal.signal_type == "SELL" and h1_bias != "BEARISH"):
+                    h1_passed = False
+                    h1_detail = f"{final_signal.signal_type} vs H1={h1_bias}"
+                    self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
+                    logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1={h1_bias})")
+                    return
+                logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
+            else:
                 h1_passed = False
-                h1_detail = f"{final_signal.signal_type} vs H1={h1_bias}"
+                h1_detail = f"{final_signal.signal_type} blocked (NEUTRAL)"
                 self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
-                logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1={h1_bias})")
+                logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1=NEUTRAL)")
                 return
-            logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
+            self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"Aligned {h1_bias}"})
         else:
-            h1_passed = False
-            h1_detail = f"{final_signal.signal_type} blocked (NEUTRAL)"
-            self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
-            logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1=NEUTRAL)")
-            return
-        self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"Aligned {h1_bias}"})
+            self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"H1={h1_bias} [DISABLED]"})
 
         # 10.2 Time-of-Hour Filter (#34A: skip WIB hours 9 and 21 — backtest +$356)
         # Hour 9 WIB (02:00 UTC) = end of NY session, low liquidity
         # Hour 21 WIB (14:00 UTC) = London-NY transition, whipsaw prone
         wib_hour = datetime.now(ZoneInfo("Asia/Jakarta")).hour
         time_blocked = wib_hour in (9, 21)
-        self._last_filter_results.append({"name": "Time Filter (#34A)", "passed": not time_blocked, "detail": f"WIB {wib_hour}" + (" BLOCKED" if time_blocked else "")})
-        if time_blocked:
+        time_enabled = self._is_filter_enabled("time_filter")
+        time_filter_blocked = time_blocked and time_enabled
+        self._last_filter_results.append({
+            "name": "Time Filter (#34A)",
+            "passed": not time_filter_blocked,
+            "detail": f"WIB {wib_hour}" + (" BLOCKED" if time_blocked else "") + (" [DISABLED]" if not time_enabled else "")
+        })
+        if time_filter_blocked:
             logger.info(f"Time Filter: {final_signal.signal_type} blocked (WIB hour {wib_hour} is skip hour)")
             return
 
@@ -1206,8 +1266,14 @@ class TradingBot:
             cooldown_remaining = self._trade_cooldown_seconds - time_since_last
             if cooldown_remaining > 0:
                 cooldown_blocked = True
-        self._last_filter_results.append({"name": "Trade Cooldown", "passed": not cooldown_blocked, "detail": f"{cooldown_remaining:.0f}s left" if cooldown_blocked else "OK"})
-        if cooldown_blocked:
+        cooldown_enabled = self._is_filter_enabled("cooldown")
+        cooldown_filter_blocked = cooldown_blocked and cooldown_enabled
+        self._last_filter_results.append({
+            "name": "Trade Cooldown",
+            "passed": not cooldown_filter_blocked,
+            "detail": (f"{cooldown_remaining:.0f}s left" if cooldown_blocked else "OK") + (" [DISABLED]" if not cooldown_enabled else "")
+        })
+        if cooldown_filter_blocked:
             logger.info(f"Trade cooldown: {cooldown_remaining:.0f}s remaining")
             return
 
