@@ -18,6 +18,7 @@ import {
   EntryFilterCard,
   PerformanceCard,
   ModelCard,
+  FiltersConfigCard,
 } from "@/components/dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -233,6 +234,16 @@ export default function Dashboard() {
             </div>
             <div className={cn("stagger-enter h-full", visible[14] && "visible")}>
               <LogCard logs={data.logs} />
+            </div>
+          </div>
+
+          {/* Row 5: Filter Controls */}
+          <div className="flex-[1.4] min-h-0 grid grid-cols-2 gap-1.5">
+            <div className={cn("stagger-enter h-full", visible[15] && "visible")}>
+              <FiltersConfigCard />
+            </div>
+            <div className={cn("stagger-enter h-full", visible[16] && "visible")}>
+              {/* Placeholder for future card */}
             </div>
           </div>
         </main>
