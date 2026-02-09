@@ -34,6 +34,7 @@ app.add_middleware(
 # Status file path (mounted as volume in Docker)
 STATUS_FILE = Path("/app/data/bot_status.json")
 MODEL_METRICS_FILE = Path("/app/data/model_metrics.json")
+FILTER_CONFIG_FILE = Path("/app/data/filter_config.json")
 
 # Default empty response
 DEFAULT_STATUS = {
@@ -411,6 +412,64 @@ async def get_signal_stats(hours: int = Query(24, ge=1, le=168)):
         "avgConfidence": round(float(row["avg_confidence"]), 1),
         "byType": {r["signal_type"]: r["count"] for r in by_type},
     }
+
+
+# ============================================================
+# FILTER CONFIG ENDPOINTS
+# ============================================================
+
+@app.get("/api/filters/config")
+async def get_filter_config():
+    """Get current filter enable/disable states."""
+    try:
+        if not FILTER_CONFIG_FILE.exists():
+            return {"filters": {}, "metadata": {}}
+
+        with open(FILTER_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        return data
+
+    except Exception as e:
+        logger.error(f"Failed to load filter config: {e}")
+        return {"filters": {}, "metadata": {}, "error": str(e)}
+
+
+@app.post("/api/filters/config")
+async def update_filter_config(updates: dict):
+    """
+    Update filter enable/disable states.
+
+    Body: { "filter_key": true/false, ... }
+    Example: { "h1_bias": false, "ml_confidence": true }
+    """
+    try:
+        # Load current config
+        if not FILTER_CONFIG_FILE.exists():
+            return {"success": False, "error": "Filter config file not found"}
+
+        with open(FILTER_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Update enabled states
+        for filter_key, enabled in updates.items():
+            if filter_key in data["filters"]:
+                data["filters"][filter_key]["enabled"] = enabled
+
+        # Update metadata
+        data["metadata"]["updated_at"] = datetime.now(ZoneInfo("Asia/Jakarta")).isoformat()
+
+        # Save
+        with open(FILTER_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Filter config updated: {list(updates.keys())}")
+
+        return {"success": True, "updated": list(updates.keys())}
+
+    except Exception as e:
+        logger.error(f"Failed to update filter config: {e}")
+        return {"success": False, "error": str(e)}
 
 
 if __name__ == "__main__":

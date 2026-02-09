@@ -1,0 +1,63 @@
+{
+  "filters": {
+    "flash_crash_guard": {
+      "enabled": true,
+      "name": "Flash Crash Guard",
+      "description": "Block entries during extreme price movements"
+    },
+    "regime_filter": {
+      "enabled": true,
+      "name": "Regime Filter",
+      "description": "Filter based on HMM regime detection"
+    },
+    "risk_check": {
+      "enabled": true,
+      "name": "Risk Check",
+      "description": "Daily/total loss limits validation"
+    },
+    "session_filter": {
+      "enabled": true,
+      "name": "Session Filter",
+      "description": "Trading session (Sydney/London/NY) validation"
+    },
+    "spread_check": {
+      "enabled": true,
+      "name": "Spread Check",
+      "description": "Block entries when spread too wide"
+    },
+    "h1_bias": {
+      "enabled": true,
+      "name": "H1 Bias Filter",
+      "description": "Multi-timeframe H1 EMA20 alignment (#31B)"
+    },
+    "ml_confidence": {
+      "enabled": true,
+      "name": "ML Confidence",
+      "description": "XGBoost confidence vs dynamic threshold"
+    },
+    "signal_combination": {
+      "enabled": true,
+      "name": "Signal Combination",
+      "description": "SMC + ML signal agreement check"
+    },
+    "cooldown": {
+      "enabled": true,
+      "name": "Cooldown Period",
+      "description": "Minimum time between trades (150s)"
+    },
+    "time_filter": {
+      "enabled": true,
+      "name": "Time Filter",
+      "description": "Block specific hours (#34A: skip 9,21 WIB)"
+    },
+    "market_close_guard": {
+      "enabled": true,
+      "name": "Market Close Guard",
+      "description": "Block entries near daily/weekend close"
+    }
+  },
+  "metadata": {
+    "updated_at": "2026-02-09T08:05:00+07:00",
+    "version": "1.0"
+  }
+}
