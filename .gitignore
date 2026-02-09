@@ -41,9 +41,8 @@ env/
 *.swo
 *~
 
-# Logs (keep structure, ignore content)
-logs/*.log
-logs/**/*.log
+# Logs (ignore all content)
+logs/
 
 # Data files (large)
 data/market_data/
@@ -86,6 +85,13 @@ archive/
 bot.pid
 bot_output.log
 nul
+data/bot_status.json
+data/signal_persistence.json
+data/model_metrics.json
+
+# Claude Code local settings
+.claude/
+backtests/.claude/
 
 # Screenshots
 *.png
