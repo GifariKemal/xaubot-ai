@@ -1002,6 +1002,11 @@ class TradingBot:
                     df = self.features.calculate_all(df, include_ml_features=True)
                     df = self.smc.calculate_all(df)
                     df = self.fe_v2.add_all_v2_features(df, self._h1_df_cached)
+                    # Ensure regime columns exist for ML model
+                    if "regime" not in df.columns:
+                        df = df.with_columns(pl.lit(1).alias("regime"))
+                    if "regime_confidence" not in df.columns:
+                        df = df.with_columns(pl.lit(1.0).alias("regime_confidence"))
                     feature_cols = self._get_available_features(df)
                     ml_prediction = self.ml_model.predict(df, feature_cols)
                     await self._smart_position_management(
@@ -1056,9 +1061,15 @@ class TradingBot:
             self._last_regime_updated = datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%H:%M:%S")
             
         except Exception as e:
-            logger.debug(f"Regime detection error: {e}")
+            logger.warning(f"Regime detection error: {e}")
             regime_state = None
-        
+
+        # Ensure regime columns exist for ML model (even if regime detection failed)
+        if "regime" not in df.columns:
+            df = df.with_columns(pl.lit(1).alias("regime"))
+        if "regime_confidence" not in df.columns:
+            df = df.with_columns(pl.lit(1.0).alias("regime_confidence"))
+
         # 5. Check flash crash
         is_flash, move_pct = self.flash_crash.detect(df.tail(5))
         flash_enabled = self._is_filter_enabled("flash_crash_guard")
