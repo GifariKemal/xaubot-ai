@@ -1,0 +1,150 @@
+================================================================================
+H1 FEATURE DEEP ANALYSIS
+================================================================================
+
+Total features in model: 76
+
+H1 features found: 9
+
+--- ALL H1 FEATURES ---
+  Rank #68: h1_atr_ratio                             importance=    0.0000
+  Rank #66: h1_ema20                                 importance=    0.0000
+  Rank # 7: h1_ema20_distance                        importance=   95.8865
+  Rank #67: h1_fvg_active                            importance=    0.0000
+  Rank #10: h1_market_structure                      importance=   61.8312
+  Rank #16: h1_ob_proximity                          importance=   33.1670
+  Rank # 6: h1_rsi                                   importance=  112.2508
+  Rank #17: h1_swing_proximity                       importance=   30.4503
+  Rank #12: h1_trend_strength                        importance=   45.8723
+
+--- TOP 10 H1 FEATURES (by importance) ---
+ 1. Rank #  6: h1_rsi                                     112.2508
+ 2. Rank #  7: h1_ema20_distance                           95.8865
+ 3. Rank # 10: h1_market_structure                         61.8312
+ 4. Rank # 12: h1_trend_strength                           45.8723
+ 5. Rank # 16: h1_ob_proximity                             33.1670
+ 6. Rank # 17: h1_swing_proximity                          30.4503
+ 7. Rank # 66: h1_ema20                                     0.0000
+ 8. Rank # 67: h1_fvg_active                                0.0000
+ 9. Rank # 68: h1_atr_ratio                                 0.0000
+
+--- H1 FEATURE STATISTICS ---
+Total H1 features: 9
+Mean importance: 42.1620
+Median importance: 33.1670
+Max importance: 112.2508
+Min importance: 0.0000
+
+H1 features in top 10: 3
+H1 features in top 20: 6
+H1 features in top 30: 6
+
+================================================================================
+ALL FEATURE NAMES IN MODEL
+================================================================================
+ 1. rsi                                                   36.2503
+ 2. atr                                                    0.0000
+ 3. atr_percent                                            0.0000
+ 4. macd                                                  65.5672
+ 5. macd_signal                                           75.9652
+ 6. macd_histogram                                         0.0000
+ 7. bb_middle                                              0.0000
+ 8. bb_upper                                               0.0000
+ 9. bb_lower                                               0.0000
+10. bb_width                                               0.0000
+11. bb_percent_b                                          21.0445
+12. ema_9                                                  0.0000
+13. ema_21                                                21.6908
+14. ema_cross_bull                                         0.0000
+15. ema_cross_bear                                         0.0000
+16. volume_sma                                             0.0000
+17. volume_ratio                                          25.7497
+18. volume_increasing                                      0.0000
+19. high_volume                                            0.0000
+20. returns_1                                            167.9189
+21. returns_5                                              2.9630
+22. returns_20                                            11.5534
+23. log_returns                                          186.0548
+24. price_position                                        39.1339
+25. dist_from_sma_20                                      11.1024
+26. volatility_20                                          0.0000
+27. normalized_range                                       0.0000
+28. avg_normalized_range                                   0.0000
+29. close_lag_1                                           18.1662
+30. close_lag_2                                           18.1221
+31. close_lag_3                                            0.0000
+32. close_lag_5                                           24.4038
+33. higher_high                                            0.0000
+34. lower_low                                              0.0000
+35. hh_count_5                                             0.0000
+36. ll_count_5                                             0.0000
+37. hour                                                  14.3622
+38. weekday                                                0.0000
+39. london_session                                         0.0000
+40. ny_session                                             0.0000
+41. swing_high                                             0.0000
+42. swing_low                                              0.0000
+43. is_fvg_bull                                           23.1050
+44. is_fvg_bear                                            0.0000
+45. fvg_signal                                             0.0000
+46. ob                                                   417.3543
+47. ob_mitigated                                         127.2658
+48. bos                                                    0.0000
+49. choch                                                  0.0000
+50. market_structure                                       0.0000
+51. regime                                                 0.0000
+52. regime_confidence                                      0.0000
+53. h1_ema20                                               0.0000
+54. h1_market_structure                                   61.8312
+55. h1_ema20_distance                                     95.8865
+56. h1_trend_strength                                     45.8723
+57. h1_swing_proximity                                    30.4503
+58. h1_fvg_active                                          0.0000
+59. h1_ob_proximity                                       33.1670
+60. h1_atr_ratio                                           0.0000
+61. h1_rsi                                               112.2508
+62. fvg_gap_size_atr                                      14.4616
+63. fvg_age_bars                                           0.0000
+64. ob_width_atr                                          40.7235
+65. ob_distance_atr                                      119.3701
+66. bos_recency                                            0.0000
+67. confluence_score                                       0.0000
+68. swing_distance_atr                                     0.0000
+69. regime_duration_bars                                   0.0000
+70. regime_transition_prob                                 0.0000
+71. volatility_zscore                                     19.7360
+72. crisis_proximity                                      15.9215
+73. wick_ratio                                             0.0000
+74. body_ratio                                             0.0000
+75. gap_from_prev_close                                    7.8998
+76. consecutive_direction                                 57.4307
+
+================================================================================
+CHECKING TRAINING DATA FOR H1 FEATURES
+================================================================================
+
+Dataset columns: 72
+H1 columns in dataset: 0
+
+NO H1 COLUMNS IN TRAINING DATA!
+
+Looking for potential H1-related columns:
+  hour
+
+================================================================================
+CHECKING FEATURE ENGINEERING CODE
+================================================================================
+
+NO H1 references found in feature_eng.py
+
+================================================================================
+CONCLUSION
+================================================================================
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\analyze_h1_features.py", line 151, in <module>
+    print(f"\n\u2713 Model HAS {len(h1_features)} H1 features")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 2: character maps to <undefined>

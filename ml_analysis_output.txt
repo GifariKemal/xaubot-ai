@@ -1,0 +1,266 @@
+
+================================================================================
+ML MODEL DEEP DIVE ANALYSIS
+================================================================================
+
+================================================================================
+1. MODEL INSPECTION: xgboost_model_v2d.pkl
+================================================================================
+
+Model pickle structure:
+  model_type: ModelType
+  xgb_model: Booster
+  lgb_model: NoneType
+  feature_names: list (length=76)
+  confidence_threshold: float
+  xgb_params: dict (length=13)
+  lgb_params: dict (length=12)
+  feature_importance: dict (length=76)
+  train_metrics: dict (length=4)
+  fitted: bool
+
+XGBoost model: <class 'xgboost.core.Booster'>
+LightGBM model: <class 'NoneType'>
+Total features: 76
+
+--- TRAINING METRICS ---
+xgb_train_score: 0.7385315785647933
+xgb_test_score: 0.7338658466928052
+train_samples: 36407
+test_samples: 9052
+
+--- XGBOOST PARAMETERS ---
+objective: binary:logistic
+eval_metric: auc
+max_depth: 3
+learning_rate: 0.05
+tree_method: hist
+device: cpu
+min_child_weight: 10
+subsample: 0.7
+colsample_bytree: 0.6
+reg_alpha: 1.0
+reg_lambda: 5.0
+gamma: 1.0
+max_delta_step: 1
+
+================================================================================
+2. FEATURE IMPORTANCE RANKING
+================================================================================
+
+Total features with importance: 76
+
+--- TOP 30 FEATURES ---
+ 1. ob                                         417.354340  [M15]
+ 2. log_returns                                186.054825  [M15]
+ 3. returns_1                                  167.918945  [M15]
+ 4. ob_mitigated                               127.265808  [SMC]
+ 5. ob_distance_atr                            119.370117  [SMC]
+ 6. h1_rsi                                     112.250816  [M15]
+ 7. h1_ema20_distance                           95.886513  [M15]
+ 8. macd_signal                                 75.965248  [M15]
+ 9. macd                                        65.567200  [M15]
+10. h1_market_structure                         61.831249  [M15]
+11. consecutive_direction                       57.430664  [M15]
+12. h1_trend_strength                           45.872288  [M15]
+13. ob_width_atr                                40.723549  [SMC]
+14. price_position                              39.133850  [M15]
+15. rsi                                         36.250340  [M15]
+16. h1_ob_proximity                             33.167027  [SMC]
+17. h1_swing_proximity                          30.450262  [M15]
+18. volume_ratio                                25.749680  [M15]
+19. close_lag_5                                 24.403849  [M15]
+20. is_fvg_bull                                 23.105017  [SMC]
+21. ema_21                                      21.690825  [M15]
+22. bb_percent_b                                21.044502  [M15]
+23. volatility_zscore                           19.736000  [M15]
+24. close_lag_1                                 18.166227  [M15]
+25. close_lag_2                                 18.122101  [M15]
+26. crisis_proximity                            15.921524  [M15]
+27. fvg_gap_size_atr                            14.461624  [SMC]
+28. hour                                        14.362236  [M15]
+29. returns_20                                  11.553368  [M15]
+30. dist_from_sma_20                            11.102405  [M15]
+
+--- H1 FEATURES IN TOP 10 ---
+Count: 0
+
+--- FEATURE CATEGORY SUMMARY ---
+H1 features: 0
+M15 technical features: 22
+SMC features: 13
+Average M15 importance: 19.988993
+Average SMC importance: 27.545626
+
+================================================================================
+3. TARGET VARIABLE STATISTICS
+================================================================================
+
+Loading: data\training_data.parquet
+Dataset shape: (8000, 72)
+
+--- TARGET DISTRIBUTION ---
+None:      1 ( 0.01%)
+SELL:   3749 (46.86%)
+HOLD:   4250 (53.12%)
+
+--- RETURN ANALYSIS (M15 bars) ---
+
+Bars with 3-bar returns > X*ATR:
+  > 0.1*ATR:     0 ( 0.00%)
+  > 0.2*ATR:     0 ( 0.00%)
+  > 0.3*ATR:     0 ( 0.00%)
+  > 0.5*ATR:     0 ( 0.00%)
+  > 0.7*ATR:     0 ( 0.00%)
+  > 1.0*ATR:     0 ( 0.00%)
+
+Mean normalized return: 0.0000
+Median normalized return: 0.0000
+
+Positive returns: 4250 (53.12%)
+Negative returns: 3744 (46.80%)
+
+--- H1 FEATURES IN DATASET ---
+H1 columns found: 0
+
+================================================================================
+4. PREDICTION CONSISTENCY ANALYSIS
+================================================================================
+
+Analyzing: logs\trading_bot_2026-02-09.log
+
+================================================================================
+5. CURRENT MODEL METRICS
+================================================================================
+
+--- MODEL METRICS (from data/model_metrics.json) ---
+{
+  "featureImportance": [
+    {
+      "name": "ob",
+      "importance": 0.2126
+    },
+    {
+      "name": "log_returns",
+      "importance": 0.0948
+    },
+    {
+      "name": "returns_1",
+      "importance": 0.0856
+    },
+    {
+      "name": "ob_mitigated",
+      "importance": 0.0648
+    },
+    {
+      "name": "ob_distance_atr",
+      "importance": 0.0608
+    },
+    {
+      "name": "h1_rsi",
+      "importance": 0.0572
+    },
+    {
+      "name": "h1_ema20_distance",
+      "importance": 0.0489
+    },
+    {
+      "name": "macd_signal",
+      "importance": 0.0387
+    },
+    {
+      "name": "macd",
+      "importance": 0.0334
+    },
+    {
+      "name": "h1_market_structure",
+      "importance": 0.0315
+    },
+    {
+      "name": "consecutive_direction",
+      "importance": 0.0293
+    },
+    {
+      "name": "h1_trend_strength",
+      "importance": 0.0234
+    },
+    {
+      "name": "ob_width_atr",
+      "importance": 0.0207
+    },
+    {
+      "name": "price_position",
+      "importance": 0.0199
+    },
+    {
+      "name": "rsi",
+      "importance": 0.0185
+    },
+    {
+      "name": "h1_ob_proximity",
+      "importance": 0.0169
+    },
+    {
+      "name": "h1_swing_proximity",
+      "importance": 0.0155
+    },
+    {
+      "name": "volume_ratio",
+      "importance": 0.0131
+    },
+    {
+      "name": "close_lag_5",
+      "importance": 0.0124
+    },
+    {
+      "name": "is_fvg_bull",
+      "importance": 0.0118
+    }
+  ],
+  "trainAuc": 0.7385315785647933,
+  "testAuc": 0.7338658466928052,
+  "sampleCount": 45459,
+  "updatedAt": "2026-02-09T09:01:15.440605+07:00"
+}
+
+================================================================================
+6. OVERFITTING ANALYSIS
+================================================================================
+
+From training_2026-02-04.log:
+  Initial training: Train AUC=0.8106, Test AUC=0.6553
+  Overfitting gap: 0.1553 (HIGH)
+
+  Walk-forward average: Train AUC=0.8107, Test AUC=0.5722
+  Overfitting gap: 0.2385 (VERY HIGH)
+
+Conclusion:
+  - Model shows significant overfitting
+  - Test AUC of 0.57-0.66 is barely better than random (0.50)
+  - High train AUC (0.81) but poor generalization
+
+================================================================================
+CRITICAL FINDINGS
+================================================================================
+
+1. MODEL PERFORMANCE:
+   - Test AUC: 0.5722 (walk-forward) - POOR
+   - Overfitting gap: 0.2385 - VERY HIGH
+   - Model barely better than random guessing
+
+2. FEATURE IMPORTANCE:
+   - H1 features NOT in top 10 - Low predictive value
+
+3. DATA QUALITY:
+   - Training samples: 8000
+   - Target imbalance likely causing issues
+   - Most returns < 0.3*ATR (target too weak)
+
+4. RECOMMENDATIONS:
+   a. Current V2D model has POOR performance - needs replacement
+   b. H1 features show low importance - may not help
+   c. Consider new target variable (stronger signal)
+   d. Address class imbalance in training
+   e. Reduce model complexity to prevent overfitting
+
+================================================================================
