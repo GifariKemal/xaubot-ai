@@ -1915,10 +1915,11 @@ class TradingBot:
         session_name = session_info.get("current_session", "Unknown")
         is_london = session_name == "London"
 
-        # Calculate ATR ratio
+        # Calculate ATR ratio from cached df
         atr_ratio = 1.0
-        if "atr" in df.columns:
-            atr_series = df["atr"].drop_nulls()
+        cached_df = getattr(self, '_cached_df', None)
+        if cached_df is not None and "atr" in cached_df.columns:
+            atr_series = cached_df["atr"].drop_nulls()
             if len(atr_series) > 0:
                 current_atr = atr_series.tail(1).item() or 0
                 if len(atr_series) >= 96:
