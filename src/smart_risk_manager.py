@@ -148,6 +148,11 @@ class PositionGuard:
     last_profit_for_derivative: float = 0.0  # For velocity derivative calculation
     peak_hold_active: bool = False  # v0.2.2: Suppress exits when approaching peak
 
+    # === v0.2.5 MONOTONIC RATCHET & GOLDEN SESSION ===
+    tightest_max_loss: float = 999.0      # Tightest effective_max_loss ever seen (only shrinks)
+    tightest_atr_loss: float = 999.0      # Tightest max_atr_loss ever seen (only shrinks)
+    ever_profitable: bool = False          # True once trade has been profitable (profit > $0.50)
+
     def update_history(self, price: float, profit: float, ml_confidence: float, max_history: int = 20):
         """Update price/profit history untuk analisis momentum."""
         now = time.time()
@@ -983,6 +988,13 @@ class SmartRiskManager:
             elif guard.direction == "BUY" and stoch_k > 80:
                 profit_mult *= 0.8  # Overbought: BUY may reverse
 
+        # === 6. GOLDEN SESSION AWARENESS (v0.2.5) ===
+        # London-NY Overlap has extreme volatility — losses escalate FAST.
+        # Tighten loss tolerance and take profit sooner.
+        if market_context and market_context.get("is_golden"):
+            loss_mult *= 0.70    # 30% tighter max loss during golden
+            profit_mult *= 0.85  # Take profit slightly sooner (extreme vol = fast reversals)
+
         # Clamp multipliers to reasonable ranges
         # v5c: loss_mult minimum raised 0.3->0.5 (give trades more breathing room)
         profit_mult = max(0.3, min(2.5, profit_mult))
@@ -1096,6 +1108,14 @@ class SmartRiskManager:
 
         effective_max_loss = self.max_loss_per_trade * sm
 
+        # === v0.2.5 FIX #4: MONOTONIC RATCHET — max_loss can only TIGHTEN ===
+        # Once a tighter max_loss is calculated, it can never widen back.
+        # Prevents: trade state changing from "declining" to "stalling" widening the stop.
+        if effective_max_loss < guard.tightest_max_loss:
+            guard.tightest_max_loss = effective_max_loss
+        else:
+            effective_max_loss = guard.tightest_max_loss
+
         # === ATR-BASED THRESHOLDS — "Detak Jantung Market" ===
         # All thresholds use ATR as the base unit, making them SYMMETRIC and adaptive:
         # - London (high vol) -> wider stops, bigger targets
@@ -1134,6 +1154,12 @@ class SmartRiskManager:
         timeout_loss = -0.35 * loss_mult * atr_unit    # Dynamic timeout
         stagnant_loss = 0.25 * loss_mult * atr_unit    # Dynamic stagnation
 
+        # v0.2.5 FIX #4: max_atr_loss ratchet — can only tighten
+        if max_atr_loss < guard.tightest_atr_loss:
+            guard.tightest_atr_loss = max_atr_loss
+        else:
+            max_atr_loss = guard.tightest_atr_loss
+
         # === v6: KALMAN VELOCITY ALIASES (moved here for dynamic grace) ===
         # Use Kalman-filtered velocity/acceleration for exit decisions (smoother).
         # Raw velocity still used for counter logic (sign flips, was_positive).
@@ -1144,6 +1170,12 @@ class SmartRiskManager:
         # v6.1: Grace adapts to how fast the trade is losing money
         # Fast crash -> short grace (3-4 min)
         # Slow loss/recovery -> long grace (10-12 min)
+
+        # v0.2.5 FIX #3: Track if trade was ever profitable
+        if current_profit > 0.50 and not guard.ever_profitable:
+            guard.ever_profitable = True
+
+        is_golden = market_context.get("is_golden", False) if market_context else False
 
         if current_profit >= 0:
             # In profit: full grace (regime-based)
@@ -1181,16 +1213,28 @@ class SmartRiskManager:
                 else:
                     grace_minutes = 5  # 8 -> 5
 
+            # v0.2.5 FIX #3: NEVER-profitable trades get shorter grace (max 2 min)
+            # If trade went negative and NEVER saw meaningful profit, cut faster.
+            if not guard.ever_profitable:
+                grace_minutes = min(grace_minutes, 2.0)
+
+        # v0.2.5: Golden Session — reduce grace by 40% (extreme vol = fast moves)
+        if is_golden:
+            grace_minutes = max(2.0, grace_minutes * 0.60)
+
         # Log dynamic multipliers periodically (every 60s)
         if len(guard.profit_timestamps) > 0:
             now_ts = time.time()
             if not hasattr(guard, '_last_dynamic_log') or now_ts - guard._last_dynamic_log >= 60:
                 guard._last_dynamic_log = now_ts
+                _golden_tag = " [GOLDEN]" if is_golden else ""
+                _ever_prof = "Y" if guard.ever_profitable else "N"
                 logger.info(
-                    f"[DYNAMIC] #{ticket} regime={regime} state={trade_state} "
+                    f"[DYNAMIC] #{ticket} regime={regime} state={trade_state}{_golden_tag} "
                     f"P×{profit_mult:.2f} L×{loss_mult:.2f} | "
-                    f"tp_min=${tp_min:.1f} max_loss=${max_atr_loss:.1f} "
-                    f"grace={grace_minutes}m"
+                    f"tp_min=${tp_min:.1f} max_loss=${max_atr_loss:.1f} eff_max=${effective_max_loss:.1f} "
+                    f"ratchet=${guard.tightest_max_loss:.1f} grace={grace_minutes:.1f}m "
+                    f"ever_profit={_ever_prof}"
                 )
 
         # === UPDATE TRACKING DATA ===

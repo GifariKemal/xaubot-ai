@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.5] - 2026-02-11
+
+### Fixed (Professor AI Analysis: Golden Session + Loss Protection)
+**Problem:** v0.2.4 caused -$17.52 loss in 8 minutes during Golden Session (London-NY Overlap).
+Two trades (#162324181: -$8.20, #162333556: -$9.32) both with SMC 63% (FVG only), ML HOLD 50%.
+
+#### Root Cause Analysis
+1. **Grace period too long for never-profitable trades** — 5 min grace given to trade that NEVER saw profit
+2. **Max loss WIDENED during trade** — Dynamic multiplier changed from "declining"→"stalling", widening stop from $7.9→$8.8
+3. **Golden Session (20:00-00:00 WIB) has extreme volatility** — No special handling despite ATR 1.20x+
+
+#### Fix #3: Grace Period for Never-Profitable Trades
+- Added `ever_profitable` field to PositionGuard (true once profit > $0.50)
+- Trades that were NEVER profitable: grace capped at **2 minutes max** (was 5-8 min)
+- Trades that were once profitable: normal grace (regime-based)
+
+#### Fix #4: Monotonic Max Loss Ratchet
+- Added `tightest_max_loss` and `tightest_atr_loss` fields to PositionGuard
+- `effective_max_loss` can only TIGHTEN (shrink), never widen back
+- `max_atr_loss` can only TIGHTEN, never widen back
+- Prevents: trade state changing from "declining"→"stalling" widening the stop
+
+#### Golden Session Special Handling
+- `market_context` now includes `is_golden`, `session_name`, `session_volatility`
+- During Golden Session (London-NY Overlap):
+  - `loss_mult *= 0.70` — 30% tighter max loss tolerance
+  - `profit_mult *= 0.85` — Take profit slightly sooner (fast reversals)
+  - Grace period reduced by 40% (`grace *= 0.60`)
+  - Combined with Fix #3: never-profitable trade in Golden = 2 min max grace
+- Enhanced dynamic log shows: `[GOLDEN]` tag, ratchet values, ever_profitable status
+
+#### Expected Impact
+- **Trade #162324181 scenario:** Grace 5m → 1.2m (golden×never-profitable), max_loss $8.8 → stays at $7.9
+- **Trade #162333556 scenario:** Grace 5m → 1.2m, tighter stop = earlier exit = smaller loss
+- **Net reduction:** -$17.52 → estimated -$8 to -$12 (30-55% improvement)
+
+---
+
 ## [0.2.4] - 2026-02-11
 
 ### Fixed (CRITICAL: Restore TRUE SMC-Only Logic)

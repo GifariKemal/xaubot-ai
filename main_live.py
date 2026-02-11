@@ -2523,6 +2523,14 @@ class TradingBot:
                         _market_ctx[col if col != "histogram" else "macd_hist"] = (
                             vals.tail(1).item() if len(vals) > 0 else None
                         )
+                # v0.2.5: Pass session info for Golden Session awareness
+                try:
+                    _sess = self.session_filter.get_status_report()
+                    _market_ctx["session_name"] = _sess.get("current_session", "")
+                    _market_ctx["is_golden"] = "GOLDEN" in _sess.get("current_session", "").upper()
+                    _market_ctx["session_volatility"] = _sess.get("volatility", "medium")
+                except Exception:
+                    _market_ctx["is_golden"] = False
 
             # Evaluate with smart risk manager (dynamic thresholds v5)
             should_close, reason, message = self.smart_risk.evaluate_position(
