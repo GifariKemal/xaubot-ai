@@ -9,6 +9,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.4] - 2026-02-11
+
+### Fixed (CRITICAL: Restore TRUE SMC-Only Logic)
+**User Discovery:** v0.2.3 logic was WRONG - still blocking SMC signals based on ML!
+
+#### Problem Identified
+- **User:** "Perasaan tadi sebelum perbaikan, kita mengabaikan ML dan fokus SMC saja"
+- **Investigation:** v0.2.3 still had 3-tier logic that BLOCKS SMC 60-75% if ML disagrees
+- **Original v4:** ML filters DISABLED - SMC signal = immediate trade (except SELL filter)
+- **v0.2.3 mistake:** Added medium tier that requires ML agreement (WRONG!)
+
+#### Root Cause Analysis
+```python
+# ORIGINAL v4 (CORRECT - SMC-Only):
+if smc_signal:
+    if ml_agrees:
+        confidence = avg(smc, ml)  # Boost
+    else:
+        confidence = smc  # Use SMC as-is
+    execute()  # ALWAYS execute
+
+# v0.2.3 (WRONG - Still blocking):
+if smc >= 75%:
+    execute()
+elif smc 60-75%:
+    if ml_agrees:  # ← WRONG! This blocks trades!
+        execute()
+    else:
+        skip()  # ← Blocked signal 63% wrongly!
+```
+
+#### Example Impact
+- **Signal:** SMC BUY 63%, ML HOLD 50%
+- **v0.2.3 behavior:** ❌ BLOCKED (medium tier needs ML confirm)
+- **Should be:** ✅ EXECUTE (SMC-only mode)
+
+#### Solution Implemented
+
+**Logic v6 - TRUE SMC-Only:**
+```python
+if smc_signal and smc_conf >= 0.55:
+    # SELL filter (only exception)
+    if signal == "SELL":
+        if ml_signal != "SELL" or ml_conf < 0.75:
+            skip()  # SELL safety filter
+
+    # For all other signals: ML is OPTIONAL boost
+    if ml_agrees:
+        confidence = avg(smc, ml)  # Boost
+    else:
+        confidence = smc  # Use SMC as-is (ML IGNORED)
+
+    execute()  # ALWAYS execute if SMC >= 55%
+```
+
+**Key Changes:**
+- ❌ Removed: 3-tier logic (HIGH/MEDIUM/LOW)
+- ✅ Added: Single threshold (>= 55%)
+- ✅ ML role: OPTIONAL boost only (not blocker)
+- ✅ SELL filter: Only exception (requires ML >= 75%)
+
+**Expected Behavior:**
+| SMC | ML | v0.2.3 (Wrong) | v0.2.4 (Correct) |
+|-----|-----|----------------|------------------|
+| BUY 63% | HOLD 50% | ❌ BLOCKED | ✅ EXECUTE (conf 63%) |
+| BUY 75% | HOLD 50% | ✅ EXECUTE (conf 71%) | ✅ EXECUTE (conf 75%) |
+| BUY 80% | BUY 70% | ✅ EXECUTE (conf 75%) | ✅ EXECUTE (conf 75%) |
+| SELL 75% | HOLD 50% | ✅ EXECUTE | ❌ BLOCKED (safety) |
+
+**Files Modified:**
+- `main_live.py` - Signal logic v6 (line 1940-2010)
+- `VERSION` - Updated to 0.2.4
+- `CHANGELOG.md` - This entry
+
+**User Feedback Integration:**
+- ✅ "Mengabaikan ML" - ML truly ignored (except SELL safety)
+- ✅ "Fokus SMC saja" - SMC >= 55% executes always
+- ✅ Original v4 intention restored
+
+---
+
 ## [0.2.3] - 2026-02-11
 
 ### Fixed (SMC Primary Strategy Restoration)

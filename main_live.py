@@ -1938,16 +1938,23 @@ class TradingBot:
                 )
 
         # ============================================================
-        # SIGNAL LOGIC v5 - SMC PRIMARY, ML SECONDARY
+        # SIGNAL LOGIC v6 - SMC-ONLY (TRUE SMC MASTER)
         # ============================================================
-        # Philosophy: SMC is the CORE strategy, ML is support/filter
-        # - SMC confidence >= 75% -> EXECUTE (high conviction)
-        # - SMC confidence 60-75% -> Require ML agreement to boost
-        # - SMC confidence < 60% -> Skip (SMC not confident)
+        # Philosophy: SMC is MASTER, ML is OPTIONAL boost/reference only
+        # - SMC signal exists (>= 55% conf) -> EXECUTE
+        # - ML agrees -> Boost confidence (average)
+        # - ML disagrees -> Use SMC confidence (ML IGNORED)
+        # - Exception: SELL requires ML >= 75% (safety filter)
         # ============================================================
         golden_marker = "[GOLDEN] " if is_golden_time else ""
         if smc_signal is not None:
             smc_conf = smc_signal.confidence
+
+            # Skip if SMC confidence too low (< 55%)
+            if smc_conf < 0.55:
+                if self._loop_count % 120 == 0:
+                    logger.info(f"[SMC LOW] {smc_signal.signal_type} confidence {smc_conf:.0%} < 55% -> Skip")
+                return None
 
             # Check ML agreement
             ml_agrees = (
@@ -1956,75 +1963,51 @@ class TradingBot:
             )
 
             # ============================================================
-            # SMC HIGH CONFIDENCE (>= 75%) - EXECUTE DIRECTLY
+            # SELL-SPECIFIC SAFETY FILTER
             # ============================================================
-            if smc_conf >= 0.75:
-                # SMC is very confident -> Execute regardless of ML
-                if ml_agrees:
-                    combined_confidence = (smc_conf + ml_prediction.confidence) / 2
-                    reason_suffix = f" | ML BOOST: {ml_prediction.signal} ({ml_prediction.confidence:.0%})"
-                else:
-                    combined_confidence = smc_conf * 0.95  # Minor penalty for ML disagree
-                    reason_suffix = f" | ML disagree: {ml_prediction.signal} ({ml_prediction.confidence:.0%})"
-
-                # Apply London penalty if applicable
-                combined_confidence *= london_penalty
-
-                logger.info(
-                    f"{golden_marker}[SMC PRIMARY] {smc_signal.signal_type} @ {smc_signal.entry_price:.2f} "
-                    f"(SMC={smc_conf:.0%}, ML={ml_prediction.signal} {ml_prediction.confidence:.0%}, "
-                    f"Final={combined_confidence:.0%})"
-                )
-
-                return SMCSignal(
-                    signal_type=smc_signal.signal_type,
-                    entry_price=smc_signal.entry_price,
-                    stop_loss=smc_signal.stop_loss,
-                    take_profit=smc_signal.take_profit,
-                    confidence=combined_confidence,
-                    reason=f"SMC-PRIMARY: {smc_signal.reason}{reason_suffix}",
-                )
-
-            # ============================================================
-            # SMC MEDIUM CONFIDENCE (60-75%) - REQUIRE ML AGREEMENT
-            # ============================================================
-            elif smc_conf >= 0.60:
-                # SMC moderately confident -> Need ML confirmation
-                if ml_agrees and ml_prediction.confidence >= 0.60:
-                    # Both agree -> Take the trade
-                    combined_confidence = (smc_conf + ml_prediction.confidence) / 2
-                    combined_confidence *= london_penalty
-
-                    logger.info(
-                        f"{golden_marker}[SMC+ML CONFIRM] {smc_signal.signal_type} @ {smc_signal.entry_price:.2f} "
-                        f"(SMC={smc_conf:.0%}, ML={ml_prediction.signal} {ml_prediction.confidence:.0%}, "
-                        f"Final={combined_confidence:.0%})"
-                    )
-
-                    return SMCSignal(
-                        signal_type=smc_signal.signal_type,
-                        entry_price=smc_signal.entry_price,
-                        stop_loss=smc_signal.stop_loss,
-                        take_profit=smc_signal.take_profit,
-                        confidence=combined_confidence,
-                        reason=f"SMC+ML: {smc_signal.reason} | ML confirms",
-                    )
-                else:
-                    # ML doesn't agree -> Skip (SMC not strong enough alone)
+            # SELL signals require ML >= 75% (historically poor win rate)
+            if smc_signal.signal_type == "SELL":
+                if ml_prediction.signal != "SELL" or ml_prediction.confidence < 0.75:
                     if self._loop_count % 60 == 0:
                         logger.info(
-                            f"[SMC MEDIUM SKIP] SMC {smc_signal.signal_type} {smc_conf:.0%} needs ML confirm, "
-                            f"but ML says {ml_prediction.signal} {ml_prediction.confidence:.0%}"
+                            f"[SELL FILTER] SELL blocked: ML {ml_prediction.signal} "
+                            f"{ml_prediction.confidence:.0%} (need SELL >=75%)"
                         )
                     return None
 
             # ============================================================
-            # SMC LOW CONFIDENCE (< 60%) - SKIP
+            # CALCULATE FINAL CONFIDENCE (SMC-ONLY MODE)
             # ============================================================
+            if ml_agrees:
+                # ML boosts confidence (average SMC + ML)
+                combined_confidence = (smc_conf + ml_prediction.confidence) / 2
+                reason_suffix = f" | ML BOOST: {ml_prediction.signal} ({ml_prediction.confidence:.0%})"
             else:
-                if self._loop_count % 120 == 0:
-                    logger.info(f"[SMC LOW] {smc_signal.signal_type} confidence {smc_conf:.0%} < 60% -> Skip")
-                return None
+                # ML ignored, use SMC confidence as-is
+                combined_confidence = smc_conf
+                reason_suffix = f" | ML: {ml_prediction.signal} ({ml_prediction.confidence:.0%})"
+
+            # Apply London penalty if applicable
+            combined_confidence *= london_penalty
+
+            # Apply regime adjustment for high volatility
+            if regime_state and regime_state.regime == MarketRegime.HIGH_VOLATILITY:
+                combined_confidence *= 0.9
+
+            logger.info(
+                f"{golden_marker}[SMC-ONLY] {smc_signal.signal_type} @ {smc_signal.entry_price:.2f} "
+                f"(SMC={smc_conf:.0%}, ML={ml_prediction.signal} {ml_prediction.confidence:.0%}, "
+                f"Final={combined_confidence:.0%})"
+            )
+
+            return SMCSignal(
+                signal_type=smc_signal.signal_type,
+                entry_price=smc_signal.entry_price,
+                stop_loss=smc_signal.stop_loss,
+                take_profit=smc_signal.take_profit,
+                confidence=combined_confidence,
+                reason=f"SMC-ONLY: {smc_signal.reason}{reason_suffix}",
+            )
 
         # No valid signal
         return None
