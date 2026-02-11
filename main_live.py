@@ -1713,7 +1713,10 @@ class TradingBot:
         # v0.2.7: NIGHT SAFETY - Spread filter for late night hours (22:00-05:59 WIB)
         # Golden Session (20:00-00:00 WIB) allows wider spread due to extreme volatility
         is_night_hours = wib_hour >= 22 or wib_hour <= 5
-        is_golden = session_name and "GOLDEN" in session_name.upper()
+        # Check if Golden Session
+        session_info = self.session_filter.get_status_report()
+        current_session_name = session_info.get("current_session", "")
+        is_golden = "GOLDEN" in current_session_name.upper()
         night_spread_ok = True
         night_spread_msg = ""
         if is_night_hours:
