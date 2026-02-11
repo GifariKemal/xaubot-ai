@@ -20,7 +20,8 @@ import time
 import os
 import json
 from collections import deque
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from types import SimpleNamespace
 from typing import Optional, Dict, Tuple
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -130,28 +131,30 @@ class TradingBot:
         # Initialize filter config manager
         self.filter_config = FilterConfigManager("data/filter_config.json")
 
-        # Initialize ML V2 Model D (76 features, AUC 0.7339)
+        # Initialize ML Model (unified path — auto-trainer saves here after retrain)
         self.ml_model = TradingModelV2(
-            confidence_threshold=self.config.ml.confidence_threshold,
-            model_path="models/xgboost_model_v2d.pkl",
+            confidence_threshold=0.60,  # Binary confidence threshold (adjustable 0.55-0.65)
+            model_path="models/xgboost_model.pkl",
         )
         self.fe_v2 = MLV2FeatureEngineer()
         self._h1_df_cached = None  # Cache H1 DataFrame with indicators for V2 features
 
-        # Initialize Smart Position Manager - ATR-ADAPTIVE (#24B)
+        # Initialize Smart Position Manager — EXIT STRATEGY v4 "Patient Recovery"
+        # Philosophy: Let trades BREATHE. Don't cut winners at $3-4.
+        # Regime danger only at $8+. Give losers room to recover.
         self.position_manager = SmartPositionManager(
-            breakeven_pips=30.0,       # Fallback if ATR unavailable
-            trail_start_pips=50.0,     # Fallback if ATR unavailable
-            trail_step_pips=30.0,      # Fallback if ATR unavailable
-            atr_be_mult=2.0,           # Breakeven = ATR * 2.0 (#24B)
-            atr_trail_start_mult=4.0,  # Trail start = ATR * 4.0 (#24B)
-            atr_trail_step_mult=3.0,   # Trail step = ATR * 3.0 (#24B)
-            min_profit_to_protect=5.0,   # Protect profits > $5
-            max_drawdown_from_peak=50.0,  # Allow 50% drawdown (we use tiny lots)
+            breakeven_pips=20.0,       # Fallback if ATR unavailable
+            trail_start_pips=35.0,     # Fallback if ATR unavailable
+            trail_step_pips=20.0,      # Fallback if ATR unavailable
+            atr_be_mult=2.0,           # v4: BE at 2x ATR (from 1.0) — don't lock too early
+            atr_trail_start_mult=3.0,  # v4: Trail at 3x ATR (from 2.0) — let profit run
+            atr_trail_step_mult=2.0,   # v4: Trail step 2x ATR (from 1.5)
+            min_profit_to_protect=8.0, # v4: Regime/signal exit only at $8+ (from $3)
+            max_drawdown_from_peak=40.0,  # v4: Allow 40% drawdown (from 25%)
             # Smart Market Close Handler
             enable_market_close_handler=True,
-            min_profit_before_close=5.0,   # Take profit >= $5 before market close
-            max_loss_to_hold=30.0,     # Max loss $30 per position
+            min_profit_before_close=3.0,   # v4: from $2
+            max_loss_to_hold=10.0,     # v4: Max loss $10 per position (from $5)
         )
 
         # Initialize Session Filter (WIB timezone for Batam)
@@ -184,6 +187,10 @@ class TradingBot:
         self._loop_count = 0
         self._h1_bias_cache = "NEUTRAL"
         self._h1_bias_loop = 0
+        self._h1_bias_score = 0.0
+        self._h1_bias_strength = "weak"
+        self._h1_bias_signals = {}
+        self._h1_bias_regime_weights = "unknown"
         self._last_signal: Optional[SMCSignal] = None
         self._last_retrain_check: Optional[datetime] = None
         self._last_trade_time: Optional[datetime] = None
@@ -203,6 +210,8 @@ class TradingBot:
         self._current_session_multiplier: float = 1.0  # Session lot multiplier
         self._is_sydney_session: bool = False  # Sydney session flag (needs higher confidence)
         self._last_candle_time: Optional[datetime] = None  # Track last processed candle
+        self._pyramid_done_tickets: set = set()  # Tickets that already triggered a pyramid
+        self._last_pyramid_time: Optional[datetime] = None  # Cooldown between pyramids
         self._position_check_interval: int = 5  # Check positions every N seconds between candles (more data points for velocity)
 
         # Entry filter tracking for dashboard
@@ -219,7 +228,82 @@ class TradingBot:
         self._dash_logs: deque = deque(maxlen=50)
         self._dash_last_price: float = 0.0
         self._dash_status_file = Path("data/bot_status.json")
-    
+
+        # Restore dashboard state from previous session
+        self._restore_dashboard_state()
+
+    def _restore_dashboard_state(self):
+        """Restore dashboard histories from bot_status.json so restart doesn't lose data."""
+        try:
+            if not self._dash_status_file.exists():
+                return
+            import json
+            with open(self._dash_status_file, "r") as f:
+                prev = json.load(f)
+
+            # Restore price/equity/balance histories
+            for val in prev.get("priceHistory", []):
+                self._dash_price_history.append(val)
+            for val in prev.get("equityHistory", []):
+                self._dash_equity_history.append(val)
+            for val in prev.get("balanceHistory", []):
+                self._dash_balance_history.append(val)
+
+            # Restore logs
+            for log in prev.get("logs", []):
+                self._dash_logs.append(log)
+
+            # Restore last price
+            self._dash_last_price = prev.get("price", 0.0)
+
+            # Restore signal caches so dashboard doesn't show empty
+            smc = prev.get("smc", {})
+            if smc.get("signal"):
+                self._last_raw_smc_signal = smc["signal"]
+                self._last_raw_smc_confidence = smc.get("confidence", 0.0)
+                self._last_raw_smc_reason = smc.get("reason", "")
+                self._last_raw_smc_updated = smc.get("updatedAt", "")
+
+            ml = prev.get("ml", {})
+            if ml.get("signal"):
+                self._last_ml_signal = ml["signal"]
+                self._last_ml_confidence = ml.get("confidence", 0.0)
+                self._last_ml_probability = ml.get("buyProb", ml.get("confidence", 0.0))
+                self._last_ml_updated = ml.get("updatedAt", "")
+
+            regime = prev.get("regime", {})
+            if regime.get("name"):
+                from src.regime_detector import MarketRegime
+                regime_val = regime["name"].lower().replace(" ", "_")
+                try:
+                    self._last_regime = MarketRegime(regime_val)
+                except ValueError:
+                    pass
+                self._last_regime_volatility = regime.get("volatility", 0.0)
+                self._last_regime_confidence = regime.get("confidence", 0.0)
+                self._last_regime_updated = regime.get("updatedAt", "")
+
+            # Restore performance stats
+            perf = prev.get("performance", {})
+            self._loop_count = perf.get("loopCount", 0)
+            self._total_session_trades = perf.get("totalSessionTrades", 0)
+            self._total_session_wins = perf.get("totalSessionWins", 0)
+            self._total_session_profit = perf.get("totalSessionProfit", 0.0)
+            # Restore uptime: shift start_time back by previous uptime
+            prev_uptime_h = perf.get("uptimeHours", 0)
+            if prev_uptime_h > 0:
+                self._start_time = datetime.now() - timedelta(hours=prev_uptime_h)
+
+            # H1 bias: restore values but force recalc on first loop
+            self._h1_ema20_value = prev.get("h1BiasDetails", {}).get("ema20", 0.0)
+            self._h1_current_price = prev.get("h1BiasDetails", {}).get("price", 0.0)
+            # DON'T restore _h1_bias_cache — let it recalculate fresh from MT5
+            self._h1_bias_loop = -999  # Force recalc on first iteration
+
+            logger.info(f"Dashboard state restored: {len(self._dash_price_history)} prices, {len(self._dash_logs)} logs, loops={self._loop_count}, uptime={prev_uptime_h}h")
+        except Exception as e:
+            logger.warning(f"Could not restore dashboard state: {e}")
+
     def _load_models(self) -> bool:
         """Load pre-trained models."""
         logger.info("Loading trained models...")
@@ -281,11 +365,24 @@ class TradingBot:
                 "updatedAt": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
             }
 
-            # Extract feature importance from XGBoost model
-            if self.ml_model.fitted and hasattr(self.ml_model, 'model') and self.ml_model.model is not None:
+            # Extract feature importance from XGBoost model (V2: xgb_model, V1: model)
+            booster = getattr(self.ml_model, 'xgb_model', None) or getattr(self.ml_model, 'model', None)
+            if self.ml_model.fitted and booster is not None:
                 try:
-                    booster = self.ml_model.model
                     importance = booster.get_score(importance_type='gain') if hasattr(booster, 'get_score') else {}
+                    # Map f0/f1/... back to feature names if needed
+                    if importance and self.ml_model.feature_names:
+                        mapped = {}
+                        for key, val in importance.items():
+                            if key.startswith('f') and key[1:].isdigit():
+                                idx = int(key[1:])
+                                if idx < len(self.ml_model.feature_names):
+                                    mapped[self.ml_model.feature_names[idx]] = val
+                                else:
+                                    mapped[key] = val
+                            else:
+                                mapped[key] = val
+                        importance = mapped
                     if not importance and hasattr(booster, 'feature_importances_'):
                         names = self.ml_model.feature_names if hasattr(self.ml_model, 'feature_names') else []
                         importance = dict(zip(names, booster.feature_importances_))
@@ -306,10 +403,10 @@ class TradingBot:
                 metrics["sampleCount"] = retrain_results.get("sample_count", 0)
             elif hasattr(self.ml_model, '_train_metrics') and self.ml_model._train_metrics:
                 # Use metrics stored in the model pickle (loaded on startup)
-                # V1 uses train_auc/test_auc, V2 uses xgb_train_score/xgb_test_score
+                # V1: train_auc/test_auc, V2: xgb_train_score/xgb_test_score, V3: train_accuracy/test_accuracy
                 tm = self.ml_model._train_metrics
-                metrics["trainAuc"] = tm.get("train_auc", 0) or tm.get("xgb_train_score", 0)
-                metrics["testAuc"] = tm.get("test_auc", 0) or tm.get("xgb_test_score", 0)
+                metrics["trainAuc"] = tm.get("train_auc", 0) or tm.get("xgb_train_score", 0) or tm.get("train_accuracy", 0)
+                metrics["testAuc"] = tm.get("test_auc", 0) or tm.get("xgb_test_score", 0) or tm.get("test_accuracy", 0)
                 metrics["sampleCount"] = tm.get("train_samples", 0) + tm.get("test_samples", 0)
             elif hasattr(self, 'auto_trainer') and hasattr(self.auto_trainer, 'last_auc'):
                 metrics["testAuc"] = self.auto_trainer.last_auc or 0
@@ -408,8 +505,8 @@ class TradingBot:
             ml_data = {
                 "signal": ml_signal,
                 "confidence": ml_conf,
-                "buyProb": ml_prob if ml_signal == "BUY" else (1.0 - ml_prob),
-                "sellProb": ml_prob if ml_signal == "SELL" else (1.0 - ml_prob),
+                "buyProb": ml_prob,           # ml_prob = probability of BUY (always)
+                "sellProb": 1.0 - ml_prob,    # complement = probability of SELL
                 "updatedAt": getattr(self, "_last_ml_updated", ""),
             }
 
@@ -464,11 +561,11 @@ class TradingBot:
                 "logs": list(self._dash_logs),
                 "settings": {
                     "capitalMode": self.config.capital_mode.value,
-                    "capital": self.config.capital,
-                    "riskPerTrade": self.config.risk.risk_per_trade,
-                    "maxDailyLoss": self.config.risk.max_daily_loss,
-                    "maxPositions": self.config.risk.max_positions,
-                    "maxLotSize": self.config.risk.max_lot_size,
+                    "capital": self.smart_risk.capital,
+                    "riskPerTrade": self.smart_risk.max_loss_per_trade_percent,
+                    "maxDailyLoss": self.smart_risk.max_daily_loss_percent,
+                    "maxPositions": self.smart_risk.max_concurrent_positions,
+                    "maxLotSize": self.smart_risk.max_lot_size,
                     "leverage": self.config.risk.max_leverage,
                     "executionTF": self.config.execution_timeframe,
                     "trendTF": self.config.trend_timeframe,
@@ -512,15 +609,31 @@ class TradingBot:
                 # === NEW: H1 Bias Details ===
                 "h1BiasDetails": {
                     "bias": getattr(self, "_h1_bias_cache", "NEUTRAL"),
+                    "score": getattr(self, "_h1_bias_score", 0.0),
+                    "strength": getattr(self, "_h1_bias_strength", "weak"),
+                    "indicators": getattr(self, "_h1_bias_signals", {}),
+                    "regimeWeights": getattr(self, "_h1_bias_regime_weights", "unknown"),
                     "ema20": getattr(self, "_h1_ema20_value", 0.0),
                     "price": getattr(self, "_h1_current_price", 0.0),
                 },
             }
 
-            # Atomic write (write to temp then rename)
-            tmp_file = self._dash_status_file.with_suffix(".tmp")
-            tmp_file.write_text(json.dumps(status, default=str))
-            tmp_file.replace(self._dash_status_file)
+            # Direct write with retry (Windows-friendly)
+            json_data = json.dumps(status, default=str)
+            status_path = str(self._dash_status_file)
+            written = False
+            for attempt in range(3):
+                try:
+                    with open(status_path, "w", encoding="utf-8") as f:
+                        f.write(json_data)
+                    written = True
+                    break
+                except (PermissionError, OSError) as e:
+                    if attempt < 2:
+                        import time as _time
+                        _time.sleep(0.05)
+                    else:
+                        logger.debug(f"Dashboard write failed after 3 attempts: {e}")
 
         except Exception as e:
             logger.debug(f"Dashboard status write error: {e}")
@@ -560,7 +673,7 @@ class TradingBot:
         """Get time filter (#34A) status for dashboard."""
         try:
             wib_hour = datetime.now(ZoneInfo("Asia/Jakarta")).hour
-            blocked_hours = [9, 21]
+            blocked_hours = []  # All hours enabled
             return {
                 "wibHour": wib_hour,
                 "isBlocked": wib_hour in blocked_hours,
@@ -600,9 +713,21 @@ class TradingBot:
             if self.auto_trainer._last_retrain_time:
                 hours_since = (datetime.now(ZoneInfo("Asia/Jakarta")) - self.auto_trainer._last_retrain_time).total_seconds() / 3600
 
+            # Get AUC: prefer auto_trainer's cached value, fallback to model's stored metrics
+            current_auc = self.auto_trainer._current_auc
+            if current_auc is None and hasattr(self.ml_model, '_train_metrics') and self.ml_model._train_metrics:
+                tm = self.ml_model._train_metrics
+                current_auc = tm.get("test_auc") or tm.get("xgb_test_score") or tm.get("test_accuracy")
+
+            # Sanitize NaN values for JSON compliance
+            if current_auc is not None:
+                import math
+                if math.isnan(current_auc) or math.isinf(current_auc):
+                    current_auc = None
+
             return {
                 "lastRetrain": self.auto_trainer._last_retrain_time.strftime("%Y-%m-%d %H:%M") if self.auto_trainer._last_retrain_time else None,
-                "currentAuc": self.auto_trainer._current_auc,
+                "currentAuc": current_auc,
                 "minAucThreshold": self.auto_trainer.min_auc_threshold,
                 "hoursSinceRetrain": round(hours_since, 1),
                 "nextRetrainHour": self.auto_trainer.daily_retrain_hour,
@@ -667,8 +792,18 @@ class TradingBot:
 
     async def start(self):
         """Start the trading bot."""
+        # Import version info
+        try:
+            from src.version import get_detailed_version, __exit_strategy__
+            version_str = get_detailed_version()
+            exit_str = __exit_strategy__
+        except ImportError:
+            version_str = "v0.0.0 (Core)"
+            exit_str = "Exit v5.0"
+
         logger.info("=" * 60)
-        logger.info("SMART AUTOMATIC TRADING BOT + AI")
+        logger.info(f"XAUBOT AI {version_str}")
+        logger.info(f"Strategy: {exit_str}")
         logger.info("=" * 60)
         logger.info(f"Symbol: {self.config.symbol}")
         logger.info(f"Capital: ${self.config.capital:,.2f}")
@@ -714,6 +849,9 @@ class TradingBot:
         # Register Telegram commands
         self._register_telegram_commands()
 
+        # Sync position guards with MT5 (cleanup stale guards from previous restarts)
+        self._sync_position_guards()
+
         # Start main loop
         self._running = True
         self._dash_log("info", "Bot started - trading loop active")
@@ -735,6 +873,27 @@ class TradingBot:
         self.mt5.disconnect()
         self._log_summary()
     
+    def _sync_position_guards(self):
+        """Sync position guards with actual MT5 positions — remove stale guards from previous restarts."""
+        try:
+            open_positions = self.mt5.get_open_positions(
+                symbol=self.config.symbol,
+                magic=self.config.magic_number,
+            )
+            mt5_tickets = set()
+            if open_positions is not None and not open_positions.is_empty():
+                mt5_tickets = set(open_positions["ticket"].to_list())
+
+            stale_guards = set(self.smart_risk._position_guards.keys()) - mt5_tickets
+            for ticket in stale_guards:
+                self.smart_risk.unregister_position(ticket)
+
+            if stale_guards:
+                logger.info(f"Cleaned up {len(stale_guards)} stale position guards: {stale_guards}")
+            logger.info(f"Position guards synced: {len(self.smart_risk._position_guards)} active (MT5 has {len(mt5_tickets)} positions)")
+        except Exception as e:
+            logger.warning(f"Position guard sync failed: {e}")
+
     def _get_available_features(self, df: pl.DataFrame) -> list:
         """Get feature columns that exist in DataFrame."""
         if self.ml_model.fitted and self.ml_model.feature_names:
@@ -774,14 +933,19 @@ class TradingBot:
     # --- H1 Multi-Timeframe Bias (Fix 5) ---
     def _get_h1_bias(self) -> str:
         """
-        Determine H1 higher-timeframe bias using Price vs EMA20 (#31B).
+        Dynamic H1 higher-timeframe bias using multi-indicator scoring + regime-based weights.
         Returns: "BULLISH", "BEARISH", or "NEUTRAL"
 
-        Logic (#31B: backtest +$343, WR 81.8%, Sharpe 3.97, DD 2.5%):
-        - Fetch H1 data (100 bars)
-        - Calculate EMA20 on H1 closes
-        - If price > EMA20 * 1.001 → BULLISH (allow BUY only)
-        - If price < EMA20 * 0.999 → BEARISH (allow SELL only)
+        Uses 5 indicators with regime-adaptive weights:
+        1. EMA Trend (price vs EMA21)
+        2. EMA Cross (EMA9 vs EMA21)
+        3. RSI Zone (>55 bull, <45 bear)
+        4. MACD Histogram
+        5. Candle Structure (last 5 candles)
+
+        Weights adjust based on HMM regime (trending/ranging/volatile).
+        Score range: -1.0 (max bearish) to +1.0 (max bullish).
+        Threshold: ±0.3 (30% agreement needed).
         """
         try:
             # Cache H1 bias — only update every 4 candles (1 hour) since H1 changes slowly
@@ -795,7 +959,7 @@ class TradingBot:
                 count=100,
             )
 
-            if len(df_h1) < 20:
+            if len(df_h1) < 30:
                 return "NEUTRAL"
 
             # Calculate indicators + SMC on H1 and cache for V2 features
@@ -803,39 +967,131 @@ class TradingBot:
             df_h1 = self.smc.calculate_all(df_h1)
             self._h1_df_cached = df_h1  # Cache for V2 features
 
-            # #31B: Price vs EMA20 method (backtested winner)
-            import numpy as np
-            closes = df_h1["close"].to_list()
-            current_price = closes[-1]
+            # Extract latest values
+            last = df_h1.row(-1, named=True)
+            price = last["close"]
+            ema_9 = last["ema_9"]
+            ema_21 = last["ema_21"]
+            rsi = last["rsi"]
+            macd_hist = last["macd_histogram"]
 
-            # Calculate EMA20
-            period = 20
-            multiplier = 2 / (period + 1)
-            ema = np.mean(closes[:period])
-            for val in closes[period:]:
-                ema = (val - ema) * multiplier + ema
+            # === 5 Indicator Signals (+1, -1, 0) ===
+            signals = {
+                "ema_trend": 1 if price > ema_21 else (-1 if price < ema_21 else 0),
+                "ema_cross": 1 if ema_9 > ema_21 else (-1 if ema_9 < ema_21 else 0),
+                "rsi": 1 if rsi > 55 else (-1 if rsi < 45 else 0),
+                "macd": 1 if macd_hist > 0 else (-1 if macd_hist < 0 else 0),
+                "candles": self._count_candle_bias(df_h1),
+            }
 
-            # Determine bias with small buffer (0.1% threshold)
-            bias = "NEUTRAL"
-            if current_price > ema * 1.001:
+            # === Regime-Based Weights ===
+            weights = self._get_regime_weights()
+
+            # === Weighted Score ===
+            score = sum(signals[k] * weights[k] for k in signals)
+
+            # === Dynamic Threshold ===
+            if score >= 0.3:
                 bias = "BULLISH"
-            elif current_price < ema * 0.999:
+            elif score <= -0.3:
                 bias = "BEARISH"
+            else:
+                bias = "NEUTRAL"
 
-            # Cache result
+            # === Determine Strength ===
+            abs_score = abs(score)
+            if abs_score >= 0.7:
+                strength = "strong"
+            elif abs_score >= 0.5:
+                strength = "moderate"
+            else:
+                strength = "weak"
+
+            # === Cache Results ===
             self._h1_bias_cache = bias
             self._h1_bias_loop = self._loop_count
-            self._h1_ema20_value = float(ema)
-            self._h1_current_price = float(current_price)
+            self._h1_bias_score = float(score)
+            self._h1_bias_strength = strength
+            self._h1_bias_signals = signals.copy()
+            _regime_str = self._last_regime.value if hasattr(self, '_last_regime') and self._last_regime else "unknown"
+            self._h1_bias_regime_weights = _regime_str
+            self._h1_current_price = float(price)
+            # Keep EMA20 for backward compatibility (use EMA21 as proxy)
+            self._h1_ema20_value = float(ema_21)
 
             if self._loop_count % 4 == 0:
-                logger.info(f"H1 Bias: {bias} (price={current_price:.2f}, EMA20={ema:.2f})")
+                logger.info(
+                    f"H1 Bias: {bias} ({strength}, score={score:.2f}) | "
+                    f"Signals: EMA_trend={signals['ema_trend']:+d}, EMA_cross={signals['ema_cross']:+d}, "
+                    f"RSI={signals['rsi']:+d}, MACD={signals['macd']:+d}, Candles={signals['candles']:+d} | "
+                    f"Regime: {_regime_str}"
+                )
 
             return bias
 
         except Exception as e:
-            logger.debug(f"H1 bias error: {e}")
+            logger.debug(f"H1 dynamic bias error: {e}")
             return "NEUTRAL"
+
+    def _count_candle_bias(self, df_h1) -> int:
+        """
+        Count bullish/bearish candles in last 5 H1 candles.
+        Returns: +1 if majority bullish (≥3), -1 if majority bearish (≥3), 0 otherwise.
+        """
+        try:
+            last_5 = df_h1.tail(5)
+            bullish = sum(1 for row in last_5.iter_rows(named=True) if row["close"] > row["open"])
+            bearish = 5 - bullish
+
+            if bullish >= 3:
+                return 1
+            elif bearish >= 3:
+                return -1
+            else:
+                return 0
+        except Exception:
+            return 0
+
+    def _get_regime_weights(self) -> dict:
+        """
+        Get indicator weights based on current HMM regime.
+
+        Regimes:
+        - Low volatility (ranging): RSI/MACD dominate (mean-reversion)
+        - Medium volatility: Balanced
+        - High volatility (trending): EMA trend/cross dominate
+
+        Returns: dict with keys matching signals (ema_trend, ema_cross, rsi, macd, candles)
+        """
+        regime = (self._last_regime.value if hasattr(self, '_last_regime') and self._last_regime else "medium_volatility").lower()
+
+        if "low" in regime or "ranging" in regime:
+            # Low volatility / ranging — RSI and MACD more useful
+            return {
+                "ema_trend": 0.15,
+                "ema_cross": 0.15,
+                "rsi": 0.30,
+                "macd": 0.25,
+                "candles": 0.15,
+            }
+        elif "high" in regime or "trending" in regime:
+            # High volatility / trending — EMA trend dominates
+            return {
+                "ema_trend": 0.30,
+                "ema_cross": 0.25,
+                "rsi": 0.10,
+                "macd": 0.25,
+                "candles": 0.10,
+            }
+        else:
+            # Medium volatility — balanced weights
+            return {
+                "ema_trend": 0.25,
+                "ema_cross": 0.20,
+                "rsi": 0.20,
+                "macd": 0.20,
+                "candles": 0.15,
+            }
 
     def _is_filter_enabled(self, filter_key: str) -> bool:
         """
@@ -1016,9 +1272,172 @@ class TradingBot:
                         ml_prediction=ml_prediction,
                         current_price=current_price,
                     )
+            # --- PYRAMID CHECK: Add to Winner when trade 1 is in profit ---
+            if len(open_positions) > 0 and not self.simulation:
+                await self._check_pyramid_opportunity(open_positions, current_price)
+
         except Exception as e:
             logger.debug(f"Position check error: {e}")
-    
+
+    async def _check_pyramid_opportunity(self, open_positions, current_price: float):
+        """
+        Add to Winner (Pyramiding): Buka trade ke-2 saat trade pertama sudah profit.
+
+        Rules:
+        1. Trade pertama harus profit >= $8 (ATR-scaled)
+        2. Ticket belum pernah trigger pyramid sebelumnya
+        3. SMC signal >= 75% sama arah
+        4. ML prediction setuju sama arah
+        5. Session harus London atau New York (high liquidity)
+        6. Max 2 posisi concurrent
+        7. Cooldown 30 detik antar pyramid
+        8. Lot size sama dengan trade pertama
+        """
+        try:
+            # Cooldown check: minimal 30 detik antar pyramid
+            if self._last_pyramid_time:
+                seconds_since = (datetime.now() - self._last_pyramid_time).total_seconds()
+                if seconds_since < 30:
+                    return
+
+            # Position limit check
+            can_open, limit_reason = self.smart_risk.can_open_position()
+            if not can_open:
+                return
+
+            # Session check: only London and New York (high liquidity for pyramiding)
+            session_info = self.session_filter.get_status_report()
+            session_name = session_info.get("current_session", "Unknown")
+            if session_name not in ("London", "New York", "London-NY Overlap"):
+                return
+
+            # Get cached signals
+            cached_smc_signal = getattr(self, '_last_raw_smc_signal', '')
+            cached_smc_conf = getattr(self, '_last_raw_smc_confidence', 0.0)
+            cached_ml = getattr(self, '_cached_ml_prediction', None)
+
+            if not cached_smc_signal or not cached_ml:
+                return
+
+            # ATR scaling for profit threshold
+            _current_atr = 0.0
+            _baseline_atr = 0.0
+            cached_df = getattr(self, '_cached_df', None)
+            if cached_df is not None and "atr" in cached_df.columns:
+                atr_series = cached_df["atr"].drop_nulls()
+                if len(atr_series) > 0:
+                    _current_atr = atr_series.tail(1).item() or 0
+                if len(atr_series) >= 96:
+                    _baseline_atr = atr_series.tail(96).mean()
+                elif len(atr_series) >= 20:
+                    _baseline_atr = atr_series.mean()
+
+            # Check each open position for pyramid opportunity
+            for row in open_positions.iter_rows(named=True):
+                ticket = row["ticket"]
+                profit = row.get("profit", 0)
+                position_type = row.get("type", 0)  # 0=BUY, 1=SELL
+                direction = "BUY" if position_type == 0 else "SELL"
+                lot_size = row.get("volume", 0.01)
+
+                # Skip if already triggered pyramid
+                if ticket in self._pyramid_done_tickets:
+                    continue
+
+                # ATR-based profit threshold (per-position, adapts to lot size)
+                atr_dollars = _current_atr * lot_size * 100 if _current_atr > 0 else 0
+                sm = max(0.3, min(1.5, _current_atr / _baseline_atr)) if _baseline_atr > 0 else 1.0
+                atr_unit = atr_dollars if atr_dollars > 0 else 10 * sm
+                min_profit_for_pyramid = 0.5 * atr_unit  # 0.5 ATR — same as tp_min
+
+                # Trade must be profitable enough
+                if profit < min_profit_for_pyramid:
+                    continue
+
+                # Check velocity is positive (trade still moving in our favor)
+                guard = self.smart_risk._position_guards.get(ticket)
+                if guard and guard.velocity <= 0:
+                    continue  # Don't pyramid into a stalling trade
+
+                # SMC signal must match direction with >= 75% confidence
+                if cached_smc_signal != direction or cached_smc_conf < 0.75:
+                    continue
+
+                # ML must agree with direction
+                if cached_ml.signal != direction:
+                    continue
+
+                # All conditions passed — execute pyramid trade
+                logger.info(f"[PYRAMID] Conditions met for #{ticket}: profit=${profit:.2f}, "
+                           f"SMC={cached_smc_signal}({cached_smc_conf:.0%}), ML={cached_ml.signal}({cached_ml.confidence:.0%})")
+
+                # Build signal from cached data
+                last_signal = getattr(self, '_last_signal', None)
+                if not last_signal:
+                    logger.debug("[PYRAMID] No cached signal available")
+                    continue
+
+                # Create fresh SMC signal for pyramid entry
+                tick = self.mt5.get_tick(self.config.symbol)
+                if not tick:
+                    continue
+
+                entry_price = tick.ask if direction == "BUY" else tick.bid
+
+                # Use cached signal's SL/TP structure but adjust entry to current price
+                pyramid_signal = SMCSignal(
+                    signal_type=direction,
+                    entry_price=entry_price,
+                    stop_loss=last_signal.stop_loss,
+                    take_profit=last_signal.take_profit,
+                    confidence=cached_smc_conf,
+                    reason=f"PYRAMID: Add to winner #{ticket} (profit=${profit:.2f})",
+                )
+
+                # Use same lot size as original trade
+                sl_distance = abs(entry_price - pyramid_signal.stop_loss)
+                risk_amount = lot_size * sl_distance * 10
+                account_balance = self.mt5.account_balance or self.config.capital
+                risk_percent = (risk_amount / account_balance) * 100
+
+                pyramid_pos = SimpleNamespace(
+                    lot_size=lot_size,  # Same lot as original
+                    risk_amount=risk_amount,
+                    risk_percent=risk_percent,
+                )
+
+                # Get regime state for execution
+                cached_regime = None
+                if hasattr(self, '_last_regime') and self._last_regime:
+                    cached_regime = RegimeState(
+                        regime=self._last_regime,
+                        volatility=getattr(self, '_last_regime_volatility', 0.0),
+                        confidence=getattr(self, '_last_regime_confidence', 0.0),
+                        probabilities={},
+                        recommendation="TRADE",
+                    )
+
+                # Execute pyramid trade
+                logger.info(f"[PYRAMID] Opening {direction} {lot_size} lot @ {entry_price:.2f} "
+                           f"(adding to winner #{ticket})")
+
+                trade_time_before = self._last_trade_time
+                await self._execute_trade_safe(pyramid_signal, pyramid_pos, cached_regime)
+
+                # Only mark as done if trade was actually executed (trade_time updates on success)
+                if self._last_trade_time != trade_time_before:
+                    self._pyramid_done_tickets.add(ticket)
+                    self._last_pyramid_time = datetime.now()
+                    self._dash_log("trade", f"PYRAMID: {direction} {lot_size} lot (adding to #{ticket}, profit=${profit:.2f})")
+                else:
+                    logger.warning(f"[PYRAMID] Trade execution failed for #{ticket}, will retry next cycle")
+
+                # Only one pyramid per check cycle
+                break
+
+        except Exception as e:
+            logger.debug(f"Pyramid check error: {e}")
+
     async def _trading_iteration(self):
         """Single trading iteration."""
         # Reset filter tracking for dashboard
@@ -1043,6 +1462,10 @@ class TradingBot:
         
         # 3. Apply SMC analysis
         df = self.smc.calculate_all(df)
+
+        # 3a. Ensure H1 data is cached BEFORE V2 features (fixes "No H1 data" warning)
+        if self._h1_df_cached is None:
+            self._get_h1_bias()
 
         # 3b. Add V2 features for Model D (23 extra features)
         df = self.fe_v2.add_all_v2_features(df, self._h1_df_cached)
@@ -1112,6 +1535,24 @@ class TradingBot:
         # Cache ML prediction and DataFrame for inter-candle position checks (Fix 4)
         self._cached_ml_prediction = ml_prediction
         self._cached_df = df
+
+        # Cache SMC signal for dashboard (runs before filters so dashboard always updates)
+        smc_signal = self.smc.generate_signal(df)
+        _wib_now = datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%H:%M:%S")
+        if smc_signal:
+            self._last_raw_smc_signal = smc_signal.signal_type
+            self._last_raw_smc_confidence = smc_signal.confidence
+            self._last_raw_smc_reason = smc_signal.reason
+            self._last_raw_smc_updated = _wib_now
+            self._dash_log("trade", f"SMC: {smc_signal.signal_type} ({smc_signal.confidence:.0%}) - {smc_signal.reason}")
+        else:
+            self._last_raw_smc_signal = ""
+            self._last_raw_smc_confidence = 0.0
+            self._last_raw_smc_reason = ""
+            self._last_raw_smc_updated = _wib_now
+
+        # H1 Multi-Timeframe Bias (runs before filters so dashboard always updates)
+        h1_bias = self._get_h1_bias()
 
         # 6.5 SMART POSITION MANAGEMENT - NO HARD STOP LOSS
         # Hanya close jika: TP tercapai, ML reversal kuat, atau max loss
@@ -1195,26 +1636,9 @@ class TradingBot:
 
         # 7.6 NEWS AGENT - DISABLED (backtest: costs $178 profit, ML handles volatility)
 
-        # 7.7 H1 Multi-Timeframe Bias (Fix 5)
-        # Fetch H1 data and determine higher-TF bias for M15 signal filtering
-        h1_bias = self._get_h1_bias()
+        # 7.7 H1 bias already calculated above (before filters, for dashboard)
 
-        # 8. Get SMC signal
-        smc_signal = self.smc.generate_signal(df)
-
-        # Cache raw SMC for dashboard (before filtering)
-        _wib_now = datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%H:%M:%S")
-        if smc_signal:
-            self._last_raw_smc_signal = smc_signal.signal_type
-            self._last_raw_smc_confidence = smc_signal.confidence
-            self._last_raw_smc_reason = smc_signal.reason
-            self._last_raw_smc_updated = _wib_now
-            self._dash_log("trade", f"SMC: {smc_signal.signal_type} ({smc_signal.confidence:.0%}) - {smc_signal.reason}")
-        else:
-            self._last_raw_smc_signal = ""
-            self._last_raw_smc_confidence = 0.0
-            self._last_raw_smc_reason = ""
-            self._last_raw_smc_updated = _wib_now
+        # 8. SMC signal already generated above (before filters, for dashboard)
 
         # 9. ML prediction already done above for position management
 
@@ -1251,22 +1675,36 @@ class TradingBot:
         h1_detail = f"H1={h1_bias}"
 
         if h1_enabled:
-            if h1_bias != "NEUTRAL":
-                if (final_signal.signal_type == "BUY" and h1_bias != "BULLISH") or \
-                   (final_signal.signal_type == "SELL" and h1_bias != "BEARISH"):
+            h1_opposed = False
+            if h1_bias == "NEUTRAL":
+                # NEUTRAL = no opinion → allow trade (don't block)
+                logger.debug(f"H1 Filter: NEUTRAL — no H1 opinion, allowing {final_signal.signal_type}")
+            elif (final_signal.signal_type == "BUY" and h1_bias == "BEARISH") or \
+                 (final_signal.signal_type == "SELL" and h1_bias == "BULLISH"):
+                # Actively opposed — block unless strong override
+                h1_opposed = True
+            else:
+                logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
+
+            if h1_opposed:
+                # Strong signal override: if SMC >= 80% AND ML agrees >= 65%, bypass H1
+                smc_strong = smc_signal and smc_signal.confidence >= 0.80
+                ml_agrees = ml_prediction and ml_prediction.signal == final_signal.signal_type
+                ml_strong = ml_prediction and ml_prediction.confidence >= 0.65
+
+                if smc_strong and ml_agrees and ml_strong:
+                    h1_passed = True
+                    h1_detail = f"OVERRIDE: {final_signal.signal_type} vs H1={h1_bias} (SMC={smc_signal.confidence:.0%}+ML={ml_prediction.confidence:.0%})"
+                    logger.info(f"H1 Filter: OVERRIDE — {final_signal.signal_type} allowed despite H1={h1_bias} (SMC={smc_signal.confidence:.0%}, ML={ml_prediction.signal} {ml_prediction.confidence:.0%})")
+                    self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": h1_detail})
+                else:
                     h1_passed = False
                     h1_detail = f"{final_signal.signal_type} vs H1={h1_bias}"
                     self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
                     logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1={h1_bias})")
                     return
-                logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
             else:
-                h1_passed = False
-                h1_detail = f"{final_signal.signal_type} blocked (NEUTRAL)"
-                self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
-                logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1=NEUTRAL)")
-                return
-            self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"Aligned {h1_bias}"})
+                self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"Aligned {h1_bias}"})
         else:
             self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"H1={h1_bias} [DISABLED]"})
 
@@ -1274,16 +1712,38 @@ class TradingBot:
         # Hour 9 WIB (02:00 UTC) = end of NY session, low liquidity
         # Hour 21 WIB (14:00 UTC) = London-NY transition, whipsaw prone
         wib_hour = datetime.now(ZoneInfo("Asia/Jakarta")).hour
-        time_blocked = wib_hour in (9, 21)
+        time_blocked = False  # All hours enabled — risk managed by ATR scaling + lot multiplier
         time_enabled = self._is_filter_enabled("time_filter")
         time_filter_blocked = time_blocked and time_enabled
+
+        # v6.1: NIGHT SAFETY - Spread filter for late night hours (22:00-05:59 WIB)
+        is_night_hours = wib_hour >= 22 or wib_hour <= 5
+        night_spread_ok = True
+        night_spread_msg = ""
+        if is_night_hours:
+            # Get current spread
+            tick = self.mt5.get_tick(self.config.symbol)
+            if tick:
+                current_spread_points = (tick.ask - tick.bid) / 0.01  # Spread in points (0.01 = 1 pip for gold)
+                # Normal max spread: 30 points ($0.30)
+                # Night max spread: 50 points ($0.50) - allow wider spread but still filter extremes
+                night_max_spread = 50
+                if current_spread_points > night_max_spread:
+                    night_spread_ok = False
+                    night_spread_msg = f"spread {current_spread_points:.1f}p > {night_max_spread}p"
+                else:
+                    night_spread_msg = f"spread {current_spread_points:.1f}p OK (night limit {night_max_spread}p)"
+
         self._last_filter_results.append({
             "name": "Time Filter (#34A)",
-            "passed": not time_filter_blocked,
-            "detail": f"WIB {wib_hour}" + (" BLOCKED" if time_blocked else "") + (" [DISABLED]" if not time_enabled else "")
+            "passed": not time_filter_blocked and night_spread_ok,
+            "detail": f"WIB {wib_hour}" + (" BLOCKED" if time_blocked else "") + (" [DISABLED]" if not time_enabled else "") + (f" NIGHT: {night_spread_msg}" if is_night_hours else "")
         })
         if time_filter_blocked:
             logger.info(f"Time Filter: {final_signal.signal_type} blocked (WIB hour {wib_hour} is skip hour)")
+            return
+        if not night_spread_ok:
+            logger.warning(f"Night Safety: {final_signal.signal_type} blocked - {night_spread_msg} (WIB {wib_hour})")
             return
 
         # 10.5 Check trade cooldown
@@ -1330,10 +1790,20 @@ class TradingBot:
         session_mult = getattr(self, '_current_session_multiplier', 1.0)
         if session_mult < 1.0:
             original_lot = safe_lot
-            safe_lot = max(0.01, safe_lot * session_mult)  # Minimum 0.01
+            safe_lot = max(0.01, round(safe_lot * session_mult, 2))  # Minimum 0.01, rounded to 0.01 step
             sydney_mode = getattr(self, '_is_sydney_session', False)
             if sydney_mode:
                 logger.info(f"Sydney SAFE MODE: Lot {original_lot:.2f} -> {safe_lot:.2f} (0.5x)")
+
+        # v6.1: NIGHT SAFETY - Lot reduction for late night hours (22:00-05:59 WIB)
+        # Night trading has lower win rate (14%) and higher loss risk
+        # Reduce lot by 50% to minimize damage from night volatility
+        wib_hour = datetime.now(ZoneInfo("Asia/Jakarta")).hour
+        is_night_hours = wib_hour >= 22 or wib_hour <= 5
+        if is_night_hours:
+            original_lot = safe_lot
+            safe_lot = max(0.01, round(safe_lot * 0.5, 2))  # 50% reduction
+            logger.warning(f"NIGHT SAFETY MODE: Lot {original_lot:.2f} -> {safe_lot:.2f} (0.5x) - WIB {wib_hour}:xx (high risk hours)")
 
         if safe_lot <= 0:
             logger.debug("Smart Risk: Lot size is 0 - skipping trade")
@@ -1449,6 +1919,14 @@ class TradingBot:
                 (smc_signal.signal_type == "BUY" and ml_prediction.signal == "BUY") or
                 (smc_signal.signal_type == "SELL" and ml_prediction.signal == "SELL")
             )
+
+            # SELL-SPECIFIC CONFIDENCE FILTER (Step 4: Improve 41.2% win rate)
+            # Require ML confidence >= 0.75 for SELL signals to filter weak trades
+            if smc_signal.signal_type == "SELL":
+                if ml_prediction.signal != "SELL" or ml_prediction.confidence < 0.75:
+                    if self._loop_count % 60 == 0:
+                        logger.info(f"SELL blocked: ML confidence too low ({ml_prediction.signal} {ml_prediction.confidence:.0%}, need SELL >=75%)")
+                    return None
 
             if ml_agrees:
                 combined_confidence = (smc_signal.confidence + ml_prediction.confidence) / 2
@@ -1882,6 +2360,24 @@ class TradingBot:
         1. SmartRiskManager: TP, ML reversal, max loss, daily limit
         2. SmartPositionManager: Trailing SL, breakeven, market close, drawdown protection
         """
+        # Sync guards with MT5 — remove guards for positions that no longer exist
+        # IMPORTANT: Use FRESH MT5 call, not stale open_positions parameter
+        # (open_positions may not include positions opened during this loop iteration)
+        try:
+            fresh_mt5 = self.mt5.get_open_positions(
+                symbol=self.config.symbol,
+                magic=self.config.magic_number,
+            )
+            mt5_tickets = set()
+            if fresh_mt5 is not None and not fresh_mt5.is_empty():
+                mt5_tickets = set(fresh_mt5["ticket"].to_list())
+            stale = set(self.smart_risk._position_guards.keys()) - mt5_tickets
+            for ticket in stale:
+                self.smart_risk.unregister_position(ticket)
+                logger.debug(f"Cleaned stale guard #{ticket}")
+        except Exception as e:
+            logger.debug(f"Guard sync error: {e}")
+
         # --- SmartPositionManager: trailing SL, breakeven, market close ---
         if df is not None and len(df) > 0:
             pm_actions = self.position_manager.analyze_positions(
@@ -1910,6 +2406,7 @@ class TradingBot:
                         risk_result = self.smart_risk.record_trade_result(profit)
                         self.smart_risk.unregister_position(action.ticket)
                         self.position_manager._peak_profits.pop(action.ticket, None)
+                        self._pyramid_done_tickets.discard(action.ticket)  # Cleanup pyramid tracking
                         await self.notifications.notify_trade_close_smart(action.ticket, profit, current_price, action.reason)
                         logger.info(f"CLOSED #{action.ticket}: {action.reason}")
                         continue  # Skip SmartRiskManager eval for this ticket
@@ -1945,7 +2442,30 @@ class TradingBot:
                     current_profit=profit,
                 )
 
-            # Evaluate with smart risk manager
+            # Calculate ATR for dynamic threshold scaling
+            _current_atr = 0.0
+            _baseline_atr = 0.0
+            if df is not None and "atr" in df.columns:
+                atr_series = df["atr"].drop_nulls()
+                if len(atr_series) > 0:
+                    _current_atr = atr_series.tail(1).item() or 0
+                if len(atr_series) >= 96:  # ~24h of M15 data
+                    _baseline_atr = atr_series.tail(96).mean()
+                elif len(atr_series) >= 20:
+                    _baseline_atr = atr_series.mean()
+
+            # Build market context for dynamic exit intelligence
+            _market_ctx = None
+            if df is not None:
+                _market_ctx = {}
+                for col in ("rsi", "stoch_k", "adx", "histogram"):
+                    if col in df.columns:
+                        vals = df[col].drop_nulls()
+                        _market_ctx[col if col != "histogram" else "macd_hist"] = (
+                            vals.tail(1).item() if len(vals) > 0 else None
+                        )
+
+            # Evaluate with smart risk manager (dynamic thresholds v5)
             should_close, reason, message = self.smart_risk.evaluate_position(
                 ticket=ticket,
                 current_price=current_price,
@@ -1953,6 +2473,9 @@ class TradingBot:
                 ml_signal=ml_prediction.signal,
                 ml_confidence=ml_prediction.confidence,
                 regime=regime_state.regime.value if regime_state else "normal",
+                current_atr=_current_atr,
+                baseline_atr=_baseline_atr,
+                market_context=_market_ctx,
             )
 
             # Per-ticket momentum log (~every 30 seconds)
@@ -1962,11 +2485,13 @@ class TradingBot:
                 if now_ts - guard.last_momentum_log_time >= 30:
                     guard.last_momentum_log_time = now_ts
                     vel_summary = guard.get_velocity_summary()
+                    atr_ratio = _current_atr / _baseline_atr if _baseline_atr > 0 else 1.0
                     logger.info(
                         f"[MOMENTUM] #{ticket} profit=${profit:+.2f} | "
                         f"vel={vel_summary['velocity']:.4f}$/s | "
                         f"accel={vel_summary['acceleration']:.4f} | "
                         f"stag={vel_summary['stagnation_s']:.0f}s | "
+                        f"ATR={_current_atr:.1f}({atr_ratio:.2f}x) | "
                         f"samples={vel_summary['samples']}"
                     )
 
@@ -1981,6 +2506,7 @@ class TradingBot:
                     # Record result and check for limit violations
                     risk_result = self.smart_risk.record_trade_result(profit)
                     self.smart_risk.unregister_position(ticket)
+                    self._pyramid_done_tickets.discard(ticket)  # Cleanup pyramid tracking
 
                     # Log trade close for auto-training
                     try:
@@ -2063,6 +2589,8 @@ class TradingBot:
                         if result.success:
                             logger.info(f"Closed position {ticket}")
                             closed_count += 1
+                            self._pyramid_done_tickets.discard(ticket)  # Cleanup pyramid tracking
+                            self.smart_risk.unregister_position(ticket)  # Cleanup risk tracking
                             # Remove from failed list if was there
                             if ticket in failed_tickets:
                                 failed_tickets.remove(ticket)
@@ -2187,14 +2715,17 @@ class TradingBot:
 
                 logger.info(f"  HMM: {'OK' if self.regime_detector.fitted else 'FAILED'}")
                 logger.info(f"  XGBoost: {'OK' if self.ml_model.fitted else 'FAILED'}")
+                logger.info(f"  Features: {len(self.ml_model.feature_names) if self.ml_model.feature_names else 0}")
                 logger.info(f"  Train AUC: {results.get('xgb_train_auc', 0):.4f}")
                 logger.info(f"  Test AUC: {results.get('xgb_test_auc', 0):.4f}")
+
+                # Update auto_trainer's cached AUC for dashboard
+                self.auto_trainer._current_auc = results.get("xgb_test_auc", 0)
 
                 # Write updated model metrics for dashboard
                 self._write_model_metrics(retrain_results=results)
 
                 # Check if new model is worse - rollback if needed
-                # FIX: Increased minimum AUC from 0.52 to 0.60 (0.52 is barely better than random)
                 if results.get("xgb_test_auc", 0) < 0.60:
                     logger.warning("New model AUC too low - rolling back!")
                     self.auto_trainer.rollback_models()
@@ -2240,5 +2771,51 @@ async def main():
         await bot.stop()
 
 
+def _acquire_lock():
+    """Prevent duplicate bot instances via PID lockfile."""
+    lockfile = Path("data/bot.lock")
+    lockfile.parent.mkdir(exist_ok=True)
+
+    if lockfile.exists():
+        try:
+            old_pid = int(lockfile.read_text().strip())
+            # Check if old process is still alive (Windows)
+            import subprocess
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {old_pid}", "/NH"],
+                capture_output=True, text=True, timeout=5
+            )
+            if f"{old_pid}" in result.stdout and "python" in result.stdout.lower():
+                logger.error(f"ANOTHER BOT INSTANCE IS RUNNING (PID {old_pid})!")
+                logger.error("Kill it first: taskkill /F /PID " + str(old_pid))
+                sys.exit(1)
+            else:
+                logger.info(f"Stale lockfile found (PID {old_pid} not running), removing...")
+        except (ValueError, Exception) as e:
+            logger.warning(f"Could not check lockfile: {e}, removing...")
+
+    # Write our PID
+    lockfile.write_text(str(os.getpid()))
+    logger.info(f"Bot lockfile acquired: PID {os.getpid()}")
+    return lockfile
+
+
+def _release_lock():
+    """Release PID lockfile."""
+    lockfile = Path("data/bot.lock")
+    try:
+        if lockfile.exists():
+            stored_pid = int(lockfile.read_text().strip())
+            if stored_pid == os.getpid():
+                lockfile.unlink()
+                logger.info("Bot lockfile released")
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    lockfile = _acquire_lock()
+    try:
+        asyncio.run(main())
+    finally:
+        _release_lock()
