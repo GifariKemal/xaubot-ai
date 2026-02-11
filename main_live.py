@@ -1710,8 +1710,10 @@ class TradingBot:
         time_enabled = self._is_filter_enabled("time_filter")
         time_filter_blocked = time_blocked and time_enabled
 
-        # v6.1: NIGHT SAFETY - Spread filter for late night hours (22:00-05:59 WIB)
+        # v0.2.7: NIGHT SAFETY - Spread filter for late night hours (22:00-05:59 WIB)
+        # Golden Session (20:00-00:00 WIB) allows wider spread due to extreme volatility
         is_night_hours = wib_hour >= 22 or wib_hour <= 5
+        is_golden = session_name and "GOLDEN" in session_name.upper()
         night_spread_ok = True
         night_spread_msg = ""
         if is_night_hours:
@@ -1719,14 +1721,15 @@ class TradingBot:
             tick = self.mt5.get_tick(self.config.symbol)
             if tick:
                 current_spread_points = (tick.ask - tick.bid) / 0.01  # Spread in points (0.01 = 1 pip for gold)
-                # Normal max spread: 30 points ($0.30)
-                # Night max spread: 50 points ($0.50) - allow wider spread but still filter extremes
-                night_max_spread = 50
+                # Golden Session: 80 points max (extreme volatility expected)
+                # Normal night: 50 points max (still allow wider than day)
+                night_max_spread = 80 if is_golden else 50
                 if current_spread_points > night_max_spread:
                     night_spread_ok = False
                     night_spread_msg = f"spread {current_spread_points:.1f}p > {night_max_spread}p"
                 else:
-                    night_spread_msg = f"spread {current_spread_points:.1f}p OK (night limit {night_max_spread}p)"
+                    session_tag = " [GOLDEN]" if is_golden else ""
+                    night_spread_msg = f"spread {current_spread_points:.1f}p OK{session_tag} (limit {night_max_spread}p)"
 
         self._last_filter_results.append({
             "name": "Time Filter (#34A)",
