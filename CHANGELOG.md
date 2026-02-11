@@ -9,6 +9,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.3] - 2026-02-11
+
+### Fixed (SMC Primary Strategy Restoration)
+**Philosophy Change:** SMC is PRIMARY, ML is SECONDARY support (not blocker)
+
+#### Problem Identified
+- **User Feedback:** "SMC adalah patokan utama, ML hanya pendukung"
+- **Issue:** v0.2.2 London Filter + SELL Filter blocking high-confidence SMC signals
+- **Example:** SMC BUY 75% confidence blocked because ML predicted HOLD 50%
+- **Impact:** Missing profitable trades when SMC is confident
+
+#### Solutions Implemented
+
+**FIX #1: London Filter - Penalty Instead of Block** 🔧
+```python
+# BEFORE (v0.2.2):
+if is_london and atr_ratio < 1.2:
+    if ml_confidence < 0.70:
+        return None  # BLOCKS trade completely!
+
+# AFTER (v0.2.3):
+if is_london and atr_ratio < 1.2:
+    london_penalty = 0.90  # Reduce confidence by 10%, don't block
+```
+- **Impact:** SMC signals no longer blocked, only confidence adjusted
+- **Files:** `main_live.py` line 1910-1935
+
+**FIX #2: Signal Logic v5 - SMC Primary Hierarchy** 🎯
+```python
+# NEW 3-TIER LOGIC:
+if smc_confidence >= 0.75:
+    # TIER 1: HIGH CONFIDENCE - Execute regardless of ML
+    execute_trade(confidence = smc * 0.95 if ML disagree else avg(smc, ml))
+
+elif smc_confidence >= 0.60:
+    # TIER 2: MEDIUM CONFIDENCE - Require ML agreement
+    if ml_agrees and ml_confidence >= 0.60:
+        execute_trade(confidence = avg(smc, ml))
+    else:
+        skip()
+
+else:
+    # TIER 3: LOW CONFIDENCE - Skip (SMC not confident)
+    skip()
+```
+
+**Logic Changes:**
+- **SMC >= 75%:** Execute ALWAYS (ML only boosts/minor penalty)
+- **SMC 60-75%:** Needs ML confirmation (both agree)
+- **SMC < 60%:** Skip (SMC itself not confident)
+- **SELL Filter:** Removed (SMC confidence determines execution)
+
+**Expected Results:**
+- ✅ High SMC confidence (75-85%) trades execute
+- ✅ No more blocking from ML HOLD predictions
+- ✅ ML still provides boost when agrees (+5-10% confidence)
+- ✅ ML disagree on high SMC = minor penalty (-5% confidence)
+
+**Trade Scenarios:**
+| SMC | ML | Old (v0.2.2) | New (v0.2.3) |
+|-----|-----|--------------|--------------|
+| BUY 85% | HOLD 50% | ❌ BLOCKED (London filter) | ✅ EXECUTE (conf 81%) |
+| BUY 75% | BUY 70% | ✅ EXECUTE (conf 73%) | ✅ EXECUTE (conf 73%) |
+| BUY 65% | HOLD 50% | ❌ BLOCKED (ML disagree) | ❌ SKIP (needs ML) |
+| SELL 80% | HOLD 60% | ❌ BLOCKED (SELL filter) | ✅ EXECUTE (conf 76%) |
+
+**Files Modified:**
+- `main_live.py` - Signal aggregation logic rewritten (line 1936-2035)
+- `VERSION` - Updated to 0.2.3
+- `CHANGELOG.md` - This entry
+
+---
+
 ## [0.2.2] - 2026-02-11
 
 ### Fixed (Professor AI Optimizations - 5 Critical Fixes)
