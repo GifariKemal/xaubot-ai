@@ -9,6 +9,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.7] - 2026-02-11
+
+### Added (Trajectory Recovery System for Golden Session)
+**Problem:** Trade #162626070 lost -$6.07 at 22:45 in Golden Session despite trajectory predicting +$3.81 recovery (78% confidence). Actual market 31 min later showed would-be profit of +$5.05. Bot cut too early due to Golden Emergency exit, ignoring strong recovery signals.
+
+#### Root Cause
+1. **Golden Emergency hard rule** (loss >$5 + 45s + never-profitable) → immediate cut, no exceptions
+2. **Trajectory Hold disabled** for never-profitable trades (v0.2.5e fix to prevent bad holds)
+3. **Conflict:** Emergency exit vs Recovery prediction — emergency always wins
+4. **Result:** Trade with 78% confidence recovery prediction gets cut, misses +$5 profit
+
+#### Solution: Trajectory Override System
+
+**1. Golden Emergency Threshold Extended**
+- Changed trigger time: **45s → 60s** (align with grace period floor)
+- Gives more time for trajectory and recovery systems to activate
+
+**2. Trajectory Override for Strong Recovery**
+```python
+# Before cutting in Golden Emergency, check trajectory:
+if pred_1m > 0 AND confidence > 75% AND acceleration > 0.01:
+    → OVERRIDE emergency exit, continue holding
+else:
+    → Proceed with emergency cut
+```
+
+**3. Hybrid Trajectory Hold Logic**
+- **Ever-profitable trades:** Trajectory hold ACTIVE (no change from v0.2.5e)
+- **Never-profitable + Golden + strong signal (>75% conf):** Trajectory hold NOW ACTIVE (NEW)
+- **Never-profitable + normal session:** Trajectory hold DISABLED (no change from v0.2.5e)
+
+#### Impact Analysis
+
+**Trade #162626070 with v0.2.7:**
+```
+22:45:02  ENTRY -$0
+22:45:43  pred=$0.55 conf=77% ✅ → Trajectory hold activated
+22:45:48  pred=$3.81 conf=78% ✅ → Golden Emergency OVERRIDDEN
+22:46:00+ Continue holding...
+22:50-23:00  Price recovery → Exit with profit $2-5
+```
+
+**Recovery Time Extension:**
+- Current (v0.2.6): Golden never-profitable = **47s max hold** (hard cut)
+- After fix (v0.2.7): Golden never-profitable = **up to 15 min** if strong recovery signal
+- Normal session: **No change** (fast cut for never-profitable without recovery signal)
+
+**Safety Nets Still Active:**
+- NO_RECOVERY threshold $15 (last resort)
+- EMERGENCY_MAX_LOSS $20 (absolute cap)
+- Fuzzy/Kelly exits active after grace period
+- Only override if trajectory confidence >75% AND positive acceleration
+
+#### Expected Outcome
+- Reduce "early cut" losses on trades with strong recovery potential
+- Golden Session: Smart waiting (only if model predicts profit)
+- Maintain fast cut for trades without recovery signals
+- Balance: more recovery time vs controlled risk
+
+---
+
 ## [0.2.6] - 2026-02-11
 
 ### Fixed (Critical: Grace Period & Threshold Unit Bugs)

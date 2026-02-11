@@ -1309,19 +1309,29 @@ class SmartRiskManager:
                         pred_1m = predictions.get('pred_1m', 0)
                         logger.info(f"[TRAJ-OUT] pred_1m=${pred_1m:.2f} | conf={predictions['confidence']:.0%}")
 
-                        if should_hold and guard.ever_profitable:
-                            # v0.2.5: Only hold if trade was ONCE profitable
-                            # Never-profitable trades: trajectory recovery too speculative
+                        # v0.2.6f: Hybrid trajectory hold logic
+                        # - Ever-profitable: always allow hold (existing behavior)
+                        # - Never-profitable + Golden + strong signal: allow hold (NEW)
+                        # - Never-profitable + normal session: skip hold (existing behavior)
+                        can_hold_never_prof = (
+                            is_golden
+                            and predictions.get('pred_1m', 0) > 0
+                            and predictions.get('confidence', 0) > 0.75
+                            and _accel > 0.01  # positive acceleration
+                        )
+
+                        if should_hold and (guard.ever_profitable or can_hold_never_prof):
+                            hold_reason = "ever-profitable" if guard.ever_profitable else "golden-recovery"
                             logger.info(
-                                f"[TRAJECTORY HOLD] {pred_reason} | "
+                                f"[TRAJECTORY HOLD] {pred_reason} ({hold_reason}) | "
                                 f"Predictions: 1m=${predictions['pred_1m']:.2f}, "
                                 f"3m=${predictions['pred_3m']:.2f} (conf={predictions['confidence']:.0%})"
                             )
                             pass  # Don't return yet, continue to other checks
                         elif should_hold and not guard.ever_profitable:
                             logger.info(
-                                f"[TRAJECTORY SKIP] Never-profitable, ignoring hold prediction "
-                                f"(pred_1m=${predictions['pred_1m']:.2f})"
+                                f"[TRAJECTORY SKIP] Never-profitable (not Golden or weak signal), "
+                                f"ignoring hold prediction (pred_1m=${predictions['pred_1m']:.2f})"
                             )
 
                     # 2. MOMENTUM PERSISTENCE: Adjust fuzzy threshold based on momentum strength
@@ -1558,15 +1568,33 @@ class SmartRiskManager:
                 f"${EMERGENCY_MAX_LOSS:.2f} limit - emergency exit!"
             )
 
-        # === v0.2.5f: GOLDEN EMERGENCY EXIT ===
+        # === v0.2.6f: GOLDEN EMERGENCY EXIT with TRAJECTORY OVERRIDE ===
         # Never-profitable trades in Golden Session with steep loss → cut fast
-        # Golden = extreme volatility, if -$5+ in 45s and never profitable, it's going wrong
+        # BUT: if trajectory predicts strong recovery, give it time
+        # Golden = extreme volatility, if -$5+ in 60s and never profitable, check trajectory
         if (is_golden and not guard.ever_profitable
-                and current_profit < -5.0 and trade_age_seconds >= 45):
-            return True, ExitReason.POSITION_LIMIT, (
-                f"[GOLDEN EMERGENCY] Loss ${abs(current_profit):.2f} never-profitable "
-                f"after {trade_age_seconds:.0f}s in Golden Session — cutting fast"
-            )
+                and current_profit < -5.0 and trade_age_seconds >= 60):
+
+            # v0.2.6f: Check if trajectory predicts strong recovery
+            strong_recovery_signal = False
+            if self.trajectory_predictor and predictions:
+                pred_1m = predictions.get('pred_1m', current_profit)
+                pred_conf = predictions.get('pred_1m_conf', 0)
+
+                # Strong recovery: pred > 0, conf > 75%, positive acceleration
+                if pred_1m > 0 and pred_conf > 0.75 and _accel > 0.01:
+                    strong_recovery_signal = True
+                    logger.info(
+                        f"[GOLDEN EMERGENCY OVERRIDE] Trajectory predicts recovery: "
+                        f"pred_1m=${pred_1m:.2f} conf={pred_conf:.0%} accel={_accel:.4f} — holding"
+                    )
+
+            if not strong_recovery_signal:
+                # No recovery signal → proceed with emergency exit
+                return True, ExitReason.POSITION_LIMIT, (
+                    f"[GOLDEN EMERGENCY] Loss ${abs(current_profit):.2f} never-profitable "
+                    f"after {trade_age_seconds:.0f}s in Golden Session — cutting fast"
+                )
 
         # === CHECK 0A: BREAKEVEN SHIELD (percentage-based, dynamic) ===
         # v5: Protect ANY meaningful profit from becoming a loss.
