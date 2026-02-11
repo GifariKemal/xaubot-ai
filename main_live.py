@@ -42,6 +42,7 @@ logger.add(
     rotation="1 day",
     retention="30 days",
     level="DEBUG",
+    encoding="utf-8",  # v0.2.2: Fix Unicode encoding errors (Professor AI Fix #5)
 )
 
 # Create directories
@@ -1905,6 +1906,36 @@ class TradingBot:
             if self._loop_count % 120 == 0:
                 logger.info(f"Skip: CRISIS regime - tidak entry")
             return None
+
+        # ============================================================
+        # v0.2.2 FIX #3: FALSE BREAKOUT FILTER (Professor AI)
+        # ============================================================
+        # London session + low ATR = potential whipsaw → require HIGHER ML confidence
+        session_info = self.session_filter.get_status_report()
+        session_name = session_info.get("current_session", "Unknown")
+        is_london = session_name == "London"
+
+        # Calculate ATR ratio
+        atr_ratio = 1.0
+        if "atr" in df.columns:
+            atr_series = df["atr"].drop_nulls()
+            if len(atr_series) > 0:
+                current_atr = atr_series.tail(1).item() or 0
+                if len(atr_series) >= 96:
+                    baseline_atr = atr_series.tail(96).mean()
+                    atr_ratio = current_atr / baseline_atr if baseline_atr > 0 else 1.0
+
+        # Filter false breakouts
+        if is_london and atr_ratio < 1.2:
+            # London + low volatility = whipsaw risk
+            # Require ML confidence >= 0.70 (instead of 0.60)
+            if ml_prediction.confidence < 0.70:
+                if self._loop_count % 60 == 0:
+                    logger.info(
+                        f"[FALSE BREAKOUT RISK] London + low ATR ({atr_ratio:.2f}x) → "
+                        f"ML conf {ml_prediction.confidence:.0%} < 70% required"
+                    )
+                return None
 
         # ============================================================
         # SIGNAL LOGIC v4 - SMC-Only (ML DISABLED)

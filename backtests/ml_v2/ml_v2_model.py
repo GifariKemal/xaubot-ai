@@ -419,9 +419,15 @@ class TradingModelV2:
         if self.xgb_model is None:
             return 0.5
 
-        names = feature_names or self.feature_names
-        dmatrix = xgb.DMatrix(X, feature_names=names)
-        preds = self.xgb_model.predict(dmatrix)
+        # Check if model is XGBClassifier (sklearn API) or Booster (low-level API)
+        if hasattr(self.xgb_model, 'predict_proba'):
+            # XGBClassifier - use sklearn API directly
+            preds = self.xgb_model.predict_proba(X)
+        else:
+            # Booster - use low-level API with DMatrix
+            names = feature_names or self.feature_names
+            dmatrix = xgb.DMatrix(X, feature_names=names)
+            preds = self.xgb_model.predict(dmatrix)
 
         if self.model_type == ModelType.XGBOOST_3CLASS:
             # Multi-class: return dict
@@ -431,8 +437,13 @@ class TradingModelV2:
                 "HOLD": float(preds[0][2]),
             }
         else:
-            # Binary
-            return float(preds[0])
+            # Binary: return probability of class 1 (BUY)
+            if hasattr(self.xgb_model, 'predict_proba'):
+                # XGBClassifier returns [prob_class_0, prob_class_1]
+                return float(preds[0][1])
+            else:
+                # Booster returns single probability
+                return float(preds[0])
 
     def _predict_lightgbm(self, X) -> float:
         """Predict with LightGBM."""

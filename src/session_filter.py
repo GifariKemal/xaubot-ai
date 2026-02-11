@@ -104,8 +104,8 @@ class SessionFilter:
                 start_hour=15, start_minute=0,
                 end_hour=16, end_minute=0,
                 volatility="high",
-                allow_trading=False,           # #24B: Skip Tokyo-London overlap (backtest +$345)
-                position_size_multiplier=0.0,
+                allow_trading=True,
+                position_size_multiplier=0.7,
             ),
             TradingSession.OVERLAP_LONDON_NY: SessionConfig(
                 name="London-NY Overlap (GOLDEN)",

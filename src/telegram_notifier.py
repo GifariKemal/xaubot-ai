@@ -485,7 +485,7 @@ class TelegramNotifier:
         # === Section 1: Trade Result ===
         trade_items = [
             f"<b>{trade.symbol}</b> {trade.order_type}",
-            f"Entry: <code>{trade.entry_price:.2f}</code> → Exit: <code>{trade.close_price:.2f}</code>",
+            f"Entry: <code>{trade.entry_price:.2f}</code> -> Exit: <code>{trade.close_price:.2f}</code>",
             f"Lot: <code>{trade.lot_size}</code> | Pips: <code>{trade.profit_pips:+.1f}</code>",
             f"<b>P/L: {profit_str}</b> ({pct_str})",
             f"Duration: <code>{duration_str}</code>",
@@ -1227,7 +1227,7 @@ Day Change:    {((end_balance-start_balance)/start_balance*100):+.2f}%
         ai_items = [
             f"ML: <code>{ml_signal}</code> {ml_confidence:.0%} / thresh {dynamic_threshold:.0%}",
             f"SMC: <code>{smc_signal or 'NONE'}</code> ({smc_conf:.0%})",
-            f"Quality: <code>{quality_display}</code> (score:{market_score}) → {trade_status}",
+            f"Quality: <code>{quality_display}</code> (score:{market_score}) -> {trade_status}",
         ]
 
         # === Section 5: Risk ===

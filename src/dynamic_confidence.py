@@ -4,9 +4,9 @@ Dynamic Confidence System
 Menyesuaikan confidence threshold berdasarkan kondisi market.
 
 Prinsip:
-- Market bagus (trending, session bagus) → threshold lebih rendah (60%)
-- Market jelek (choppy, low liquidity) → threshold lebih tinggi (75%)
-- Multiple konfirmasi → threshold lebih rendah
+- Market bagus (trending, session bagus) -> threshold lebih rendah (60%)
+- Market jelek (choppy, low liquidity) -> threshold lebih tinggi (75%)
+- Multiple konfirmasi -> threshold lebih rendah
 """
 
 from dataclasses import dataclass
@@ -210,7 +210,7 @@ class DynamicConfidenceManager:
         """Get summary string untuk logging."""
         return (
             f"Market: {analysis.quality.value.upper()} "
-            f"(score={analysis.score}) → "
+            f"(score={analysis.score}) -> "
             f"Threshold: {analysis.confidence_threshold:.0%}"
         )
 

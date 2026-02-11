@@ -399,8 +399,88 @@ class FeatureEngineer:
                 .cast(pl.Int8)
                 .alias("high_volume"),
         ])
-        
-        logger.debug(f"Volume features calculated (period={period})")
+
+        # === ADVANCED: Order Flow Imbalance (Pseudo-OFI) ===
+        # Phase 4 - Advanced Exit Strategies
+        # Directional volume classification
+        df = df.with_columns([
+            # Buy volume: close > open (bullish candle)
+            pl.when(pl.col("close") > pl.col("open"))
+                .then(pl.col("volume"))
+                .otherwise(0)
+                .alias("buy_volume"),
+
+            # Sell volume: close < open (bearish candle)
+            pl.when(pl.col("close") < pl.col("open"))
+                .then(pl.col("volume"))
+                .otherwise(0)
+                .alias("sell_volume"),
+        ])
+
+        # Pseudo-OFI calculation
+        df = df.with_columns([
+            (
+                (pl.col("buy_volume") - pl.col("sell_volume")) /
+                (pl.col("buy_volume") + pl.col("sell_volume") + 1e-9)
+            )
+            .alias("ofi_pseudo")
+            .fill_nan(0)
+            .fill_null(0)
+        ])
+
+        # OFI trend and divergence
+        df = df.with_columns([
+            # Rolling OFI mean (20 bars)
+            pl.col("ofi_pseudo").rolling_mean(20).alias("ofi_trend"),
+
+            # Rolling OFI std (for normalization)
+            pl.col("ofi_pseudo").rolling_std(20).alias("ofi_std"),
+        ])
+
+        df = df.with_columns([
+            # OFI divergence (current vs trend)
+            (pl.col("ofi_pseudo") - pl.col("ofi_trend"))
+            .alias("ofi_divergence")
+            .fill_nan(0)
+            .fill_null(0)
+        ])
+
+        # Volume momentum (acceleration)
+        df = df.with_columns([
+            # Volume ratio change (1st derivative)
+            (pl.col("volume_ratio") / pl.col("volume_ratio").shift(1) - 1)
+            .alias("volume_momentum")
+            .fill_nan(0)
+            .fill_null(0),
+        ])
+
+        # Volume toxicity metric
+        # Combines: volume acceleration + OFI divergence + spread expansion
+        if "spread" in df.columns:
+            df = df.with_columns([
+                # Toxicity score (0-5+)
+                (
+                    pl.col("volume_momentum").abs() +
+                    pl.col("ofi_divergence").abs() * 2 +
+                    (pl.col("spread") / pl.col("spread").rolling_mean(20) - 1).abs()
+                )
+                .alias("toxicity")
+                .fill_nan(0)
+                .fill_null(0)
+            ])
+        else:
+            # Simplified toxicity without spread
+            df = df.with_columns([
+                (
+                    pl.col("volume_momentum").abs() +
+                    pl.col("ofi_divergence").abs() * 2
+                )
+                .alias("toxicity")
+                .fill_nan(0)
+                .fill_null(0)
+            ])
+
+        logger.debug(f"Volume features calculated (period={period}, includes OFI & toxicity)")
         return df
     
     def calculate_ml_features(

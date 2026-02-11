@@ -96,6 +96,58 @@ class RegimeConfig:
 
 
 @dataclass
+class AdvancedExitConfig:
+    """
+    Advanced Exit Strategies Configuration (Phase 1-6).
+    Settings for EKF, PID, Fuzzy Logic, OFI, HJB, Kelly Criterion.
+    """
+    # Feature flag: enable/disable advanced exits
+    enabled: bool = field(default_factory=lambda: os.getenv("ADVANCED_EXITS_ENABLED", "1") == "1")
+
+    # Extended Kalman Filter (EKF) settings
+    ekf_friction: float = 0.05              # Velocity decay near TP
+    ekf_accel_decay: float = 0.95           # Acceleration decay factor
+    ekf_adaptive_noise: bool = True         # Adapt Q/R to regime & ATR
+    ekf_process_noise: float = 0.01         # Base process noise
+    ekf_measurement_noise_profit: float = 0.25      # Profit measurement noise
+    ekf_measurement_noise_velocity: float = 0.05    # Velocity measurement noise
+    ekf_measurement_noise_momentum: float = 0.10    # Momentum measurement noise
+
+    # PID Controller settings
+    pid_kp: float = 0.15                    # Proportional gain
+    pid_ki: float = 0.05                    # Integral gain
+    pid_kd: float = 0.10                    # Derivative gain
+    pid_target_velocity: float = 0.10       # Target velocity ($/second)
+    pid_max_integral: float = 0.5           # Anti-windup limit
+    pid_output_min: float = -0.2            # Min adjustment (ATR units)
+    pid_output_max: float = 0.2             # Max adjustment (ATR units)
+
+    # Fuzzy Logic settings
+    fuzzy_exit_threshold: float = 0.70      # Exit if confidence > 0.70
+    fuzzy_warning_threshold: float = 0.50   # Warning if confidence > 0.50
+    fuzzy_partial_threshold: float = 0.75   # Partial exit if confidence 0.50-0.75
+
+    # Order Flow Imbalance (OFI) / Toxicity settings
+    toxicity_threshold: float = 1.5         # Warn level (exit if profitable)
+    toxicity_critical: float = 2.5          # Critical level (exit immediately)
+    ofi_divergence_threshold: float = 0.3   # OFI divergence exit threshold
+
+    # Optimal Stopping (HJB) settings
+    hjb_theta: float = 0.5                  # Mean reversion speed
+    hjb_mu: float = 0.0                     # Long-term mean
+    hjb_sigma: float = 1.0                  # Volatility parameter
+    hjb_exit_cost: float = 0.1              # Exit cost (ATR units)
+
+    # Kelly Criterion settings
+    kelly_base_win_rate: float = 0.55       # Historical win rate
+    kelly_avg_win: float = 8.0              # Average winning trade ($)
+    kelly_avg_loss: float = 4.0             # Average losing trade ($)
+    kelly_fraction: float = 0.5             # Use half-Kelly for safety
+    kelly_hold_threshold: float = 0.70      # Hold if Kelly > 0.70
+    kelly_partial_threshold: float = 0.25   # Partial exit if Kelly < 0.70
+
+
+@dataclass
 class TradingConfig:
     """
     Main trading configuration.
@@ -132,6 +184,7 @@ class TradingConfig:
     ml: MLConfig = field(default_factory=MLConfig)
     regime: RegimeConfig = field(default_factory=RegimeConfig)
     thresholds: ThresholdsConfig = field(default_factory=ThresholdsConfig)
+    advanced_exit: AdvancedExitConfig = field(default_factory=AdvancedExitConfig)
 
     # Execution
     slippage_points: int = 20          # Maximum slippage in points

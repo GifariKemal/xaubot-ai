@@ -1,0 +1,63 @@
+[32m2026-02-09 20:39:10.330[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m32[0m - [1m============================================================[0m
+[32m2026-02-09 20:39:10.330[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m33[0m - [1mSIMPLE BACKTEST: H1 Bias vs M5 Confirmation[0m
+[32m2026-02-09 20:39:10.330[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m34[0m - [1m============================================================[0m
+[32m2026-02-09 20:39:12.837[0m | [1mINFO    [0m | [36msrc.mt5_connector[0m:[36mconnect[0m:[36m177[0m - [1mConnected to MT5: FinexBisnisSolusi-Demo (Account: 61045904)[0m
+[32m2026-02-09 20:39:13.338[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m57[0m - [1mFetching 14 days of data...[0m
+[32m2026-02-09 20:39:13.547[0m | [34m[1mDEBUG   [0m | [36msrc.mt5_connector[0m:[36mget_market_data[0m:[36m449[0m - [34m[1mFetched 1344 bars for XAUUSD M15[0m
+[32m2026-02-09 20:39:13.976[0m | [34m[1mDEBUG   [0m | [36msrc.mt5_connector[0m:[36mget_market_data[0m:[36m449[0m - [34m[1mFetched 4032 bars for XAUUSD M5[0m
+[32m2026-02-09 20:39:13.976[0m | [1mINFO    [0m | [36msrc.mt5_connector[0m:[36mdisconnect[0m:[36m203[0m - [1mDisconnected from MT5[0m
+[32m2026-02-09 20:39:13.976[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m65[0m - [1mM15 bars: 1344, M5 bars: 4032[0m
+[32m2026-02-09 20:39:13.976[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m68[0m - [1mCalculating features and SMC...[0m
+[32m2026-02-09 20:39:13.982[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_rsi[0m:[36m130[0m - [34m[1mRSI calculated (period=14)[0m
+[32m2026-02-09 20:39:13.984[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_atr[0m:[36m185[0m - [34m[1mATR calculated (period=14)[0m
+[32m2026-02-09 20:39:13.985[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_macd[0m:[36m243[0m - [34m[1mMACD calculated (12/26/9)[0m
+[32m2026-02-09 20:39:13.986[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_bollinger_bands[0m:[36m301[0m - [34m[1mBollinger Bands calculated (period=20, std=2.0)[0m
+[32m2026-02-09 20:39:13.988[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_ema_crossover[0m:[36m357[0m - [34m[1mEMA crossover calculated (9/21)[0m
+[32m2026-02-09 20:39:13.989[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_volume_features[0m:[36m403[0m - [34m[1mVolume features calculated (period=20)[0m
+[32m2026-02-09 20:39:13.992[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_swing_points[0m:[36m401[0m - [34m[1mSwing points: 81 highs, 84 lows[0m
+[32m2026-02-09 20:39:13.994[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_fvg[0m:[36m312[0m - [34m[1mFVG calculation complete. Bullish: 178, Bearish: 107[0m
+[32m2026-02-09 20:39:13.996[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_order_blocks[0m:[36m511[0m - [34m[1mOrder Blocks: 60 bullish, 56 bearish[0m
+[32m2026-02-09 20:39:14.000[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m599[0m - [34m[1mBOS: 20 bullish, 10 bearish[0m
+[32m2026-02-09 20:39:14.000[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m600[0m - [34m[1mCHoCH: 16 bullish, 17 bearish[0m
+[32m2026-02-09 20:39:14.002[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_rsi[0m:[36m130[0m - [34m[1mRSI calculated (period=14)[0m
+[32m2026-02-09 20:39:14.005[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_atr[0m:[36m185[0m - [34m[1mATR calculated (period=14)[0m
+[32m2026-02-09 20:39:14.007[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_macd[0m:[36m243[0m - [34m[1mMACD calculated (12/26/9)[0m
+[32m2026-02-09 20:39:14.009[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_bollinger_bands[0m:[36m301[0m - [34m[1mBollinger Bands calculated (period=20, std=2.0)[0m
+[32m2026-02-09 20:39:14.011[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_ema_crossover[0m:[36m357[0m - [34m[1mEMA crossover calculated (9/21)[0m
+[32m2026-02-09 20:39:14.012[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_volume_features[0m:[36m403[0m - [34m[1mVolume features calculated (period=20)[0m
+[32m2026-02-09 20:39:14.015[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_swing_points[0m:[36m401[0m - [34m[1mSwing points: 236 highs, 248 lows[0m
+[32m2026-02-09 20:39:14.018[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_fvg[0m:[36m312[0m - [34m[1mFVG calculation complete. Bullish: 539, Bearish: 383[0m
+[32m2026-02-09 20:39:14.021[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_order_blocks[0m:[36m511[0m - [34m[1mOrder Blocks: 181 bullish, 170 bearish[0m
+[32m2026-02-09 20:39:14.033[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m599[0m - [34m[1mBOS: 68 bullish, 41 bearish[0m
+[32m2026-02-09 20:39:14.033[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m600[0m - [34m[1mCHoCH: 42 bullish, 42 bearish[0m
+[32m2026-02-09 20:39:14.046[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m87[0m - [1mH1 bars: 337[0m
+[32m2026-02-09 20:39:14.046[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m90[0m - [1m
+============================================================[0m
+[32m2026-02-09 20:39:14.046[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m91[0m - [1mBACKTEST 1: H1 BIAS[0m
+[32m2026-02-09 20:39:14.047[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m92[0m - [1m============================================================[0m
+[32m2026-02-09 20:39:14.070[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m191[0m - [1m
+============================================================[0m
+[32m2026-02-09 20:39:14.070[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m192[0m - [1mBACKTEST 2: M5 CONFIRMATION[0m
+[32m2026-02-09 20:39:14.070[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m193[0m - [1m============================================================[0m
+[32m2026-02-09 20:39:14.080[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m279[0m - [1m
+============================================================[0m
+[32m2026-02-09 20:39:14.080[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m280[0m - [1mRESULTS COMPARISON[0m
+[32m2026-02-09 20:39:14.080[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m281[0m - [1m============================================================[0m
+
+Metric               H1 Bias         M5 Confirm      Improvement    
+-----------------------------------------------------------------
+Total Trades         0               0               +0
+Wins                 0               0               +0
+Losses               0               0               +0
+Win Rate             0.0%           0.0%           +0.0%
+Total P/L            $0.00          $0.00          $+0.00
+Avg Win              $0.00          $0.00          $+0.00
+Avg Loss             $0.00          $0.00          $+0.00
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\simple_h1_vs_m5.py", line 346, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\simple_h1_vs_m5.py", line 322, in main
+    print(f"{'Profit Factor':<20} {m_h1['profit_factor']:.2f}{'':<12} {m_m5['profit_factor']:.2f}{'':<12} {m_m5['profit_factor']-m_h1['profit_factor']:+.2f}")
+                                   ~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'profit_factor'

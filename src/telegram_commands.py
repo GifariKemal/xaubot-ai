@@ -225,7 +225,7 @@ def register_commands(bot):
             momentum = guard.momentum_score if guard else 0
 
             pos_items.append(f"#{ticket} {direction} <code>{lot}</code>")
-            pos_items.append(f"  Open: <code>{open_price:.2f}</code> → Now: <code>{current:.2f}</code>")
+            pos_items.append(f"  Open: <code>{open_price:.2f}</code> -> Now: <code>{current:.2f}</code>")
             pos_items.append(f"  SL: <code>{sl:.2f}</code> | TP: <code>{tp:.2f}</code>")
             pos_items.append(f"  P/L: <b>{_fmt_usd(profit)}</b> | M: <code>{momentum:+.0f}</code>")
 

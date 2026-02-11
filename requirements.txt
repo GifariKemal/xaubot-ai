@@ -13,7 +13,12 @@ MetaTrader5>=5.0.5572
 xgboost>=2.1.0
 scikit-learn>=1.4.0
 hmmlearn>=0.3.3
+filterpy>=1.4.5
 joblib>=1.4.0
+
+# Advanced Exit Strategies (Phase 1-6)
+scikit-fuzzy>=0.4.2  # Fuzzy logic controller
+scipy>=1.11.0        # HJB solver (optimize, integrate)
 
 # Asynchronous Processing
 asyncio-throttle>=1.0.2

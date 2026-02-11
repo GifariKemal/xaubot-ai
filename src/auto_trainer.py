@@ -261,23 +261,33 @@ class AutoTrainer:
             (current_auc, is_acceptable, message)
         """
         try:
-            # Try to get AUC from loaded model
-            if model is not None and hasattr(model, '_test_auc'):
+            current_auc = None
+
+            # Try to get AUC from loaded model's train_metrics (V2 format)
+            if model is not None and hasattr(model, '_train_metrics') and model._train_metrics:
+                tm = model._train_metrics
+                current_auc = tm.get("test_auc") or tm.get("xgb_test_score") or tm.get("test_accuracy")
+            # V1 model attributes
+            elif model is not None and hasattr(model, '_test_auc'):
                 current_auc = model._test_auc
             elif model is not None and hasattr(model, 'auc'):
                 current_auc = model.auc
-            else:
+
+            if current_auc is None:
                 # Try to load from model file
                 import pickle
                 model_path = self.models_dir / "xgboost_model.pkl"
                 if model_path.exists():
                     with open(model_path, "rb") as f:
                         saved_data = pickle.load(f)
-                        if isinstance(saved_data, dict) and "test_auc" in saved_data:
-                            current_auc = saved_data["test_auc"]
+                        if isinstance(saved_data, dict):
+                            # V2 format: train_metrics dict inside
+                            tm = saved_data.get("train_metrics", {})
+                            current_auc = (tm.get("test_auc") or tm.get("xgb_test_score")
+                                          or tm.get("test_accuracy") or saved_data.get("test_auc"))
                         elif hasattr(saved_data, '_test_auc'):
                             current_auc = saved_data._test_auc
-                        else:
+                        if current_auc is None:
                             return 0.0, False, "Could not determine AUC from model"
                 else:
                     return 0.0, False, "Model file not found"
@@ -292,7 +302,7 @@ class AutoTrainer:
                 message = f"Model AUC OK: {current_auc:.4f} (threshold: {self.min_auc_threshold})"
                 self._low_auc_alert_sent = False  # Reset alert flag
             else:
-                message = f"⚠️ LOW AUC ALERT: {current_auc:.4f} < {self.min_auc_threshold} threshold!"
+                message = f"[WARNING] LOW AUC ALERT: {current_auc:.4f} < {self.min_auc_threshold} threshold!"
                 if not self._low_auc_alert_sent:
                     logger.warning(message)
                     self._low_auc_alert_sent = True
@@ -414,7 +424,9 @@ class AutoTrainer:
         from src.feature_eng import FeatureEngineer
         from src.smc_polars import SMCAnalyzer
         from src.regime_detector import MarketRegimeDetector
-        from src.ml_model import TradingModel, get_default_feature_columns
+        from src.ml_model import get_default_feature_columns
+        from backtests.ml_v2.ml_v2_model import TradingModelV2
+        from backtests.ml_v2.ml_v2_feature_eng import MLV2FeatureEngineer
 
         started_at = datetime.now(WIB)
 
@@ -435,10 +447,10 @@ class AutoTrainer:
         # Determine training parameters
         training_type = "weekend" if is_weekend else "daily"
         if is_weekend:
-            bars = 15000  # More data for weekend deep training
+            bars = 20000  # More data for weekend deep training
             num_boost_round = 80
         else:
-            bars = 8000   # Daily training
+            bars = 15000  # Daily training (increased from 8000 for better HMM regime detection)
             num_boost_round = 50
 
         # Record training start in database
@@ -498,32 +510,61 @@ class AutoTrainer:
                 results["hmm_trained"] = True
                 logger.info("HMM model trained and saved")
 
-            # Train XGBoost
-            logger.info("Training XGBoost Model...")
-            xgb = TradingModel(
+            # Add V2 features (23 additional features on top of base 37)
+            logger.info("Adding V2 features for enhanced model training...")
+            fe_v2 = MLV2FeatureEngineer()
+
+            # Fetch H1 data for multi-timeframe features
+            df_h1 = None
+            try:
+                df_h1 = connector.get_market_data(symbol, "H1", min(bars // 4, 2000))
+                if len(df_h1) > 30:
+                    df_h1 = fe.calculate_all(df_h1, include_ml_features=False)
+                    df_h1 = smc.calculate_all(df_h1)
+                    logger.info(f"H1 data fetched: {len(df_h1)} bars for V2 features")
+                else:
+                    df_h1 = None
+                    logger.warning("Insufficient H1 data, using defaults")
+            except Exception as e:
+                logger.warning(f"Could not fetch H1 data: {e}, using defaults")
+
+            df = fe_v2.add_all_v2_features(df, df_h1)
+
+            # Train XGBoost V2 Model (with all available features)
+            logger.info("Training XGBoost V2 Model...")
+            xgb_model = TradingModelV2(
                 confidence_threshold=0.60,
                 model_path=str(self.models_dir / "xgboost_model.pkl"),
             )
 
-            feature_cols = get_default_feature_columns()
-            available_features = [f for f in feature_cols if f in df.columns]
+            # Auto-detect all numeric feature columns (like V3 trainer)
+            exclude_cols = {"time", "open", "high", "low", "close", "volume", "target",
+                           "tick_volume", "spread", "real_volume", "multi_bar_target"}
+            feature_cols = [
+                col for col in df.columns
+                if col not in exclude_cols and df[col].dtype in [pl.Float64, pl.Float32, pl.Int64, pl.Int32, pl.Int8, pl.Boolean]
+            ]
+            logger.info(f"Training with {len(feature_cols)} features")
 
-            xgb.fit(
+            xgb_model.fit(
                 df,
-                available_features,
+                feature_cols,
                 target_col="target",
                 train_ratio=0.7,
                 num_boost_round=num_boost_round,
                 early_stopping_rounds=5,
             )
 
-            if xgb.fitted:
+            if xgb_model.fitted:
                 results["xgb_trained"] = True
-                results["xgb_train_auc"] = xgb._train_metrics.get("train_auc", 0)
-                results["xgb_test_auc"] = xgb._train_metrics.get("test_auc", 0)
-                results["train_accuracy"] = xgb._train_metrics.get("train_accuracy", 0)
-                results["test_accuracy"] = xgb._train_metrics.get("test_accuracy", 0)
-                logger.info(f"XGBoost trained: Train AUC={results['xgb_train_auc']:.4f}, Test AUC={results['xgb_test_auc']:.4f}")
+                # V2 model stores AUC as xgb_train_score/xgb_test_score
+                results["xgb_train_auc"] = xgb_model._train_metrics.get("xgb_train_score", 0)
+                results["xgb_test_auc"] = xgb_model._train_metrics.get("xgb_test_score", 0)
+                results["train_accuracy"] = xgb_model._train_metrics.get("train_accuracy", 0)
+                results["test_accuracy"] = xgb_model._train_metrics.get("test_accuracy", 0)
+                results["n_features"] = len(feature_cols)
+                logger.info(f"XGBoost V2 trained: Train AUC={results['xgb_train_auc']:.4f}, Test AUC={results['xgb_test_auc']:.4f}")
+                logger.info(f"  Features: {len(feature_cols)}")
 
             # Save training data
             training_data_path = self.data_dir / "training_data.parquet"
@@ -549,6 +590,8 @@ class AutoTrainer:
             )
 
             if results["success"]:
+                # Update cached AUC for dashboard reporting
+                self._current_auc = results["xgb_test_auc"]
                 logger.info("=" * 50)
                 logger.info("AUTO-RETRAINING COMPLETED SUCCESSFULLY")
                 logger.info(f"Duration: {results['duration_seconds']}s")

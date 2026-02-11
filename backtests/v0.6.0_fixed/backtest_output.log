@@ -1,0 +1,45 @@
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m34[0m - [1m================================================================================[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m35[0m - [1mXAUBOT AI v0.6.0 FIXED - BACKTEST RUNNER[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m36[0m - [1m================================================================================[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m37[0m - [1m[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m38[0m - [1mPROFESSOR'S FIXES APPLIED:[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m39[0m - [1m  [FIX 1] Fuzzy Thresholds: 70-90% tiered (was fixed 90%)[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m40[0m - [1m  [FIX 2] Trajectory Calibration: regime penalty + uncertainty[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m41[0m - [1m  [FIX 3] Session Filter: Sydney/Tokyo DISABLED (00:00-10:00)[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m42[0m - [1m  [FIX 4] Unicode Fix: ASCII only (no emojis)[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m43[0m - [1m  [FIX 5] Max Loss: $25/trade (was $50)[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m44[0m - [1m[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m45[0m - [1mBacktest Period: 90 days[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m46[0m - [1m================================================================================[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m47[0m - [1m[0m
+[32m2026-02-11 08:51:24.748[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m61[0m - [1mStep 1/4: Connecting to MT5...[0m
+[32m2026-02-11 08:51:27.252[0m | [1mINFO    [0m | [36msrc.mt5_connector[0m:[36mconnect[0m:[36m177[0m - [1mConnected to MT5: FinexBisnisSolusi-Demo (Account: 61045904)[0m
+[32m2026-02-11 08:51:27.753[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m77[0m - [1mStep 2/4: Loading XAUUSD M15 data (last 90 days, ~8640 bars)...[0m
+[32m2026-02-11 08:51:27.958[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m84[0m - [1m  Loaded 8640 bars[0m
+[32m2026-02-11 08:51:27.962[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m85[0m - [1m  Date range: 2025-09-29 16:30:00 to 2026-02-11 03:45:00[0m
+[32m2026-02-11 08:51:27.962[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m88[0m - [1mStep 3/4: Engineering features...[0m
+[32m2026-02-11 08:51:27.981[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m91[0m - [1m  Added 56 features[0m
+[32m2026-02-11 08:51:27.981[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m94[0m - [1mStep 4/4: Running backtest with FIXED logic...[0m
+[32m2026-02-11 08:51:27.981[0m | [1mINFO    [0m | [36m__main__[0m:[36mmain[0m:[36m95[0m - [1m[0m
+[32m2026-02-11 08:51:27.981[0m | [33m[1mWARNING [0m | [36msrc.regime_detector[0m:[36mload[0m:[36m642[0m - [33m[1mModel file not found: models\hmm_regime.pkl[0m
+[32m2026-02-11 08:51:27.982[0m | [33m[1mWARNING [0m | [36msrc.ml_model[0m:[36mload[0m:[36m404[0m - [33m[1mModel file not found: models\xgboost_model.pkl[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m483[0m - [1m[BACKTEST FIXED v0.6.0][0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m484[0m - [1m  Date range: 2025-09-30 18:30:00 to 2026-02-10 01:45:00[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m485[0m - [1m  Total bars: 8440[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m486[0m - [1m  FIXES APPLIED:[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m487[0m - [1m    [FIX 1] Fuzzy thresholds: micro=70%, small=75%, medium=85%, large=90%[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m488[0m - [1m    [FIX 2] Trajectory calibration: regime penalty + uncertainty[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m489[0m - [1m    [FIX 3] Session filter: Sydney/Tokyo DISABLED[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m490[0m - [1m    [FIX 4] Unicode: ASCII only[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m491[0m - [1m    [FIX 5] Max loss: $25.0 (was $50)[0m
+[32m2026-02-11 08:51:27.984[0m | [1mINFO    [0m | [36mbacktest_v0_6_0_fixed[0m:[36mrun[0m:[36m492[0m - [1m[0m
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\v0.6.0_fixed\run_backtest.py", line 195, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\v0.6.0_fixed\run_backtest.py", line 104, in main
+    stats = bt.run(df)
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\v0.6.0_fixed\backtest_v0_6_0_fixed.py", line 515, in run
+    smc_result = self.smc.analyze(df_slice)
+                 ^^^^^^^^^^^^^^^^
+AttributeError: 'SMCAnalyzer' object has no attribute 'analyze'

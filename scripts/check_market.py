@@ -112,3 +112,58 @@ for row in choch_indices:
     print(f'  {row["time"]} | Close={row["close"]:.2f} | CHoCH={row["choch"]} | {candles_ago} candles ago')
 
 mt5.disconnect()
+
+# === MACRO CONTEXT (Phase 9 Enhancement) ===
+print('')
+print('=== MACRO-ECONOMIC CONTEXT FOR GOLD ===')
+print('(Fetching macro data...)')
+
+import asyncio
+from src.macro_connector import MacroDataConnector
+
+async def get_macro_context():
+    """Fetch and display macro context."""
+    try:
+        connector = MacroDataConnector()
+        summary = await connector.get_macro_context()
+        print(summary)
+
+        # Additional insights
+        macro_score, components = await connector.calculate_macro_score()
+
+        print('')
+        print('=== MACRO SCORE BREAKDOWN ===')
+        print(f'Overall Score: {macro_score:.2f} (0=Bearish, 0.5=Neutral, 1=Bullish)')
+        print('')
+
+        if components.get('dxy_score') is not None:
+            print(f'  DXY Contribution: {components["dxy_score"]:.2f} (weight: 35%)')
+        if components.get('vix_score') is not None:
+            print(f'  VIX Contribution: {components["vix_score"]:.2f} (weight: 25%)')
+        if components.get('yields_score') is not None:
+            print(f'  Yields Contribution: {components["yields_score"]:.2f} (weight: 30%)')
+        if components.get('fed_score') is not None:
+            print(f'  Fed Rate Contribution: {components["fed_score"]:.2f} (weight: 10%)')
+
+        print('')
+        print('=== TRADING IMPLICATIONS ===')
+        if macro_score < 0.3:
+            print('  Macro environment is BEARISH for gold')
+            print('  Consider: Reduce position sizes, avoid aggressive longs')
+        elif macro_score < 0.7:
+            print('  Macro environment is NEUTRAL for gold')
+            print('  Consider: Trade technically, normal position sizing')
+        else:
+            print('  Macro environment is BULLISH for gold')
+            print('  Consider: Favor long bias, can increase position sizes')
+
+    except Exception as e:
+        print(f'  Error fetching macro data: {e}')
+        print('  Note: Set FRED_API_KEY env var for real yields & fed funds data')
+        print('  (DXY and VIX work without API key)')
+
+try:
+    asyncio.run(get_macro_context())
+except Exception as e:
+    print(f'  Could not fetch macro data: {e}')
+    print('  This is optional - SMC analysis above is still valid')

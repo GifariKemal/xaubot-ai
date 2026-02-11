@@ -235,7 +235,7 @@ def main():
             connector,
             config.symbol,
             config.execution_timeframe,
-            bars=10000,  # Doubled from 5000 for better model generalization
+            bars=15000,  # Increased for better HMM regime separation
         )
         
         # Prepare features

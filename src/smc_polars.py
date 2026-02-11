@@ -818,9 +818,9 @@ class SMCAnalyzer:
             risk = entry - sl
             tp = entry + (risk * min_rr_ratio)
 
-            # VALIDATE RR before creating signal
+            # VALIDATE RR before creating signal (tolerance for floating point)
             actual_rr = (tp - entry) / risk if risk > 0 else 0
-            if actual_rr < min_rr_ratio:
+            if actual_rr < min_rr_ratio - 0.01:
                 logger.debug(f"Skipping BUY signal: RR {actual_rr:.2f} < {min_rr_ratio}")
                 signal = None
             else:
@@ -877,9 +877,9 @@ class SMCAnalyzer:
             risk = sl - entry
             tp = entry - (risk * min_rr_ratio)
 
-            # VALIDATE RR before creating signal
+            # VALIDATE RR before creating signal (tolerance for floating point)
             actual_rr = (entry - tp) / risk if risk > 0 else 0
-            if actual_rr < min_rr_ratio:
+            if actual_rr < min_rr_ratio - 0.01:
                 logger.debug(f"Skipping SELL signal: RR {actual_rr:.2f} < {min_rr_ratio}")
                 signal = None
             else:

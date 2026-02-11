@@ -12,8 +12,8 @@ class MomentumPersistence:
     """
     Analisis persistence (kekuatan berkelanjutan) dari momentum trading.
 
-    Skor tinggi (>0.7) = Momentum kuat, likely continue → HOLD position
-    Skor rendah (<0.3) = Momentum lemah, likely reverse → EXIT position
+    Skor tinggi (>0.7) = Momentum kuat, likely continue -> HOLD position
+    Skor rendah (<0.3) = Momentum lemah, likely reverse -> EXIT position
 
     Features analyzed:
     1. Velocity trend consistency (all positive/negative)
@@ -250,19 +250,19 @@ class MomentumPersistence:
             (is_reversing, reason)
 
         Example momentum reversal patterns:
-        - Velocity sign flip: [+0.05, +0.03, -0.02] → reversing!
-        - Rapid deceleration: [+0.10, +0.08, +0.03, +0.01] → reversing!
+        - Velocity sign flip: [+0.05, +0.03, -0.02] -> reversing!
+        - Rapid deceleration: [+0.10, +0.08, +0.03, +0.01] -> reversing!
         """
         if len(velocity_history) < min_samples:
             return False, "Insufficient data"
 
         recent = velocity_history[-min_samples:]
 
-        # Pattern 1: Sign flip (positive → negative or vice versa)
+        # Pattern 1: Sign flip (positive -> negative or vice versa)
         if len(recent) >= 2:
             signs = [1 if v > 0 else -1 if v < 0 else 0 for v in recent]
             if signs[-1] != signs[0] and signs[-1] != 0 and signs[0] != 0:
-                return True, f"Momentum sign flip: {signs[0]} → {signs[-1]}"
+                return True, f"Momentum sign flip: {signs[0]} -> {signs[-1]}"
 
         # Pattern 2: Rapid deceleration (magnitude dropping >50% in 3 samples)
         if len(recent) >= 3:
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     should_raise, new_thresh, reason = persistence.should_raise_exit_threshold(
         vel_history, accel_history, 0.05, base_threshold=0.90
     )
-    print(f"Raise Threshold: {should_raise} → {new_thresh:.0%}")
+    print(f"Raise Threshold: {should_raise} -> {new_thresh:.0%}")
     print(f"Reason: {reason}\n")
 
     # Test 2: Reversing momentum
@@ -326,5 +326,5 @@ if __name__ == "__main__":
     should_raise, new_thresh, reason = persistence.should_raise_exit_threshold(
         vel_history_stable, accel_history_stable, 3.0, base_threshold=0.85
     )
-    print(f"Raise Threshold: {should_raise} → {new_thresh:.0%}")
+    print(f"Raise Threshold: {should_raise} -> {new_thresh:.0%}")
     print(f"Reason: {reason}")

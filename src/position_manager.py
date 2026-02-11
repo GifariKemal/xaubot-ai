@@ -53,9 +53,9 @@ class SmartMarketCloseHandler:
     Intelligent market close handler.
 
     Logic:
-    1. Profit + Near Close → Close to secure profit (jangan sampai hilang TP)
-    2. Loss + Still in range → Hold, wait for volatility on reopen
-    3. Loss + Weekend approaching → Consider cut loss (gap risk)
+    1. Profit + Near Close -> Close to secure profit (jangan sampai hilang TP)
+    2. Loss + Still in range -> Hold, wait for volatility on reopen
+    3. Loss + Weekend approaching -> Consider cut loss (gap risk)
 
     Market Hours (XAUUSD):
     - Sunday 5pm EST - Friday 5pm EST (24/5)
@@ -185,7 +185,7 @@ class SmartMarketCloseHandler:
         Returns:
             (recommendation, reason)
         """
-        # Case 1: In profit and near close → TAKE PROFIT
+        # Case 1: In profit and near close -> TAKE PROFIT
         if profit >= self.min_profit_to_take and near_close:
             urgency = "WEEKEND" if near_weekend else "daily"
             return (
@@ -193,7 +193,7 @@ class SmartMarketCloseHandler:
                 f"Take profit ${profit:.2f} before {urgency} close ({hours_to_close:.1f}h remaining)"
             )
 
-        # Case 2: In loss, near weekend, and significant SL hit → CUT LOSS
+        # Case 2: In loss, near weekend, and significant SL hit -> CUT LOSS
         if profit < 0 and near_weekend:
             if sl_distance_percent >= self.weekend_loss_cut_percent:
                 return (
@@ -211,7 +211,7 @@ class SmartMarketCloseHandler:
                     f"Hold small loss ${profit:.2f} over weekend (may recover on Monday volatility)"
                 )
 
-        # Case 3: In loss, near daily close but not weekend → HOLD
+        # Case 3: In loss, near daily close but not weekend -> HOLD
         if profit < 0 and near_close and not near_weekend:
             if abs(profit) <= self.max_loss_to_hold:
                 return (
@@ -224,7 +224,7 @@ class SmartMarketCloseHandler:
                     f"Consider cutting large loss ${profit:.2f} before close"
                 )
 
-        # Case 4: Small profit near close → Consider taking
+        # Case 4: Small profit near close -> Consider taking
         if profit > 0 and profit < self.min_profit_to_take and near_close:
             if hours_to_close < 0.5:  # Very close to close (30 min)
                 return (
@@ -518,18 +518,20 @@ class SmartPositionManager:
                 reason=f"Regime danger ({market['regime']}) - Securing ${profit:.2f} profit",
             )
 
-        # 2. Strong opposite signal with profit
-        if is_buy and market["should_exit_longs"] and profit > self.min_profit_to_protect / 2:
+        # 2. Strong opposite signal — only exit at substantial profit (v5)
+        # min_profit_to_protect / 2 was too low ($4), now requires 75% of threshold
+        signal_exit_threshold = self.min_profit_to_protect * 0.75
+        if is_buy and market["should_exit_longs"] and profit > signal_exit_threshold:
             return PositionAction(
                 ticket=ticket,
                 action="CLOSE",
-                reason=f"Bearish signal detected - Securing ${profit:.2f} profit",
+                reason=f"Bearish signal detected - Securing ${profit:.2f} profit (threshold ${signal_exit_threshold:.0f})",
             )
-        elif not is_buy and market["should_exit_shorts"] and profit > self.min_profit_to_protect / 2:
+        elif not is_buy and market["should_exit_shorts"] and profit > signal_exit_threshold:
             return PositionAction(
                 ticket=ticket,
                 action="CLOSE",
-                reason=f"Bullish signal detected - Securing ${profit:.2f} profit",
+                reason=f"Bullish signal detected - Securing ${profit:.2f} profit (threshold ${signal_exit_threshold:.0f})",
             )
 
         # 3. Drawdown from peak profit
@@ -542,8 +544,8 @@ class SmartPositionManager:
                     reason=f"Profit protection: {drawdown_pct:.0f}% drawdown from peak ${peak_profit:.2f}",
                 )
 
-        # 4. High urgency with any profit
-        if market["urgency"] >= 7 and profit > 0:
+        # 4. High urgency — only exit at substantial profit (v4: raised from $0)
+        if market["urgency"] >= 8 and profit > self.min_profit_to_protect:
             return PositionAction(
                 ticket=ticket,
                 action="CLOSE",

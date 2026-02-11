@@ -16,8 +16,8 @@ Application:
 - Full exit if Kelly fraction < 0.3
 
 Integration with Fuzzy Logic:
-- High exit_confidence (>0.75) → adjust win probability down → Kelly suggests reduce
-- Low exit_confidence (<0.50) → maintain position → Kelly suggests hold
+- High exit_confidence (>0.75) -> adjust win probability down -> Kelly suggests reduce
+- Low exit_confidence (<0.50) -> maintain position -> Kelly suggests hold
 
 Author: AI Assistant (Phase 6 - Advanced Exit Strategies)
 """

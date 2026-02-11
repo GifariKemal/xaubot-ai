@@ -124,7 +124,7 @@ class PositionGuard:
     peak_update_time: float = 0.0          # time.time() when peak was last updated
     failed_peak_attempts: int = 0          # Times price approached but failed to exceed peak
     velocity_was_positive: bool = False    # Velocity was positive in recent past
-    velocity_sign_flips: int = 0           # Consecutive vel positive→negative transitions
+    velocity_sign_flips: int = 0           # Consecutive vel positive->negative transitions
     decel_at_profit_count: int = 0         # Consecutive readings with negative accel while in profit
     profit_stall_start_time: float = 0.0   # time.time() when profit stall began
     profit_stall_anchor: float = 0.0       # Profit level when stall started
@@ -146,6 +146,7 @@ class PositionGuard:
     acceleration_history: List[float] = field(default_factory=list)  # Historical acceleration values
     peak_loss: float = 0.0  # Most negative profit ever reached (for recovery detection)
     last_profit_for_derivative: float = 0.0  # For velocity derivative calculation
+    peak_hold_active: bool = False  # v0.2.2: Suppress exits when approaching peak
 
     def update_history(self, price: float, profit: float, ml_confidence: float, max_history: int = 20):
         """Update price/profit history untuk analisis momentum."""
@@ -213,7 +214,7 @@ class PositionGuard:
             # Approached peak (within 85%) but didn't break it
             self.failed_peak_attempts += 1
 
-        # Track velocity sign transitions (positive → negative)
+        # Track velocity sign transitions (positive -> negative)
         if self.velocity < -0.01 and self.velocity_was_positive:
             self.velocity_sign_flips += 1
         elif self.velocity > 0.01:
@@ -282,7 +283,7 @@ class PositionGuard:
         if len(self.ml_confidence_history) >= 3:
             recent_conf = self.ml_confidence_history[-3:]
             conf_trend = recent_conf[-1] - recent_conf[0]
-            conf_score = ((conf_trend + 0.3) / 0.6) * 20  # -0.3 to +0.3 → 0 to 20
+            conf_score = ((conf_trend + 0.3) / 0.6) * 20  # -0.3 to +0.3 -> 0 to 20
             conf_score = max(0, min(20, conf_score))
         else:
             conf_score = 10
@@ -368,7 +369,7 @@ class SmartRiskManager:
         capital: float = 5000.0,
         max_daily_loss_percent: float = 5.0,      # Max 5% daily loss
         max_total_loss_percent: float = 10.0,     # Max 10% total loss (stop trading)
-        max_loss_per_trade_percent: float = 1.0,  # Max 1% per trade (software S/L)
+        max_loss_per_trade_percent: float = 0.5,  # Max 0.5% per trade (FIX 5: was 1.0%, ~$25 for $5k capital)
         emergency_sl_percent: float = 2.0,        # Emergency broker S/L 2% per trade
         base_lot_size: float = 0.01,              # Lot dasar sangat kecil
         max_lot_size: float = 0.03,               # Maximum lot
@@ -983,11 +984,75 @@ class SmartRiskManager:
                 profit_mult *= 0.8  # Overbought: BUY may reverse
 
         # Clamp multipliers to reasonable ranges
-        # v5c: loss_mult minimum raised 0.3→0.5 (give trades more breathing room)
+        # v5c: loss_mult minimum raised 0.3->0.5 (give trades more breathing room)
         profit_mult = max(0.3, min(2.5, profit_mult))
         loss_mult = max(0.5, min(2.5, loss_mult))
 
         return profit_mult, loss_mult
+
+    def _calculate_fuzzy_exit_threshold(self, current_profit: float) -> float:
+        """
+        FIX 1 (v0.1.1): Tiered fuzzy exit thresholds based on profit magnitude.
+
+        BEFORE: Fixed 90% threshold for all profits
+        AFTER: Dynamic thresholds:
+          - Micro (<$1): 70% -> exit early
+          - Small ($1-$3): 75% -> protection
+          - Medium ($3-$8): 85% -> hold longer
+          - Large (>$8): 90% -> maximize
+
+        Returns threshold value 0.0-1.0
+        """
+        if current_profit < 1.0:
+            return 0.70  # Micro: exit early
+        elif current_profit < 3.0:
+            return 0.75  # Small: protect
+        elif current_profit < 8.0:
+            return 0.85  # Medium: hold
+        else:
+            return 0.90  # Large: maximize
+
+    def _predict_trajectory_calibrated(
+        self,
+        current_profit: float,
+        velocity: float,
+        acceleration: float,
+        regime: str,
+        horizon_seconds: int = 60
+    ) -> float:
+        """
+        FIX 2 (v0.1.1): Calibrated trajectory prediction with regime penalty + uncertainty.
+
+        BEFORE: Optimistic parabolic prediction (95% error rate)
+        AFTER: Conservative with:
+          - Regime penalty (ranging 0.4x, volatile 0.6x, trending 0.9x)
+          - Uncertainty bounds (95% CI lower bound)
+
+        Returns predicted profit in dollars
+        """
+        # Parabolic motion: p(t) = p₀ + v*t + 0.5*a*t²
+        raw_prediction = current_profit + velocity * horizon_seconds + 0.5 * acceleration * (horizon_seconds ** 2)
+
+        # Apply regime penalty
+        regime_penalties = {
+            "ranging": 0.4,
+            "mean_reverting": 0.4,
+            "volatile": 0.6,
+            "high_volatility": 0.6,
+            "crisis": 0.5,
+            "trending": 0.9,
+            "normal": 0.6,
+        }
+        penalty = regime_penalties.get(regime, 0.6)
+        calibrated_prediction = raw_prediction * penalty
+
+        # Add uncertainty (95% confidence interval lower bound)
+        # Uncertainty grows with acceleration magnitude
+        prediction_std = abs(acceleration) * horizon_seconds * 5
+        conservative_prediction = calibrated_prediction - 1.96 * prediction_std
+
+        # Floor at current profit (can't predict below current)
+        return max(current_profit, conservative_prediction)
 
     def evaluate_position(
         self,
@@ -1002,7 +1067,7 @@ class SmartRiskManager:
         market_context: Optional[Dict] = None,
     ) -> Tuple[bool, Optional[ExitReason], str]:
         """
-        SMART DYNAMIC TP v5 - Evaluate if position should be closed.
+        SMART DYNAMIC TP v6.4 - Evaluate if position should be closed (Professor AI Validated Fixes).
 
         Uses ATR-based dynamic scaling + regime/ML/velocity multipliers:
           - current_atr: ATR(14) in price points from latest M15 data
@@ -1033,9 +1098,9 @@ class SmartRiskManager:
 
         # === ATR-BASED THRESHOLDS — "Detak Jantung Market" ===
         # All thresholds use ATR as the base unit, making them SYMMETRIC and adaptive:
-        # - London (high vol) → wider stops, bigger targets
-        # - Sydney (low vol) → tighter stops, smaller targets
-        # - Big lot → wider in dollars, same in ATR terms
+        # - London (high vol) -> wider stops, bigger targets
+        # - Sydney (low vol) -> tighter stops, smaller targets
+        # - Big lot -> wider in dollars, same in ATR terms
         # atr_unit = how many $ of P/L per 1 ATR move for THIS position
         atr_unit = atr_dollars if atr_dollars > 0 else 10 * sm  # Fallback if ATR unavailable
 
@@ -1077,8 +1142,8 @@ class SmartRiskManager:
 
         # === DYNAMIC GRACE PERIOD (3-12 minutes based on loss velocity) ===
         # v6.1: Grace adapts to how fast the trade is losing money
-        # Fast crash → short grace (3-4 min)
-        # Slow loss/recovery → long grace (10-12 min)
+        # Fast crash -> short grace (3-4 min)
+        # Slow loss/recovery -> long grace (10-12 min)
 
         if current_profit >= 0:
             # In profit: full grace (regime-based)
@@ -1110,11 +1175,11 @@ class SmartRiskManager:
                 # Very slow loss or recovering (velocity positive/near zero)
                 # Use regime-based grace but reduced 50%
                 if regime in ("ranging", "mean_reverting"):
-                    grace_minutes = 8  # 12 → 8
+                    grace_minutes = 8  # 12 -> 8
                 elif regime in ("high_volatility", "volatile", "crisis"):
-                    grace_minutes = 6  # 10 → 6
+                    grace_minutes = 6  # 10 -> 6
                 else:
-                    grace_minutes = 5  # 8 → 5
+                    grace_minutes = 5  # 8 -> 5
 
         # Log dynamic multipliers periodically (every 60s)
         if len(guard.profit_timestamps) > 0:
@@ -1151,7 +1216,13 @@ class SmartRiskManager:
             # === FUZZY LOGIC EXIT CONFIDENCE ===
             if self.fuzzy_controller is not None:
                 # Calculate profit retention
-                profit_retention = current_profit / guard.peak_profit if guard.peak_profit > 0 else 1.0
+                # FIX v0.1.2: Small loss after small profit = micro swing, bukan collapse
+                if current_profit < 0 and 0 < guard.peak_profit < 300:  # Peak <$3
+                    # Small loss after small profit: treat as medium retention (0.5)
+                    # Prevents false "collapsed" trigger (retention < 0.3 -> 95% exit)
+                    profit_retention = 0.50
+                else:
+                    profit_retention = current_profit / guard.peak_profit if guard.peak_profit > 0 else 1.0
 
                 # Calculate profit level (vs target)
                 profit_level = current_profit / tp_hard if tp_hard > 0 else 0.5
@@ -1175,14 +1246,22 @@ class SmartRiskManager:
                 if _PREDICTIVE_ENABLED:
                     # 1. TRAJECTORY PREDICTION: Check if future profit exceeds targets
                     if self.trajectory_predictor is not None and len(guard.velocity_history) >= 3:
+                        # === DEBUG v0.2.0: Trajectory input validation ===
+                        logger.info(f"[TRAJ-IN] profit=${current_profit:.4f} | vel={_vel:.6f} | accel={_accel:.6f} | regime={regime}")
+
                         should_hold, pred_reason, predictions = self.trajectory_predictor.should_hold_position(
                             current_profit=current_profit,
                             velocity=_vel,
                             acceleration=_accel,
                             min_target=tp_min,
                             velocity_history=guard.velocity_history,
-                            acceleration_history=guard.acceleration_history
+                            acceleration_history=guard.acceleration_history,
+                            regime=regime  # v0.2.0: Pass regime for dampening
                         )
+
+                        # === v0.2.2: Trajectory prediction output ===
+                        pred_1m = predictions.get('pred_1m', 0)
+                        logger.info(f"[TRAJ-OUT] pred_1m=${pred_1m:.2f} | conf={predictions['confidence']:.0%}")
 
                         if should_hold:
                             # Predicted high profit - DON'T EXIT yet
@@ -1239,22 +1318,38 @@ class SmartRiskManager:
                 if current_profit > 0:
                     # === PROFIT TRADES: Hold longer for better gains ===
 
-                    # Base profit tiers determine exit threshold
-                    if current_profit < 3.0:
-                        # Small profit (<$3): Hold until very high confidence (90%)
-                        fuzzy_threshold = 0.90
+                    # FIX v0.1.3: Use tiered fuzzy threshold function (FIX 1 v0.1.1 finally active!)
+                    fuzzy_threshold = self._calculate_fuzzy_exit_threshold(current_profit)
+
+                    # Determine tier for logging
+                    if current_profit < 1.0:
+                        tier = "MICRO"
+                    elif current_profit < 3.0:
                         tier = "SMALL"
                     elif current_profit < 8.0:
-                        # Medium profit ($3-8): Hold until high confidence (85%)
-                        fuzzy_threshold = 0.85
                         tier = "MEDIUM"
                     else:
-                        # Large profit (>$8): Can exit at 80% (protect gains)
-                        fuzzy_threshold = 0.80
                         tier = "LARGE"
 
                     # === v6.3 PREDICTIVE ADJUSTMENTS ===
                     adjustments = []
+
+                    # v0.2.1 FIX 1: LOWER threshold when crash predicted (exit faster!)
+                    if (_PREDICTIVE_ENABLED and self.trajectory_predictor is not None and
+                        len(guard.velocity_history) >= 3):
+                        # Get trajectory prediction (already calculated above)
+                        pred_1m = predictions.get('pred_1m', 0) if 'predictions' in locals() else None
+                        if pred_1m is not None and pred_1m < 0:
+                            # Crash predicted! Lower threshold by 10% (exit faster)
+                            crash_penalty = 0.10
+                            old_threshold = fuzzy_threshold
+                            fuzzy_threshold = max(fuzzy_threshold - crash_penalty, 0.60)  # Floor at 60%
+                            if fuzzy_threshold < old_threshold:
+                                adjustments.append(f"crash-{crash_penalty:.0%}")
+                                logger.warning(
+                                    f"[CRASH DETECTED] Trajectory pred ${pred_1m:.2f} < 0 -> "
+                                    f"Lowering fuzzy threshold {old_threshold:.0%} -> {fuzzy_threshold:.0%}"
+                                )
 
                     # Apply momentum persistence adjustment
                     if (_PREDICTIVE_ENABLED and self.momentum_persistence is not None and
@@ -1292,22 +1387,24 @@ class SmartRiskManager:
                         should_hold, pred_reason, predictions = (
                             self.trajectory_predictor.should_hold_position(
                                 current_profit, _vel, _accel, tp_min,
-                                guard.velocity_history, guard.acceleration_history
+                                guard.velocity_history, guard.acceleration_history,
+                                regime=regime  # v0.2.0: Pass regime for dampening
                             )
                         )
                         if should_hold and predictions.get('pred_1m', 0) > current_profit * 2:
                             # Predicted profit 2x higher in 1 minute - strong hold signal
                             trajectory_override = True
                             logger.warning(
-                                f"⏳ [TRAJECTORY OVERRIDE] Predicted ${predictions['pred_1m']:.2f} in 1min "
+                                f"[TRAJECTORY OVERRIDE] Predicted ${predictions['pred_1m']:.2f} in 1min "
                                 f"(current: ${current_profit:.2f}, conf={predictions['confidence']:.0%})"
                             )
 
                     # Build adjustment string for logging
                     adj_str = f" [{'+'.join(adjustments)}]" if adjustments else ""
 
-                    # High confidence exit (unless trajectory override)
-                    if exit_confidence > fuzzy_threshold and not trajectory_override:
+                    # High confidence exit (unless trajectory override or peak hold)
+                    peak_suppression = getattr(guard, 'peak_hold_active', False)
+                    if exit_confidence > fuzzy_threshold and not trajectory_override and not peak_suppression:
                         return True, ExitReason.TAKE_PROFIT, (
                             f"[FUZZY HIGH] Exit confidence: {exit_confidence:.2%} "
                             f"(profit=${current_profit:.2f}, tier={tier}, threshold={fuzzy_threshold:.0%}{adj_str})"
@@ -1318,36 +1415,84 @@ class SmartRiskManager:
                             f"[FUZZY SUPPRESSED] Exit confidence {exit_confidence:.2%} > {fuzzy_threshold:.0%} "
                             f"but trajectory override active (pred 1m=${predictions['pred_1m']:.2f})"
                         )
+                    elif peak_suppression:
+                        # Log but don't exit - approaching peak
+                        logger.info(
+                            f"[FUZZY SUPPRESSED] Exit confidence {exit_confidence:.2%} > {fuzzy_threshold:.0%} "
+                            f"but peak hold active (approaching peak)"
+                        )
 
-                    # Kelly only for large profits (>$8) with very high fuzzy (>80%)
-                    if self.kelly_scaler is not None and current_profit >= 8.0 and exit_confidence > 0.80:
+                    # v0.2.2 Professor AI Enhancement: Partial Exit Strategy
+                    # Exit 50% at tp_target * 0.5, hold 50% for peak capture
+                    if self.kelly_scaler is not None and current_profit >= tp_min * 0.5:
                         should_exit, close_fraction, kelly_msg = self.kelly_scaler.get_exit_action(
                             exit_confidence, current_profit, tp_hard
                         )
-                        if should_exit and close_fraction > 0.5:
+
+                        # Partial exit: Kelly suggests 30-70% close
+                        if should_exit and 0.3 <= close_fraction < 1.0:
+                            logger.warning(
+                                f"[KELLY PARTIAL] Recommendation: {kelly_msg} "
+                                f"(profit=${current_profit:.2f}, fuzzy={exit_confidence:.2%}) "
+                                f"[NOTE: Partial close not yet implemented - recommend manual close {close_fraction:.0%}]"
+                            )
+                            # TODO: Implement actual partial close via mt5.close_position(ticket, volume=lot*close_fraction)
+                            # For now, continue to full exit logic below
+
+                        # Full exit: Kelly suggests >70% close
+                        elif should_exit and close_fraction >= 0.70:
                             return True, ExitReason.TAKE_PROFIT, (
-                                f"[KELLY PROFIT] {kelly_msg} (fuzzy={exit_confidence:.2%})"
+                                f"[KELLY FULL EXIT] {kelly_msg} (fuzzy={exit_confidence:.2%})"
                             )
 
                 else:
                     # === LOSS TRADES: Exit faster to minimize damage ===
 
+                    # FIX v0.1.2: Grace period untuk loss trades - cegah early exit pada micro swings
+                    grace_period_sec = {
+                        "ranging": 120,
+                        "mean_reverting": 120,
+                        "volatile": 90,
+                        "high_volatility": 90,
+                        "crisis": 60,
+                        "trending": 60,
+                        "normal": 90,
+                    }.get(regime, 90)
+
+                    time_since_entry = time.time() - guard.entry_time
+                    in_grace_period = time_since_entry < grace_period_sec
+
                     # Lower threshold for losses (75%)
                     if exit_confidence > 0.75:
-                        return True, ExitReason.POSITION_LIMIT, (
-                            f"[FUZZY HIGH LOSS] Exit confidence: {exit_confidence:.2%} "
-                            f"(loss=${current_profit:.2f}, cut early)"
-                        )
+                        # Suppress exit during grace period for small losses (<$2)
+                        if in_grace_period and abs(current_profit) < 200:  # $2.00
+                            logger.info(
+                                f"[GRACE PERIOD] Loss fuzzy={exit_confidence:.2%} suppressed "
+                                f"(t={time_since_entry:.0f}s < {grace_period_sec}s, loss=${current_profit:.2f})"
+                            )
+                        else:
+                            return True, ExitReason.POSITION_LIMIT, (
+                                f"[FUZZY HIGH LOSS] Exit confidence: {exit_confidence:.2%} "
+                                f"(loss=${current_profit:.2f}, cut early)"
+                            )
 
                     # Kelly active for losses (help cut faster)
+                    # Also respect grace period for small losses
                     if self.kelly_scaler is not None and exit_confidence > 0.60:
                         should_exit, close_fraction, kelly_msg = self.kelly_scaler.get_exit_action(
                             exit_confidence, current_profit, tp_hard
                         )
                         if should_exit and close_fraction > 0.3:
-                            return True, ExitReason.POSITION_LIMIT, (
-                                f"[KELLY LOSS] {kelly_msg} (fuzzy={exit_confidence:.2%})"
-                            )
+                            # Suppress kelly exit during grace period for small losses
+                            if in_grace_period and abs(current_profit) < 200:  # $2.00
+                                logger.info(
+                                    f"[GRACE PERIOD] Kelly loss exit suppressed "
+                                    f"(t={time_since_entry:.0f}s < {grace_period_sec}s)"
+                                )
+                            else:
+                                return True, ExitReason.POSITION_LIMIT, (
+                                    f"[KELLY LOSS] {kelly_msg} (fuzzy={exit_confidence:.2%})"
+                                )
 
         # === PRIORITY 0: EMERGENCY SAFETY CHECKS ===
 
@@ -1372,10 +1517,10 @@ class SmartRiskManager:
         # === CHECK 0A: BREAKEVEN SHIELD (percentage-based, dynamic) ===
         # v5: Protect ANY meaningful profit from becoming a loss.
         # Uses percentage drawdown from peak (not fixed ATR threshold).
-        # Peak $3+ → protect if drops below $1.50
-        # Peak $6+ → protect if drops 70%+ from peak
-        # Peak $10+ → protect if drops 60%+ from peak
-        # v5c: min peak raised $3→$5, min age raised 5→8 min (patient protection)
+        # Peak $3+ -> protect if drops below $1.50
+        # Peak $6+ -> protect if drops 70%+ from peak
+        # Peak $10+ -> protect if drops 60%+ from peak
+        # v5c: min peak raised $3->$5, min age raised 5->8 min (patient protection)
         if atr_unit > 0 and trade_age_minutes >= 8 and guard.peak_profit >= 5.0:
             if guard.peak_profit >= 10.0:
                 max_drawdown_pct = 0.60  # Peak $10+: protect at 60% drawdown
@@ -1405,6 +1550,43 @@ class SmartRiskManager:
                     f"peak ${guard.peak_profit:.2f} floor ${deadzone_floor:.2f} "
                     f"(age {trade_age_minutes:.1f}m)"
                 )
+
+        # === CHECK 0A.3: VELOCITY CRASH OVERRIDE (v0.2.1 FIX 3) ===
+        # Emergency exit when velocity FLIPS from strong positive to negative
+        # This catches extreme momentum crashes that fuzzy logic might delay
+        if current_profit > 0 and _vel < -0.05:
+            # Check if velocity was previously positive (crash!)
+            if len(guard.velocity_history) >= 2:
+                prev_velocity = guard.velocity_history[-2] if len(guard.velocity_history) > 1 else 0
+                if prev_velocity > 0.10:
+                    # EXTREME velocity flip: +0.10 -> -0.05 = crash!
+                    velocity_drop = prev_velocity - _vel
+                    if velocity_drop > 0.15:  # Change > 0.15 $/s
+                        return True, ExitReason.TAKE_PROFIT, (
+                            f"[VELOCITY CRASH] Emergency exit! "
+                            f"Velocity crashed {prev_velocity:.3f} -> {_vel:.3f} (Δ{velocity_drop:.3f}), "
+                            f"profit=${current_profit:.2f}"
+                        )
+
+        # === CHECK 0A.4: PEAK DETECTION (v0.2.2 Professor AI Fix #2) ===
+        # Hold position if approaching peak (velocity > 0, acceleration < 0)
+        # Prevents early exit when profit still rising but decelerating
+        if current_profit >= tp_min and _vel > 0.02 and _accel < -0.001:
+            # Approaching peak: velocity positive but decelerating
+            time_to_peak = -_vel / _accel  # Time when velocity reaches 0 (peak)
+            if 0 < time_to_peak <= 30:  # Peak within next 30 seconds
+                peak_profit_estimate = current_profit + _vel * time_to_peak + 0.5 * _accel * time_to_peak**2
+                # Only hold if estimated peak is significant
+                if peak_profit_estimate > current_profit * 1.15:  # At least 15% more
+                    logger.info(
+                        f"[PEAK HOLD] Approaching peak in {time_to_peak:.0f}s "
+                        f"(current=${current_profit:.2f}, est_peak=${peak_profit_estimate:.2f}, "
+                        f"vel={_vel:.3f}, accel={_accel:.4f})"
+                    )
+                    # Don't exit yet - suppress fuzzy logic for this cycle
+                    guard.peak_hold_active = True
+        else:
+            guard.peak_hold_active = False
 
         # === CHECK 0B: ATR TRAILING (v6 multi-factor + stochastic floor) ===
         # Trail distance = BASE × REGIME × PROFIT_LEVEL × VELOCITY_QUALITY
@@ -1473,7 +1655,7 @@ class SmartRiskManager:
         # === CHECK 0C: PROFIT MOMENTUM FADE ===
         # Detect when profit velocity transitions from positive to negative.
         # This catches the exact moment momentum fades — before big drawdown.
-        # Example: Trade peaked $7.58, velocity was +0.05, now -0.03 → fading
+        # Example: Trade peaked $7.58, velocity was +0.05, now -0.03 -> fading
         if current_profit >= tp_min and trade_age_minutes >= 3:
             # Velocity was positive and now turned negative (momentum fading)
             # v6: uses Kalman-filtered velocity for trigger, raw for counter tracking
@@ -1489,8 +1671,8 @@ class SmartRiskManager:
 
         # === CHECK 0D: CAN'T MAKE NEW HIGHS ===
         # Detect when trade has profit but can't push to new peaks.
-        # Pattern: price approaches peak multiple times but fails → resistance.
-        # Example: Peak $6.35, tried 4x to break, profit now $5.20 → take it
+        # Pattern: price approaches peak multiple times but fails -> resistance.
+        # Example: Peak $6.35, tried 4x to break, profit now $5.20 -> take it
         if current_profit >= tp_min and trade_age_minutes >= 5 and guard.peak_update_time > 0:
             peak_age = time.time() - guard.peak_update_time
             if peak_age >= 60 and guard.failed_peak_attempts >= 3:
@@ -1507,8 +1689,8 @@ class SmartRiskManager:
         # === CHECK 0E: RSI/STOCH REVERSAL AT PROFIT ===
         # Use market indicators to detect imminent reversal while in profit.
         # When RSI/Stoch reaches extreme, mean reversion is likely.
-        # SELL + oversold → price will bounce up (against us)
-        # BUY + overbought → price will drop (against us)
+        # SELL + oversold -> price will bounce up (against us)
+        # BUY + overbought -> price will drop (against us)
         if current_profit >= tp_min and market_context and trade_age_minutes >= 3:
             rsi = market_context.get("rsi")
             stoch_k = market_context.get("stoch_k")
@@ -1653,7 +1835,7 @@ class SmartRiskManager:
         # === ATR HARD STOP — dynamic min age based on regime ===
         # v5c: Max loss is DYNAMIC (0.60 ATR * loss_mult).
         # Min age for hard stop = grace_minutes * 0.75 (at least 5 min).
-        # Raised from max(3, grace/2) → max(5, grace*0.75) for more breathing room.
+        # Raised from max(3, grace/2) -> max(5, grace*0.75) for more breathing room.
         hard_stop_min_age = max(5.0, grace_minutes * 0.75)
         if current_profit < 0 and abs(current_profit) >= max_atr_loss and trade_age_minutes >= hard_stop_min_age:
             return True, ExitReason.POSITION_LIMIT, (
@@ -1715,14 +1897,14 @@ class SmartRiskManager:
             is_reversal = True
             guard.reversal_warnings += 1
 
-        # ML reversal + loss > 0.2 ATR → cut (shorter grace: 10 min)
+        # ML reversal + loss > 0.2 ATR -> cut (shorter grace: 10 min)
         if is_reversal and current_profit < reversal_loss:
             if trade_age_minutes < grace_minutes:
                 logger.info(f"[GRACE] Reversal ({ml_signal} {ml_confidence:.0%}) loss ${current_profit:.2f} — holding {trade_age_minutes:.1f}m/{grace_minutes}m grace")
             else:
                 return True, ExitReason.TREND_REVERSAL, f"[REVERSAL] {ml_signal} ({ml_confidence:.0%}) - Loss: ${current_profit:.2f}"
 
-        # 3x reversal warnings + loss > 0.3 ATR → cut
+        # 3x reversal warnings + loss > 0.3 ATR -> cut
         if guard.reversal_warnings >= 3 and current_profit < warn_loss:
             if trade_age_minutes < grace_minutes:
                 logger.info(f"[GRACE] {guard.reversal_warnings}x reversal warnings, loss ${current_profit:.2f} — holding {trade_age_minutes:.1f}m/{grace_minutes}m grace")
@@ -1733,7 +1915,7 @@ class SmartRiskManager:
         # v5d: BACKUP-SL now respects grace period (was firing at 1-2 min!)
         # Also uses loss_mult floor of 0.8 so ML disagreement can't crush threshold
         # to $4-5 (which fires on normal gold noise within seconds).
-        backup_loss_mult = max(0.7, loss_mult)  # v6: relaxed 0.8→0.7 (ML fix makes band-aid unnecessary)
+        backup_loss_mult = max(0.7, loss_mult)  # v6: relaxed 0.8->0.7 (ML fix makes band-aid unnecessary)
         backup_pct = min(0.30, 0.20 * backup_loss_mult)  # Cap at 30% of max_loss
         if trade_age_minutes >= grace_minutes and current_profit <= -(effective_max_loss * backup_pct):
             return True, ExitReason.POSITION_LIMIT, (
@@ -1933,7 +2115,7 @@ def create_smart_risk_manager(capital: float = 5000.0) -> SmartRiskManager:
         capital=capital,
         max_daily_loss_percent=5.0,         # Max 5% daily loss
         max_total_loss_percent=10.0,        # Max 10% total loss (stop trading)
-        max_loss_per_trade_percent=1.0,     # S/L 1% per trade (software)
+        max_loss_per_trade_percent=0.5,     # FIX 5 v0.1.1: S/L 0.5% per trade (~$25 for $5k)
         emergency_sl_percent=2.0,           # Emergency broker SL 2% per trade
         base_lot_size=0.01,                 # Base lot 0.01 (minimum)
         max_lot_size=0.02,                  # Maximum 0.02 (sangat kecil)

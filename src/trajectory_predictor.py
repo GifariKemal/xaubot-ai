@@ -24,42 +24,85 @@ class TrajectoryPredictor:
         self.default_horizons = [60, 180, 300]  # 1m, 3m, 5m (seconds)
         self.confidence_threshold = 0.7  # Minimum confidence untuk pakai prediksi
 
+        # v0.2.0: Regime-based dampening factors (validated from live trades)
+        # Trade #161778984: avg over-prediction 7.5x -> need 85% reduction
+        # Trade #161850770: predicted profit from loss -> need 70% reduction
+        self.dampening_factors = {
+            "ranging": 0.20,      # 80% reduction (most conservative)
+            "volatile": 0.30,     # 70% reduction (validated: 3-17x over -> 1-5x)
+            "medium_volatility": 0.30,  # Same as volatile
+            "trending": 0.50,     # 50% reduction (momentum likely continues)
+            "normal": 0.30        # Default fallback
+        }
+
     def predict_future_profit(
         self,
         current_profit: float,
         velocity: float,
         acceleration: float,
-        horizons: List[int] = None
+        horizons: List[int] = None,
+        regime: str = "normal"
     ) -> List[float]:
         """
-        Prediksi profit di masa depan menggunakan parabolic motion.
+        Prediksi profit di masa depan menggunakan parabolic motion dengan regime dampening.
 
         Args:
             current_profit: Profit saat ini ($)
             velocity: Profit velocity ($/second)
             acceleration: Profit acceleration ($/second²)
             horizons: List of time horizons dalam seconds (default: [60, 180, 300])
+            regime: Market regime for dampening ("ranging"/"volatile"/"trending")
 
         Returns:
-            List of predicted profits untuk setiap horizon
+            List of predicted profits untuk setiap horizon (damped)
 
         Example:
             >>> predictor = TrajectoryPredictor()
             >>> pred_1m, pred_3m, pred_5m = predictor.predict_future_profit(
             ...     current_profit=0.05,
             ...     velocity=0.1335,
-            ...     acceleration=0.0017
+            ...     acceleration=0.0017,
+            ...     regime="volatile"
             ... )
             >>> print(f"1min: ${pred_1m:.2f}, 3min: ${pred_3m:.2f}")
-            1min: $11.12, 3min: $27.39
+            1min: $3.34, 3min: $8.22  (damped by 0.30x)
         """
         if horizons is None:
             horizons = self.default_horizons
 
+        # v0.2.0: Get dampening factor based on regime
+        dampening = self.dampening_factors.get(regime, 0.30)
+
         predictions = []
         for dt in horizons:
             # Kinematic equation: s = s₀ + v*t + 0.5*a*t²
-            predicted_profit = current_profit + velocity * dt + 0.5 * acceleration * dt**2
+            term1 = current_profit
+            term2 = velocity * dt
+            term3 = 0.5 * acceleration * dt**2
+            predicted_profit_raw = term1 + term2 + term3
+
+            # v0.2.1: ASYMMETRIC dampening - only dampen positive growth (optimism)
+            # Keep negative growth RAW (crash warnings must stay urgent!)
+            growth = term2 + term3
+            if growth > 0:
+                # Positive growth = over-optimism -> dampen it
+                growth_damped = growth * dampening
+                dampen_applied = True
+            else:
+                # Negative growth = crash warning -> keep RAW (urgent!)
+                growth_damped = growth
+                dampen_applied = False
+
+            predicted_profit = term1 + growth_damped
+
+            # DEBUG v0.2.1: Log calculation with asymmetric dampening (only for 60s)
+            if dt == 60:
+                dampen_str = f"× {dampening:.2f}" if dampen_applied else "× 1.00 (crash!)"
+                logger.info(
+                    f"[TRAJ-CALC] {term1:.2f} + ({term2:.2f} + {term3:.2f}) {dampen_str} = "
+                    f"{predicted_profit:.2f} (raw: {predicted_profit_raw:.2f}, regime: {regime})"
+                )
+
             predictions.append(predicted_profit)
 
         return predictions
@@ -109,10 +152,11 @@ class TrajectoryPredictor:
         acceleration: float,
         min_target: float,
         velocity_history: List[float] = None,
-        acceleration_history: List[float] = None
+        acceleration_history: List[float] = None,
+        regime: str = "normal"
     ) -> Tuple[bool, str, Dict[str, float]]:
         """
-        Rekomendasi apakah HOLD position berdasarkan prediksi.
+        Rekomendasi apakah HOLD position berdasarkan prediksi (dengan regime dampening).
 
         Args:
             current_profit: Current profit ($)
@@ -121,6 +165,7 @@ class TrajectoryPredictor:
             min_target: Minimum profit target ($)
             velocity_history: Recent velocity values (optional)
             acceleration_history: Recent acceleration values (optional)
+            regime: Market regime for dampening (v0.2.0)
 
         Returns:
             (should_hold, reason, predictions_dict)
@@ -130,14 +175,15 @@ class TrajectoryPredictor:
             ...     current_profit=0.05,
             ...     velocity=0.1335,
             ...     acceleration=0.0017,
-            ...     min_target=3.0
+            ...     min_target=3.0,
+            ...     regime="volatile"
             ... )
             >>> print(f"Hold: {should_hold}, Reason: {reason}")
-            Hold: True, Reason: Predicted $11.12 in 1min (target: $3.00)
+            Hold: True, Reason: Predicted $3.34 in 1min (target: $3.00)
         """
-        # Predict 1m, 3m, 5m ahead
+        # v0.2.0: Predict 1m, 3m, 5m ahead with regime dampening
         pred_1m, pred_3m, pred_5m = self.predict_future_profit(
-            current_profit, velocity, acceleration
+            current_profit, velocity, acceleration, regime=regime
         )
 
         # Calculate confidence (if history provided)
@@ -176,12 +222,12 @@ class TrajectoryPredictor:
         # HOLD if recovering strongly (negative to positive trajectory)
         elif current_profit < 0 and pred_1m > abs(current_profit) * 0.5:
             should_hold = True
-            reason = f"Strong recovery trajectory: ${current_profit:.2f} → ${pred_1m:.2f}"
+            reason = f"Strong recovery trajectory: ${current_profit:.2f} -> ${pred_1m:.2f}"
 
         # EXIT if prediction shows decline
         elif pred_1m < current_profit * 0.8 and velocity < 0:
             should_hold = False
-            reason = f"Declining trajectory: ${current_profit:.2f} → ${pred_1m:.2f}"
+            reason = f"Declining trajectory: ${current_profit:.2f} -> ${pred_1m:.2f}"
 
         else:
             reason = f"Neutral prediction (1m: ${pred_1m:.2f})"
@@ -218,7 +264,7 @@ class TrajectoryPredictor:
         """
         # For parabolic motion with deceleration:
         # Profit reaches peak when velocity = 0
-        # velocity(t) = v₀ + a*t = 0  →  t = -v₀/a
+        # velocity(t) = v₀ + a*t = 0  ->  t = -v₀/a
 
         if acceleration >= 0:
             # Still accelerating - no peak in near future

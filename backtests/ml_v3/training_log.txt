@@ -1,0 +1,153 @@
+[32m2026-02-09 15:42:36.061[0m | [1mINFO    [0m | [36msrc.mt5_connector[0m:[36mconnect[0m:[36m177[0m - [1mConnected to MT5: FinexBisnisSolusi-Demo (Account: 61045904)[0m
+[32m2026-02-09 15:42:36.795[0m | [34m[1mDEBUG   [0m | [36msrc.mt5_connector[0m:[36mget_market_data[0m:[36m449[0m - [34m[1mFetched 50000 bars for XAUUSD M15[0m
+[32m2026-02-09 15:42:37.000[0m | [34m[1mDEBUG   [0m | [36msrc.mt5_connector[0m:[36mget_market_data[0m:[36m449[0m - [34m[1mFetched 2000 bars for XAUUSD H1[0m
+[32m2026-02-09 15:42:37.009[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_rsi[0m:[36m130[0m - [34m[1mRSI calculated (period=14)[0m
+[32m2026-02-09 15:42:37.012[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_atr[0m:[36m185[0m - [34m[1mATR calculated (period=14)[0m
+[32m2026-02-09 15:42:37.015[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_macd[0m:[36m243[0m - [34m[1mMACD calculated (12/26/9)[0m
+[32m2026-02-09 15:42:37.018[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_bollinger_bands[0m:[36m301[0m - [34m[1mBollinger Bands calculated (period=20, std=2.0)[0m
+[32m2026-02-09 15:42:37.020[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_ema_crossover[0m:[36m357[0m - [34m[1mEMA crossover calculated (9/21)[0m
+[32m2026-02-09 15:42:37.022[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_volume_features[0m:[36m403[0m - [34m[1mVolume features calculated (period=20)[0m
+[32m2026-02-09 15:42:37.032[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_ml_features[0m:[36m518[0m - [34m[1mML features calculated[0m
+[32m2026-02-09 15:42:37.036[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_swing_points[0m:[36m401[0m - [34m[1mSwing points: 3062 highs, 3079 lows[0m
+[32m2026-02-09 15:42:37.038[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_fvg[0m:[36m312[0m - [34m[1mFVG calculation complete. Bullish: 5696, Bearish: 4720[0m
+[32m2026-02-09 15:42:37.061[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_order_blocks[0m:[36m511[0m - [34m[1mOrder Blocks: 2201 bullish, 2164 bearish[0m
+[32m2026-02-09 15:42:37.169[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m599[0m - [34m[1mBOS: 702 bullish, 458 bearish[0m
+[32m2026-02-09 15:42:37.169[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m600[0m - [34m[1mCHoCH: 616 bullish, 617 bearish[0m
+[32m2026-02-09 15:42:37.171[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_rsi[0m:[36m130[0m - [34m[1mRSI calculated (period=14)[0m
+[32m2026-02-09 15:42:37.173[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_atr[0m:[36m185[0m - [34m[1mATR calculated (period=14)[0m
+[32m2026-02-09 15:42:37.174[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_macd[0m:[36m243[0m - [34m[1mMACD calculated (12/26/9)[0m
+[32m2026-02-09 15:42:37.175[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_bollinger_bands[0m:[36m301[0m - [34m[1mBollinger Bands calculated (period=20, std=2.0)[0m
+[32m2026-02-09 15:42:37.176[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_ema_crossover[0m:[36m357[0m - [34m[1mEMA crossover calculated (9/21)[0m
+[32m2026-02-09 15:42:37.177[0m | [34m[1mDEBUG   [0m | [36msrc.feature_eng[0m:[36mcalculate_volume_features[0m:[36m403[0m - [34m[1mVolume features calculated (period=20)[0m
+[32m2026-02-09 15:42:37.178[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_swing_points[0m:[36m401[0m - [34m[1mSwing points: 130 highs, 130 lows[0m
+[32m2026-02-09 15:42:37.179[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_fvg[0m:[36m312[0m - [34m[1mFVG calculation complete. Bullish: 256, Bearish: 155[0m
+[32m2026-02-09 15:42:37.181[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_order_blocks[0m:[36m511[0m - [34m[1mOrder Blocks: 90 bullish, 82 bearish[0m
+[32m2026-02-09 15:42:37.187[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m599[0m - [34m[1mBOS: 39 bullish, 20 bearish[0m
+[32m2026-02-09 15:42:37.187[0m | [34m[1mDEBUG   [0m | [36msrc.smc_polars[0m:[36mcalculate_bos_choch[0m:[36m600[0m - [34m[1mCHoCH: 19 bullish, 19 bearish[0m
+[I 2026-02-09 15:42:37,440] A new study created in memory with name: xgboost_opt
+================================================================================
+ML MODEL V3 TRAINING PIPELINE
+Bismillah - Building Exceptional Model
+================================================================================
+
+ Fetching 50,000 bars of M15 data...
+   Symbol: XAUUSD
+   Timeframe: M15
+ Fetched 50,000 bars
+   Date range: 2023-12-27 08:30:00 to 2026-02-09 10:30:00
+
+ Fetching 2,000 bars of H1 data...
+ Fetched 2,000 H1 bars
+
+ Engineering features...
+   M15 technical indicators...
+   SMC structure features...
+   H1 higher timeframe features...
+ Total features: 70
+     Columns with nulls: 45
+      rsi, atr, atr_percent, bb_middle, bb_upper, bb_lower, bb_width, bb_percent_b, volume_sma, volume_ratio
+   Filling nulls with forward fill...
+
+ Labeling data with Triple Barrier Method...
+ Starting Triple Barrier Labeling...
+   Profit target: 0.2 ATR
+   Stop loss: 0.15 ATR
+   Max holding: 8 bars
+   Min move threshold: 0.1 ATR
+
+ Target Distribution:
+   BUY:   35687 (71.37%)
+   SELL:  14292 (28.58%)
+   HOLD:     21 ( 0.04%)
+
+ Quality Metrics:
+   Profit barriers hit:      0 ( 0.00%)
+   Avg bars to profit:  0.0
+   Avg return (ATR):    0.000
+
+  Balancing Classes...
+   Target distribution: BUY=32%, SELL=32%, HOLD=36%
+   Before: BUY=35687, SELL=14292, HOLD=21
+   After:  BUY=14291, SELL=14291, HOLD=21
+   Total samples: 28603
+
+ Splitting train/test...
+   Train: 22,883 samples
+   Test:  5,720 samples
+   Test period: 2023-12-27 08:30:00 to 2026-02-09 10:30:00
+   Train distribution: BUY=62.5%, SELL=37.5%, HOLD=0.0%
+   Test distribution: BUY=0.0%, SELL=99.6%, HOLD=0.4%
+
+ Selected 69 features
+   Sample features: spread, rsi, atr, atr_percent, macd, macd_signal, macd_histogram, bb_middle, bb_upper, bb_lower...
+
+ Training XGBoost model...
+   Class weights: SELL=0.89, HOLD=1.00, BUY=0.53
+   Running Optuna hyperparameter optimization...
+  0%|          | 0/30 [00:00<?, ?it/s]                                        0%|          | 0/30 [00:00<?, ?it/s]                                        0%|          | 0/30 [00:00<?, ?it/s]  0%|          | 0/30 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\ml_v3\train_ml_v3.py", line 580, in <module>
+    trainer.run_full_pipeline()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\ml_v3\train_ml_v3.py", line 565, in run_full_pipeline
+    model = self.train_xgboost(df_train, df_test, feature_cols, optimize_hyperparams=True)
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\ml_v3\train_ml_v3.py", line 377, in train_xgboost
+    best_params = self._optimize_hyperparameters(
+        X_train, y_train_mc, X_test, y_test_mc, sample_weights
+    )
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\ml_v3\train_ml_v3.py", line 505, in _optimize_hyperparameters
+    study.optimize(objective, n_trials=30, show_progress_bar=True, n_jobs=1)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\site-packages\optuna\study\study.py", line 490, in optimize
+    _optimize(
+    ~~~~~~~~~^
+        study=self,
+        ^^^^^^^^^^^
+    ...<7 lines>...
+        show_progress_bar=show_progress_bar,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Python313\Lib\site-packages\optuna\study\_optimize.py", line 68, in _optimize
+    _optimize_sequential(
+    ~~~~~~~~~~~~~~~~~~~~^
+        study,
+        ^^^^^^
+    ...<8 lines>...
+        progress_bar=progress_bar,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Python313\Lib\site-packages\optuna\study\_optimize.py", line 165, in _optimize_sequential
+    frozen_trial_id = _run_trial(study, func, catch)
+  File "C:\Python313\Lib\site-packages\optuna\study\_optimize.py", line 263, in _run_trial
+    raise func_err
+  File "C:\Python313\Lib\site-packages\optuna\study\_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\ml_v3\train_ml_v3.py", line 498, in objective
+    model.fit(X_train, y_train, sample_weight=sample_weights, verbose=False)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\site-packages\xgboost\core.py", line 774, in inner_f
+    return func(**kwargs)
+  File "C:\Python313\Lib\site-packages\xgboost\sklearn.py", line 1763, in fit
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Invalid classes inferred from unique values of `y`.  Expected: [0 1], got [0 2]
+[W 2026-02-09 15:42:37,448] Trial 0 failed with parameters: {'max_depth': 3, 'learning_rate': 0.13047455532390495, 'n_estimators': 500, 'min_child_weight': 6, 'gamma': 0.4227292711890863, 'subsample': 0.6486036877331404, 'colsample_bytree': 0.6421699904554006, 'reg_alpha': 0.7032937095957577, 'reg_lambda': 0.9601028148259148} because of the following error: ValueError('Invalid classes inferred from unique values of `y`.  Expected: [0 1], got [0 2]').
+Traceback (most recent call last):
+  File "C:\Python313\Lib\site-packages\optuna\study\_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+  File "C:\Users\Administrator\Videos\Smart Automatic Trading BOT + AI\backtests\ml_v3\train_ml_v3.py", line 498, in objective
+    model.fit(X_train, y_train, sample_weight=sample_weights, verbose=False)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\site-packages\xgboost\core.py", line 774, in inner_f
+    return func(**kwargs)
+  File "C:\Python313\Lib\site-packages\xgboost\sklearn.py", line 1763, in fit
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Invalid classes inferred from unique values of `y`.  Expected: [0 1], got [0 2]
+[W 2026-02-09 15:42:37,515] Trial 0 failed with value None.
+
+ Training failed: Invalid classes inferred from unique values of `y`.  Expected: [0 1], got [0 2]
