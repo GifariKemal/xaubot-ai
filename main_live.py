@@ -1671,6 +1671,7 @@ class TradingBot:
 
         # 10.1 H1 Multi-Timeframe Filter (#31B: Price vs EMA20 — backtest +$343)
         # BUY only when H1 is BULLISH, SELL only when H1 is BEARISH
+        # v0.2.5: Override lowered to SMC >= 70% (was 80% + ML 65%), SMC-Only philosophy
         h1_enabled = self._is_filter_enabled("h1_bias")
         h1_passed = True
         h1_detail = f"H1={h1_bias}"
@@ -1688,12 +1689,13 @@ class TradingBot:
                 logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
 
             if h1_opposed:
-                # Strong signal override: if SMC >= 80% AND ML agrees >= 65%, bypass H1
-                smc_strong = smc_signal and smc_signal.confidence >= 0.80
+                # v0.2.5: SMC is MASTER — lower override threshold to SMC >= 70% (was 80%)
+                # ML agreement no longer required (SMC-Only philosophy)
+                smc_strong = smc_signal and smc_signal.confidence >= 0.70
                 ml_agrees = ml_prediction and ml_prediction.signal == final_signal.signal_type
                 ml_strong = ml_prediction and ml_prediction.confidence >= 0.65
 
-                if smc_strong and ml_agrees and ml_strong:
+                if smc_strong:
                     h1_passed = True
                     h1_detail = f"OVERRIDE: {final_signal.signal_type} vs H1={h1_bias} (SMC={smc_signal.confidence:.0%}+ML={ml_prediction.confidence:.0%})"
                     logger.info(f"H1 Filter: OVERRIDE — {final_signal.signal_type} allowed despite H1={h1_bias} (SMC={smc_signal.confidence:.0%}, ML={ml_prediction.signal} {ml_prediction.confidence:.0%})")
@@ -1963,15 +1965,18 @@ class TradingBot:
             )
 
             # ============================================================
-            # SELL-SPECIFIC SAFETY FILTER
+            # SELL-SPECIFIC SAFETY FILTER (v0.2.5: H1 bias only, ML removed)
             # ============================================================
-            # SELL signals require ML >= 75% (historically poor win rate)
+            # SMC is MASTER — SELL only blocked if H1 is STRONG BULLISH (score > 0.5)
+            # Weak bullish (score <= 0.5) or neutral/bearish → SELL allowed
             if smc_signal.signal_type == "SELL":
-                if ml_prediction.signal != "SELL" or ml_prediction.confidence < 0.75:
+                _h1 = getattr(self, '_h1_bias_cache', 'NEUTRAL')
+                _h1_score = getattr(self, '_h1_bias_score', 0.0)
+                if _h1 == "BULLISH" and _h1_score > 0.50:
                     if self._loop_count % 60 == 0:
                         logger.info(
-                            f"[SELL FILTER] SELL blocked: ML {ml_prediction.signal} "
-                            f"{ml_prediction.confidence:.0%} (need SELL >=75%)"
+                            f"[SELL FILTER] SELL blocked: H1={_h1} score={_h1_score:.2f} "
+                            f"(strong bullish, SELL too risky)"
                         )
                     return None
 
