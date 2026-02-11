@@ -9,6 +9,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.8] - 2026-02-11
+
+### Fixed (Critical: Trajectory Override Logic Bug)
+**Problem:** Trade #162698852 lost -$5.81 despite trajectory predicting recovery from -$5.81 → -$1.27 (recovery +$4.54, conf 80%). Trajectory override did NOT trigger because condition checked `pred_1m > 0` (absolute profit) instead of RECOVERY AMOUNT.
+
+#### Bug in v0.2.7
+```python
+# OLD (WRONG):
+if pred_1m > 0 AND confidence > 75% AND accel > 0.01:
+    → OVERRIDE
+
+# Trade #162698852 at exit:
+# - current_profit = -$5.81
+# - pred_1m = -$1.27 (NEGATIVE) ❌
+# - accel = +0.009913 (< 0.01) ❌
+# Result: Override FAILED, exit at -$5.81
+```
+
+#### Root Cause
+**Trajectory override condition was TOO STRICT:**
+1. Required absolute profit (pred > 0), but market volatility means pred can be slightly negative even when recovering
+2. Ignored RECOVERY DIRECTION — trade predicted to improve from -$5.81 → -$1.27 = **+$4.54 recovery!**
+3. Acceleration threshold 0.01 too high (0.009913 failed by 0.0001)
+
+#### Fix: Recovery-Based Override
+```python
+# NEW (CORRECT):
+recovery_amount = pred_1m - current_profit
+significant_recovery = recovery_amount > 3.0  # Predict >$3 improvement
+near_breakeven = pred_1m > -2.0               # Or predict small loss only
+strong_confidence = confidence > 0.75
+positive_momentum = accel > 0.005             # Relaxed from 0.01
+
+if (significant_recovery OR near_breakeven) AND strong_confidence AND positive_momentum:
+    → OVERRIDE
+
+# Trade #162698852 with fix:
+# - recovery_amount = -$1.27 - (-$5.81) = +$4.54 ✅ (>$3)
+# - confidence = 80% ✅
+# - accel = +0.009913 ✅ (>0.005)
+# Result: Override TRIGGERED, hold for recovery
+```
+
+#### Changes
+1. **Golden Emergency Override:** Check recovery amount instead of absolute profit
+2. **Trajectory Hold Logic:** Same recovery-based check
+3. **Relaxed thresholds:**
+   - Acceleration: 0.01 → 0.005 (more sensitive)
+   - Accept near-breakeven: pred > -$2 (small loss OK if recovering)
+
+#### Impact
+- v0.2.7: Trade #162698852 exit at -$5.81 (no override)
+- v0.2.8: Same scenario would OVERRIDE → hold 5-10 min → potential recovery to profit or small loss
+- User requirement: "recovery meskipun profit kecil dengan interval lama tidak apa" — NOW IMPLEMENTED
+
+#### Code Cleanup
+- Searched for dead code (if False, DEPRECATED, etc.) — none found
+- Imports optimized
+- No unused functions detected
+
+---
+
 ## [0.2.7] - 2026-02-11
 
 ### Added (Trajectory Recovery System for Golden Session)

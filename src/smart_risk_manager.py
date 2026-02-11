@@ -1309,15 +1309,17 @@ class SmartRiskManager:
                         pred_1m = predictions.get('pred_1m', 0)
                         logger.info(f"[TRAJ-OUT] pred_1m=${pred_1m:.2f} | conf={predictions['confidence']:.0%}")
 
-                        # v0.2.6f: Hybrid trajectory hold logic
+                        # v0.2.7f: Hybrid trajectory hold logic (recovery-based)
                         # - Ever-profitable: always allow hold (existing behavior)
-                        # - Never-profitable + Golden + strong signal: allow hold (NEW)
+                        # - Never-profitable + Golden + recovery signal: allow hold (NEW)
                         # - Never-profitable + normal session: skip hold (existing behavior)
+                        pred_1m = predictions.get('pred_1m', 0)
+                        recovery_amount = pred_1m - current_profit
                         can_hold_never_prof = (
                             is_golden
-                            and predictions.get('pred_1m', 0) > 0
+                            and (recovery_amount > 3.0 or pred_1m > -2.0)  # Recovery or near-breakeven
                             and predictions.get('confidence', 0) > 0.75
-                            and _accel > 0.01  # positive acceleration
+                            and _accel > 0.005  # Relaxed threshold
                         )
 
                         if should_hold and (guard.ever_profitable or can_hold_never_prof):
@@ -1575,18 +1577,32 @@ class SmartRiskManager:
         if (is_golden and not guard.ever_profitable
                 and current_profit < -5.0 and trade_age_seconds >= 60):
 
-            # v0.2.6f: Check if trajectory predicts strong recovery
+            # v0.2.7f: Check if trajectory predicts RECOVERY (not just profit)
+            # Key insight: recovery = pred_1m - current_profit
+            # Example: current=-$5.81, pred=-$1.27 → recovery=+$4.54 (GOOD!)
             strong_recovery_signal = False
             if self.trajectory_predictor and predictions:
                 pred_1m = predictions.get('pred_1m', current_profit)
                 pred_conf = predictions.get('pred_1m_conf', 0)
 
-                # Strong recovery: pred > 0, conf > 75%, positive acceleration
-                if pred_1m > 0 and pred_conf > 0.75 and _accel > 0.01:
+                # Calculate recovery amount (how much profit will improve)
+                recovery_amount = pred_1m - current_profit
+
+                # Recovery conditions (ANY of these = override):
+                # 1. Significant recovery: predict >$3 improvement
+                # 2. Near-breakeven: predict loss <$2 (small loss acceptable)
+                significant_recovery = recovery_amount > 3.0
+                near_breakeven = pred_1m > -2.0
+                strong_confidence = pred_conf > 0.75
+                positive_momentum = _accel > 0.005  # Relaxed from 0.01
+
+                if (significant_recovery or near_breakeven) and strong_confidence and positive_momentum:
                     strong_recovery_signal = True
+                    recovery_type = "significant recovery" if significant_recovery else "near-breakeven"
                     logger.info(
-                        f"[GOLDEN EMERGENCY OVERRIDE] Trajectory predicts recovery: "
-                        f"pred_1m=${pred_1m:.2f} conf={pred_conf:.0%} accel={_accel:.4f} — holding"
+                        f"[GOLDEN EMERGENCY OVERRIDE] Trajectory predicts {recovery_type}: "
+                        f"current=${current_profit:.2f} → pred=${pred_1m:.2f} "
+                        f"(recovery=${recovery_amount:+.2f}, conf={pred_conf:.0%}, accel={_accel:.4f}) — holding"
                     )
 
             if not strong_recovery_signal:
