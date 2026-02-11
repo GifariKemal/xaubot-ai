@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.6] - 2026-02-11
+
+### Fixed (Critical: Grace Period & Threshold Unit Bugs)
+**Problem:** Trade #162554401 lost -$8.01 in Golden Session. Fuzzy exit confidence was 94.58% at t=86s but was SUPPRESSED by grace period. Three critical bugs discovered:
+
+#### BUG FIX 1: Fuzzy/Kelly Grace Threshold Wrong Unit
+- `abs(current_profit) < 200` was meant to be $2.00 but current_profit is in DOLLARS
+- So `200` = $200 threshold — effectively suppressed ALL loss exits during grace
+- **Fix:** Changed to `abs(current_profit) < 2.0` — only suppress micro-losses (<$2)
+
+#### BUG FIX 2: Fuzzy/Kelly Grace Period Not Unified
+- Fuzzy/Kelly section had its OWN hardcoded grace (90s for high_volatility)
+- This IGNORED all v0.2.5 fixes (ever_profitable cap, Golden Session reduction)
+- **Fix:** Replaced hardcoded dict with `grace_minutes * 60` (unified dynamic grace)
+
+#### BUG FIX 3: NO_RECOVERY & EMERGENCY Thresholds Wrong Unit
+- `NO_RECOVERY_THRESHOLD = 1500` ($1500) and `EMERGENCY_MAX_LOSS = 2000` ($2000)
+- These safety nets NEVER trigger for 0.01 lot trades (max ~$25 loss)
+- **Fix:** Changed to 15.0 ($15) and 20.0 ($20) respectively
+
+#### NEW: Golden Session Emergency Exit
+- Never-profitable trades in Golden Session with loss > $5 after 45s → immediate exit
+- No grace period, no fuzzy threshold — just cut the loss fast
+- Golden Session floor reduced: 1.0 min (never-profitable) / 1.5 min (ever-profitable)
+
+#### Impact Analysis
+- Trade #162554401 scenario: fuzzy 94.58% at -$7.93 would now EXIT (not suppressed)
+- Grace period in Golden + never-profitable: 72s (was 90s hardcoded)
+- Losses > $2 no longer suppressed during grace period at all
+- Safety nets (NO_RECOVERY $15, EMERGENCY $20) now actually functional
+
+---
+
 ## [0.2.5] - 2026-02-11
 
 ### Fixed (Professor AI Analysis: Golden Session + Loss Protection)

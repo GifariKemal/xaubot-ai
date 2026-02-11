@@ -1218,9 +1218,11 @@ class SmartRiskManager:
             if not guard.ever_profitable:
                 grace_minutes = min(grace_minutes, 2.0)
 
-        # v0.2.5: Golden Session — reduce grace by 40% (extreme vol = fast moves)
+        # v0.2.5f: Golden Session — reduce grace by 40% (extreme vol = fast moves)
+        # Lower floor for never-profitable trades (1 min vs 1.5 min)
         if is_golden:
-            grace_minutes = max(2.0, grace_minutes * 0.60)
+            golden_floor = 1.0 if not guard.ever_profitable else 1.5
+            grace_minutes = max(golden_floor, grace_minutes * 0.60)
 
         # Log dynamic multipliers periodically (every 60s)
         if len(guard.profit_timestamps) > 0:
@@ -1496,27 +1498,19 @@ class SmartRiskManager:
                 else:
                     # === LOSS TRADES: Exit faster to minimize damage ===
 
-                    # FIX v0.1.2: Grace period untuk loss trades - cegah early exit pada micro swings
-                    grace_period_sec = {
-                        "ranging": 120,
-                        "mean_reverting": 120,
-                        "volatile": 90,
-                        "high_volatility": 90,
-                        "crisis": 60,
-                        "trending": 60,
-                        "normal": 90,
-                    }.get(regime, 90)
-
-                    time_since_entry = time.time() - guard.entry_time.timestamp()
-                    in_grace_period = time_since_entry < grace_period_sec
+                    # v0.2.5f: Unified grace — use dynamic grace_minutes (respects
+                    # ever_profitable cap, Golden Session reduction, velocity-based)
+                    grace_period_sec = grace_minutes * 60
+                    in_grace_period = trade_age_seconds < grace_period_sec
 
                     # Lower threshold for losses (75%)
                     if exit_confidence > 0.75:
-                        # Suppress exit during grace period for small losses (<$2)
-                        if in_grace_period and abs(current_profit) < 200:  # $2.00
+                        # v0.2.5f: Only suppress tiny losses (<$2) during grace
+                        # BUG FIX: was 200 (=$200, never triggers) → 2.0 (=$2)
+                        if in_grace_period and abs(current_profit) < 2.0:
                             logger.info(
                                 f"[GRACE PERIOD] Loss fuzzy={exit_confidence:.2%} suppressed "
-                                f"(t={time_since_entry:.0f}s < {grace_period_sec}s, loss=${current_profit:.2f})"
+                                f"(t={trade_age_seconds:.0f}s < {grace_period_sec:.0f}s, loss=${current_profit:.2f})"
                             )
                         else:
                             return True, ExitReason.POSITION_LIMIT, (
@@ -1531,11 +1525,11 @@ class SmartRiskManager:
                             exit_confidence, current_profit, tp_hard
                         )
                         if should_exit and close_fraction > 0.3:
-                            # Suppress kelly exit during grace period for small losses
-                            if in_grace_period and abs(current_profit) < 200:  # $2.00
+                            # v0.2.5f: Only suppress tiny losses (<$2) during grace
+                            if in_grace_period and abs(current_profit) < 2.0:
                                 logger.info(
                                     f"[GRACE PERIOD] Kelly loss exit suppressed "
-                                    f"(t={time_since_entry:.0f}s < {grace_period_sec}s)"
+                                    f"(t={trade_age_seconds:.0f}s < {grace_period_sec:.0f}s)"
                                 )
                             else:
                                 return True, ExitReason.POSITION_LIMIT, (
@@ -1546,20 +1540,32 @@ class SmartRiskManager:
 
         # CHECK -1: NO RECOVERY ZONE ($15 threshold)
         # If loss >= $15, exit immediately - no point waiting for recovery
-        NO_RECOVERY_THRESHOLD = 1500  # $15.00 per 0.01 lot
+        # v0.2.5f: Fixed unit — current_profit is in DOLLARS (was 1500=$1500, never triggered)
+        NO_RECOVERY_THRESHOLD = 15.0  # $15.00
         if current_profit <= -NO_RECOVERY_THRESHOLD:
             return True, ExitReason.POSITION_LIMIT, (
                 f"[NO RECOVERY] Loss ${abs(current_profit):.2f} too deep "
-                f"(threshold ${NO_RECOVERY_THRESHOLD/100:.2f}) - cut immediately"
+                f"(threshold ${NO_RECOVERY_THRESHOLD:.2f}) - cut immediately"
             )
 
-        # CHECK 0: EMERGENCY CAP ($20 per 0.01 lot)
+        # CHECK 0: EMERGENCY CAP ($20)
         # Absolute maximum loss cap - last resort protection
-        EMERGENCY_MAX_LOSS = 2000  # $20.00 per 0.01 lot
+        # v0.2.5f: Fixed unit — current_profit is in DOLLARS (was 2000=$2000, never triggered)
+        EMERGENCY_MAX_LOSS = 20.0  # $20.00
         if current_profit <= -EMERGENCY_MAX_LOSS:
             return True, ExitReason.POSITION_LIMIT, (
                 f"[EMERGENCY CAP] Max loss ${abs(current_profit):.2f} exceeded "
-                f"${EMERGENCY_MAX_LOSS/100:.2f} limit - emergency exit!"
+                f"${EMERGENCY_MAX_LOSS:.2f} limit - emergency exit!"
+            )
+
+        # === v0.2.5f: GOLDEN EMERGENCY EXIT ===
+        # Never-profitable trades in Golden Session with steep loss → cut fast
+        # Golden = extreme volatility, if -$5+ in 45s and never profitable, it's going wrong
+        if (is_golden and not guard.ever_profitable
+                and current_profit < -5.0 and trade_age_seconds >= 45):
+            return True, ExitReason.POSITION_LIMIT, (
+                f"[GOLDEN EMERGENCY] Loss ${abs(current_profit):.2f} never-profitable "
+                f"after {trade_age_seconds:.0f}s in Golden Session — cutting fast"
             )
 
         # === CHECK 0A: BREAKEVEN SHIELD (percentage-based, dynamic) ===
