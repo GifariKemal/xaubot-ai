@@ -1669,47 +1669,38 @@ class TradingBot:
         if signal_blocked:
             return
 
-        # 10.1 H1 Multi-Timeframe Filter (#31B: Price vs EMA20 — backtest +$343)
-        # BUY only when H1 is BULLISH, SELL only when H1 is BEARISH
-        # v0.2.5: Override lowered to SMC >= 70% (was 80% + ML 65%), SMC-Only philosophy
+        # 10.1 H1 Bias — PENDUKUNG SAJA (v0.2.5d: tidak memblokir, hanya penalti confidence)
+        # SMC is MASTER. H1 aligned = boost 5%, H1 opposed = penalti 10%
         h1_enabled = self._is_filter_enabled("h1_bias")
-        h1_passed = True
+        h1_passed = True  # Always pass — never block
         h1_detail = f"H1={h1_bias}"
+        h1_penalty = 1.0
 
-        if h1_enabled:
-            h1_opposed = False
-            if h1_bias == "NEUTRAL":
-                # NEUTRAL = no opinion → allow trade (don't block)
-                logger.debug(f"H1 Filter: NEUTRAL — no H1 opinion, allowing {final_signal.signal_type}")
-            elif (final_signal.signal_type == "BUY" and h1_bias == "BEARISH") or \
-                 (final_signal.signal_type == "SELL" and h1_bias == "BULLISH"):
-                # Actively opposed — block unless strong override
-                h1_opposed = True
+        if h1_enabled and final_signal is not None:
+            h1_opposed = (
+                (final_signal.signal_type == "BUY" and h1_bias == "BEARISH") or
+                (final_signal.signal_type == "SELL" and h1_bias == "BULLISH")
+            )
+            h1_aligned = (
+                (final_signal.signal_type == "BUY" and h1_bias == "BULLISH") or
+                (final_signal.signal_type == "SELL" and h1_bias == "BEARISH")
+            )
+
+            if h1_aligned:
+                h1_penalty = 1.05  # 5% confidence boost
+                h1_detail = f"Aligned {h1_bias} (+5%)"
+                logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias} (+5% boost)")
+            elif h1_opposed:
+                h1_penalty = 0.90  # 10% confidence penalty (NOT block)
+                h1_detail = f"Opposed {h1_bias} (-10%)"
+                logger.info(f"H1 Filter: {final_signal.signal_type} opposed H1={h1_bias} (-10% penalty, NOT blocked)")
             else:
-                logger.info(f"H1 Filter: {final_signal.signal_type} aligned with H1={h1_bias}")
+                logger.debug(f"H1 Filter: NEUTRAL — no adjustment")
 
-            if h1_opposed:
-                # v0.2.5: SMC is MASTER — lower override threshold to SMC >= 70% (was 80%)
-                # ML agreement no longer required (SMC-Only philosophy)
-                smc_strong = smc_signal and smc_signal.confidence >= 0.70
-                ml_agrees = ml_prediction and ml_prediction.signal == final_signal.signal_type
-                ml_strong = ml_prediction and ml_prediction.confidence >= 0.65
+            # Apply H1 penalty to final signal confidence
+            final_signal.confidence *= h1_penalty
 
-                if smc_strong:
-                    h1_passed = True
-                    h1_detail = f"OVERRIDE: {final_signal.signal_type} vs H1={h1_bias} (SMC={smc_signal.confidence:.0%}+ML={ml_prediction.confidence:.0%})"
-                    logger.info(f"H1 Filter: OVERRIDE — {final_signal.signal_type} allowed despite H1={h1_bias} (SMC={smc_signal.confidence:.0%}, ML={ml_prediction.signal} {ml_prediction.confidence:.0%})")
-                    self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": h1_detail})
-                else:
-                    h1_passed = False
-                    h1_detail = f"{final_signal.signal_type} vs H1={h1_bias}"
-                    self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": False, "detail": h1_detail})
-                    logger.info(f"H1 Filter: {final_signal.signal_type} blocked (H1={h1_bias})")
-                    return
-            else:
-                self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"Aligned {h1_bias}"})
-        else:
-            self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": f"H1={h1_bias} [DISABLED]"})
+        self._last_filter_results.append({"name": "H1 Bias (#31B)", "passed": True, "detail": h1_detail})
 
         # 10.2 Time-of-Hour Filter (#34A: skip WIB hours 9 and 21 — backtest +$356)
         # Hour 9 WIB (02:00 UTC) = end of NY session, low liquidity
@@ -1942,11 +1933,11 @@ class TradingBot:
         # ============================================================
         # SIGNAL LOGIC v6 - SMC-ONLY (TRUE SMC MASTER)
         # ============================================================
-        # Philosophy: SMC is MASTER, ML is OPTIONAL boost/reference only
+        # Philosophy: SMC is MASTER, ML + H1 = PENDUKUNG only
         # - SMC signal exists (>= 55% conf) -> EXECUTE
         # - ML agrees -> Boost confidence (average)
         # - ML disagrees -> Use SMC confidence (ML IGNORED)
-        # - Exception: SELL requires ML >= 75% (safety filter)
+        # - H1 aligned -> +5% boost, H1 opposed -> -10% penalty (NEVER block)
         # ============================================================
         golden_marker = "[GOLDEN] " if is_golden_time else ""
         if smc_signal is not None:
@@ -1965,20 +1956,10 @@ class TradingBot:
             )
 
             # ============================================================
-            # SELL-SPECIFIC SAFETY FILTER (v0.2.5: H1 bias only, ML removed)
+            # SELL FILTER REMOVED (v0.2.5d: H1 = pendukung, bukan blocker)
             # ============================================================
-            # SMC is MASTER — SELL only blocked if H1 is STRONG BULLISH (score > 0.5)
-            # Weak bullish (score <= 0.5) or neutral/bearish → SELL allowed
-            if smc_signal.signal_type == "SELL":
-                _h1 = getattr(self, '_h1_bias_cache', 'NEUTRAL')
-                _h1_score = getattr(self, '_h1_bias_score', 0.0)
-                if _h1 == "BULLISH" and _h1_score > 0.50:
-                    if self._loop_count % 60 == 0:
-                        logger.info(
-                            f"[SELL FILTER] SELL blocked: H1={_h1} score={_h1_score:.2f} "
-                            f"(strong bullish, SELL too risky)"
-                        )
-                    return None
+            # SMC is MASTER — H1 bias hanya penalti confidence, TIDAK memblokir
+            # Penalti diterapkan di bawah bersama H1 bias filter
 
             # ============================================================
             # CALCULATE FINAL CONFIDENCE (SMC-ONLY MODE)
