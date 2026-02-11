@@ -1307,16 +1307,20 @@ class SmartRiskManager:
                         pred_1m = predictions.get('pred_1m', 0)
                         logger.info(f"[TRAJ-OUT] pred_1m=${pred_1m:.2f} | conf={predictions['confidence']:.0%}")
 
-                        if should_hold:
-                            # Predicted high profit - DON'T EXIT yet
+                        if should_hold and guard.ever_profitable:
+                            # v0.2.5: Only hold if trade was ONCE profitable
+                            # Never-profitable trades: trajectory recovery too speculative
                             logger.info(
                                 f"[TRAJECTORY HOLD] {pred_reason} | "
                                 f"Predictions: 1m=${predictions['pred_1m']:.2f}, "
                                 f"3m=${predictions['pred_3m']:.2f} (conf={predictions['confidence']:.0%})"
                             )
-                            # Skip fuzzy exit check - continue holding
-                            # (will still be subject to other safety checks below)
                             pass  # Don't return yet, continue to other checks
+                        elif should_hold and not guard.ever_profitable:
+                            logger.info(
+                                f"[TRAJECTORY SKIP] Never-profitable, ignoring hold prediction "
+                                f"(pred_1m=${predictions['pred_1m']:.2f})"
+                            )
 
                     # 2. MOMENTUM PERSISTENCE: Adjust fuzzy threshold based on momentum strength
                     if self.momentum_persistence is not None and len(guard.velocity_history) >= 3:
@@ -1435,8 +1439,8 @@ class SmartRiskManager:
                                 regime=regime  # v0.2.0: Pass regime for dampening
                             )
                         )
-                        if should_hold and predictions.get('pred_1m', 0) > current_profit * 2:
-                            # Predicted profit 2x higher in 1 minute - strong hold signal
+                        if should_hold and predictions.get('pred_1m', 0) > current_profit * 2 and guard.ever_profitable:
+                            # v0.2.5: Only override if trade was ONCE profitable
                             trajectory_override = True
                             logger.warning(
                                 f"[TRAJECTORY OVERRIDE] Predicted ${predictions['pred_1m']:.2f} in 1min "
