@@ -1459,7 +1459,7 @@ class SmartRiskManager:
                         "normal": 90,
                     }.get(regime, 90)
 
-                    time_since_entry = time.time() - guard.entry_time
+                    time_since_entry = time.time() - guard.entry_time.timestamp()
                     in_grace_period = time_since_entry < grace_period_sec
 
                     # Lower threshold for losses (75%)
